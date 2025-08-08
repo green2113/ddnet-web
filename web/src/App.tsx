@@ -58,18 +58,7 @@ function App() {
   useEffect(() => {
     const handler = (e: any) => {
       const { x, y, message } = e.detail || {}
-      // 화면 경계 보정
-      const menuWidth = 220
-      const menuHeight = 100
-      const vw = window.innerWidth
-      const vh = window.innerHeight
-      const safeX = Math.min(Math.max(8, x), Math.max(8, vw - menuWidth - 8))
-      const safeY = Math.min(Math.max(8, y), Math.max(8, vh - menuHeight - 8))
-      setMenu({ visible: true, x: safeX, y: safeY, message })
-      // 모바일 기본 선택/컨텍스트 방지
-      if ('type' in e && (e.type === 'touchstart' || e.type === 'touchend')) {
-        e.preventDefault?.()
-      }
+      setMenu({ visible: true, x, y, message })
     }
     const closer = () => setMenu((m) => ({ ...m, visible: false }))
     window.addEventListener('open-msg-menu', handler as any)
@@ -145,7 +134,7 @@ function App() {
             onLogout={logout}
           />
           <MessageList messages={messages} />
-          <Composer value={input} onChange={setInput} onSend={sendMessage} disabled={!user} />
+          <Composer value={input} onChange={setInput} onSend={sendMessage} />
           {menu.visible && menu.message && (
             <div
               className="fixed z-50 min-w-[180px] rounded-md p-2 text-sm"

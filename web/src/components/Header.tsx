@@ -54,7 +54,7 @@ export default function Header({ title, isDark, onLight, onDark, user, onLogin, 
             </button>
           </>
         ) : (
-          <button onClick={onLogin} className="text-xs px-2 py-1 text-white rounded hover:brightness-110 cursor-pointer" style={{ background: 'var(--accent)' }}>
+          <button onClick={onLogin} className="text-xs px-2 py-2 text-white rounded hover:brightness-110 cursor-pointer" style={{ background: 'var(--accent)' }}>
             Discord로 로그인
           </button>
         )}
