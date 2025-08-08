@@ -19,6 +19,7 @@
     "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250807.0",
     "@eslint/js": "^9.32.0",
     "@tailwindcss/postcss": "^4.1.11",
     "@types/react": "^19.1.9",
