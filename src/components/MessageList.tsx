@@ -1,3 +1,4 @@
+import type React from 'react'
 
 export type ChatMessage = {
   id: string
@@ -34,17 +35,18 @@ export default function MessageList({ messages }: Props) {
 
   return (
     <div className="flex-1 overflow-y-auto px-4 py-3 messages-scroll" id="messages-scroll">
-      {messages.length === 0 && (
-        <div className="text-center text-sm mt-16" style={{ color: 'var(--text-muted)' }}>
-          아직 메시지가 없습니다. 첫 메시지를 보내보세요!
-        </div>
-      )}
-      {groups.map((g) => (
-        <div key={g.dateKey}>
-          <div className="text-center text-[11px] no-select mt-2 mb-1" style={{ color: 'var(--text-muted)' }}>
-            — {g.dateLabel} —
+      <div className="min-h-full flex flex-col justify-end">
+        {messages.length === 0 && (
+          <div className="text-center text-sm mt-16" style={{ color: 'var(--text-muted)' }}>
+            아직 메시지가 없습니다. 첫 메시지를 보내보세요!
           </div>
-          {g.items.map((m, idx) => {
+        )}
+        {groups.map((g) => (
+          <div key={g.dateKey}>
+            <div className="text-center text-[11px] no-select mt-2 mb-1" style={{ color: 'var(--text-muted)' }}>
+              — {g.dateLabel} —
+            </div>
+            {g.items.map((m, idx) => {
             const prev = idx > 0 ? g.items[idx - 1] : undefined
             const isHead = !prev || prev.author.id !== m.author.id
             let pressTimer: number | null = null
@@ -66,20 +68,20 @@ export default function MessageList({ messages }: Props) {
                 pressTimer = null
               }
             }
-            return (
-              <div
-                key={m.id}
-                className={`row-hover group relative px-2 -mx-2 ${isHead ? 'mt-2' : ''}`}
-                onContextMenu={(e) => {
-                e.preventDefault()
-                const ev = new CustomEvent('open-msg-menu', { detail: { message: m, x: e.clientX, y: e.clientY } })
-                window.dispatchEvent(ev)
-                }}
-                onTouchStart={startLongPress}
-                onTouchEnd={cancelLongPress}
-                onTouchMove={cancelLongPress}
-                onTouchCancel={cancelLongPress}
-              >
+              return (
+                <div
+                  key={m.id}
+                  className={`row-hover group relative px-2 -mx-2 ${isHead ? 'mt-2' : ''}`}
+                  onContextMenu={(e) => {
+                  e.preventDefault()
+                  const ev = new CustomEvent('open-msg-menu', { detail: { message: m, x: e.clientX, y: e.clientY } })
+                  window.dispatchEvent(ev)
+                  }}
+                  onTouchStart={startLongPress}
+                  onTouchEnd={cancelLongPress}
+                  onTouchMove={cancelLongPress}
+                  onTouchCancel={cancelLongPress}
+                >
                 {isHead && (
                   <div
                     className="absolute left-2 rounded-full overflow-hidden"
@@ -122,6 +124,7 @@ export default function MessageList({ messages }: Props) {
           })}
         </div>
       ))}
+      </div>
     </div>
   )
 }

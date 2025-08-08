@@ -76,7 +76,7 @@ function App() {
     socket.on('chat:message', (msg: ChatMessage) => {
       setMessages((prev) => {
         const next = [...prev, msg]
-        // scroll to bottom on new message
+        // 하단 정렬 유지: 새 메시지 후 스크롤 맨 아래
         requestAnimationFrame(() => {
           const el = document.getElementById('messages-scroll')
           if (el) el.scrollTop = el.scrollHeight
@@ -89,7 +89,7 @@ function App() {
     }
   }, [serverBase])
 
-  // Whenever messages list changes (including when I send), keep scrolled to bottom
+  // 메시지 변경 시 항상 스크롤을 맨 아래로 유지 (하단 정렬)
   useEffect(() => {
     const el = document.getElementById('messages-scroll')
     if (el) el.scrollTop = el.scrollHeight
