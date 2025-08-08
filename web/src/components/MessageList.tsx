@@ -51,6 +51,8 @@ export default function MessageList({ messages }: Props) {
             let touchX = 0
             let touchY = 0
             const startLongPress = (e: React.TouchEvent<HTMLDivElement>) => {
+              // 모바일 기본 선택/복사 메뉴 방지
+              e.preventDefault()
               if (e.touches && e.touches.length > 0) {
                 touchX = e.touches[0].clientX
                 touchY = e.touches[0].clientY
@@ -69,7 +71,7 @@ export default function MessageList({ messages }: Props) {
             return (
               <div
                 key={m.id}
-                className={`row-hover group relative px-2 -mx-2 ${isHead ? 'mt-2' : ''}`}
+                  className={`row-hover group relative px-2 -mx-2 no-select ${isHead ? 'mt-2' : ''}`}
                 onContextMenu={(e) => {
                 e.preventDefault()
                 const ev = new CustomEvent('open-msg-menu', { detail: { message: m, x: e.clientX, y: e.clientY } })
