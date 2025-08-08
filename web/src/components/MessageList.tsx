@@ -1,0 +1,102 @@
+
+export type ChatMessage = {
+  id: string
+  author: { id: string; username: string; displayName?: string; avatar?: string | null }
+  content: string
+  timestamp: number
+  source: 'ddnet' | 'discord' | 'web'
+}
+
+type Props = {
+  messages: ChatMessage[]
+}
+
+export default function MessageList({ messages }: Props) {
+  const formatTime = (ts: number) =>
+    new Date(ts).toLocaleTimeString('ko-KR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    })
+  // 날짜별 그룹 전개
+  const groups = [] as Array<{ dateKey: string; dateLabel: string; items: typeof messages }>
+  let current: { dateKey: string; dateLabel: string; items: typeof messages } | null = null
+  for (const m of messages) {
+    const d = new Date(m.timestamp)
+    const dateKey = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`
+    const dateLabel = d.toLocaleDateString()
+    if (!current || current.dateKey !== dateKey) {
+      current = { dateKey, dateLabel, items: [] as typeof messages }
+      groups.push(current)
+    }
+    current.items.push(m)
+  }
+
+  return (
+    <div className="flex-1 overflow-y-auto px-4 py-3 messages-scroll" id="messages-scroll">
+      {messages.length === 0 && (
+        <div className="text-center text-sm mt-16" style={{ color: 'var(--text-muted)' }}>
+          아직 메시지가 없습니다. 첫 메시지를 보내보세요!
+        </div>
+      )}
+      {groups.map((g) => (
+        <div key={g.dateKey}>
+          <div className="text-center text-[11px] no-select mt-2 mb-1" style={{ color: 'var(--text-muted)' }}>
+            — {g.dateLabel} —
+          </div>
+          {g.items.map((m, idx) => {
+            const prev = idx > 0 ? g.items[idx - 1] : undefined
+            const isHead = !prev || prev.author.id !== m.author.id
+            return (
+              <div key={m.id} className={`row-hover group relative px-2 -mx-2 ${isHead ? 'mt-2' : ''}`} onContextMenu={(e) => {
+                e.preventDefault()
+                const ev = new CustomEvent('open-msg-menu', { detail: { message: m, x: e.clientX, y: e.clientY } })
+                window.dispatchEvent(ev)
+              }}>
+                {isHead && (
+                  <div
+                    className="absolute left-2 rounded-full overflow-hidden"
+                    style={{ width: '40px', height: '40px', top: '3px', background: 'var(--input-bg)' }}
+                  >
+                    {m.author.avatar ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={m.author.avatar} alt={m.author.username} className="w-full h-full object-cover no-select" />
+                    ) : null}
+                  </div>
+                )}
+                {!isHead && (
+                  <div
+                    className="absolute left-2 top-1 text-[10px] opacity-0 group-hover:opacity-100 cursor-default no-select"
+                    style={{ color: 'var(--text-muted)' }}
+                  >
+                    {formatTime(m.timestamp)}
+                  </div>
+                )}
+                <div className="min-w-0 pl-[52px]">
+                  {isHead && (
+                    <div className="flex items-baseline gap-2 flex-wrap">
+                      <span className="font-medium">{m.author.displayName || m.author.username}</span>
+                      <span className="text-xs cursor-default" style={{ color: 'var(--text-muted)' }}>
+                        {formatTime(m.timestamp)}
+                      </span>
+                      <span className="text-[10px] uppercase cursor-default no-select" style={{ color: 'var(--text-muted)' }}>
+                        {m.source}
+                      </span>
+                    </div>
+                  )}
+                  <div className="whitespace-pre-wrap break-words">
+                    <span>
+                      {m.content}
+                      </span>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+
