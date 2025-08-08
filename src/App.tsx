@@ -119,7 +119,7 @@ function App() {
   }
 
   return (
-    <div className={(isDark ? 'theme-dark ' : '') + 'h-full flex'} style={{ background: 'var(--bg-app)', color: 'var(--text-primary)' }}>
+    <div className={(isDark ? 'theme-dark ' : '') + 'app-shell flex'} style={{ background: 'var(--bg-app)', color: 'var(--text-primary)' }}>
       <SidebarGuilds />
       <div className="flex-1 flex min-w-0">
         <SidebarChannels channels={[{ id: 'general', name: 'general' }, { id: 'ddnet', name: 'ddnet-bridge' }]} activeId={'general'} />

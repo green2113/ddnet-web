@@ -25,6 +25,21 @@ html, body, #root {
   height: 100%;
 }
 
+/* 모바일에서 전체 페이지가 스크롤되지 않게 고정 */
+body {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+/* 앱 루트 셸: 안드로이드/모바일에서 주소창 변동에도 정확한 뷰포트 높이를 차지 */
+.app-shell {
+  height: 100dvh;
+  height: 100svh; /* 지원 브라우저에서 안전 뷰포트 적용 */
+  display: flex;
+  width: 100%;
+  overflow: hidden;
+}
+
 /* Mobile adjustments */
 @media (max-width: 768px) {
   .chip { display: none; }
@@ -82,6 +97,8 @@ html, body, #root {
 .messages-scroll {
   scrollbar-width: initial;               /* Firefox */
   scrollbar-color: var(--scroll-thumb) transparent;
+  overscroll-behavior: contain;           /* 부모로 스크롤 전파 방지 */
+  -webkit-overflow-scrolling: touch;      /* iOS 부드러운 스크롤 */
 }
 .messages-scroll::-webkit-scrollbar {
   width: 10px;
