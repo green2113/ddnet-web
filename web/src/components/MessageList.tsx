@@ -47,12 +47,39 @@ export default function MessageList({ messages }: Props) {
           {g.items.map((m, idx) => {
             const prev = idx > 0 ? g.items[idx - 1] : undefined
             const isHead = !prev || prev.author.id !== m.author.id
+            let pressTimer: number | null = null
+            let touchX = 0
+            let touchY = 0
+            const startLongPress = (e: React.TouchEvent<HTMLDivElement>) => {
+              if (e.touches && e.touches.length > 0) {
+                touchX = e.touches[0].clientX
+                touchY = e.touches[0].clientY
+              }
+              pressTimer = window.setTimeout(() => {
+                const ev = new CustomEvent('open-msg-menu', { detail: { message: m, x: touchX, y: touchY } })
+                window.dispatchEvent(ev)
+              }, 500)
+            }
+            const cancelLongPress = () => {
+              if (pressTimer) {
+                clearTimeout(pressTimer)
+                pressTimer = null
+              }
+            }
             return (
-              <div key={m.id} className={`row-hover group relative px-2 -mx-2 ${isHead ? 'mt-2' : ''}`} onContextMenu={(e) => {
+              <div
+                key={m.id}
+                className={`row-hover group relative px-2 -mx-2 ${isHead ? 'mt-2' : ''}`}
+                onContextMenu={(e) => {
                 e.preventDefault()
                 const ev = new CustomEvent('open-msg-menu', { detail: { message: m, x: e.clientX, y: e.clientY } })
                 window.dispatchEvent(ev)
-              }}>
+                }}
+                onTouchStart={startLongPress}
+                onTouchEnd={cancelLongPress}
+                onTouchMove={cancelLongPress}
+                onTouchCancel={cancelLongPress}
+              >
                 {isHead && (
                   <div
                     className="absolute left-2 rounded-full overflow-hidden"
