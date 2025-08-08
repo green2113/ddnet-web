@@ -4,10 +4,11 @@ type Props = {
   value: string
   onChange: (v: string) => void
   onSend: () => void
+  disabled?: boolean
 }
 
-export default function Composer({ value, onChange, onSend }: Props) {
-  const isEnabled = value.trim().length > 0
+export default function Composer({ value, onChange, onSend, disabled = false }: Props) {
+  const isEnabled = !disabled && value.trim().length > 0
   const taRef = useRef<HTMLTextAreaElement | null>(null)
 
   useEffect(() => {
@@ -20,19 +21,20 @@ export default function Composer({ value, onChange, onSend }: Props) {
   return (
     <div className="px-4 pb-4">
       <div className="flex items-center gap-2">
-        <div className="flex w-full items-center rounded-[10px] px-3 py-3" style={{ background: 'var(--input-bg)', color: 'var(--text-primary)' }}>
+        <div className={`flex w-full items-center rounded-[10px] px-3 py-3 ${disabled ? 'cursor-not-allowed opacity-90' : ''}`} style={{ background: 'var(--input-bg)', color: 'var(--text-primary)' }}>
           <textarea
             ref={taRef}
             value={value}
-            onChange={(e) => onChange(e.target.value)}
+            onChange={(e) => !disabled && onChange(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault()
                 if (isEnabled) onSend()
               }
             }}
-            placeholder="메시지 보내기"
-            className="flex-1 bg-transparent outline-none resize-none leading-6"
+            placeholder={disabled ? '로그인을 해주세요.' : '메시지 보내기'}
+            disabled={disabled}
+            className={`flex-1 bg-transparent outline-none resize-none leading-6 ${disabled ? 'cursor-not-allowed' : ''}`}
             rows={1}
             style={{ maxHeight: 180 }}
             maxLength={1000}
