@@ -9,7 +9,7 @@ export default function Login() {
     const apiBase = (import.meta as any).env?.VITE_API_BASE as string | undefined
     const authUrl = apiBase
       ? `${apiBase.replace(/\/$/, '')}/auth/discord`
-      : `${window.location.origin.replace(/:\\d+$/, ':4000')}/auth/discord`
+      : '/auth/discord' // 환경변수 미설정 시에도 서버 절대경로가 프록시/도메인에서 처리되도록 상대 경로 유지
     const timer = setTimeout(() => {
       window.location.href = authUrl
     }, 1500)
@@ -25,9 +25,7 @@ export default function Login() {
         <a
           href={(() => {
             const apiBase = (import.meta as any).env?.VITE_API_BASE as string | undefined
-            return apiBase
-              ? `${apiBase.replace(/\/$/, '')}/auth/discord`
-              : `${window.location.origin.replace(/:\\d+$/, ':4000')}/auth/discord`
+            return apiBase ? `${apiBase.replace(/\/$/, '')}/auth/discord` : '/auth/discord'
           })()}
           style={{ textDecoration: 'underline' }}
         >

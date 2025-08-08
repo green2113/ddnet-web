@@ -33,9 +33,7 @@ function App() {
 
   const serverBase = useMemo(() => {
     const api = (import.meta as any).env?.VITE_API_BASE as string | undefined
-    if (api) return api.replace(/\/$/, '')
-    // 개발 편의를 위해 로컬 프록시 기본값 유지
-    return window.location.origin.replace(/:\d+$/, ':4000')
+    return api ? api.replace(/\/$/, '') : ''
   }, [])
 
   useEffect(() => {
