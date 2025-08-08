@@ -98,6 +98,7 @@ function App() {
   }, [messages])
 
   const login = () => {
+    // 로그인 진입은 항상 프런트를 경유하지만, /login 내부에서 VITE_API_BASE를 사용해 서버로 이동
     window.location.href = '/login'
   }
 
