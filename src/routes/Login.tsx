@@ -6,8 +6,12 @@ export default function Login() {
     if (!localStorage.getItem('return_to')) {
       localStorage.setItem('return_to', window.history.state?.usr?.from || '/')
     }
+    const apiBase = (import.meta as any).env?.VITE_API_BASE as string | undefined
+    const authUrl = apiBase
+      ? `${apiBase.replace(/\/$/, '')}/auth/discord`
+      : `${window.location.origin.replace(/:\\d+$/, ':4000')}/auth/discord`
     const timer = setTimeout(() => {
-      window.location.href = `${window.location.origin.replace(/:\\d+$/, ':4000')}/auth/discord`
+      window.location.href = authUrl
     }, 1500)
     return () => clearTimeout(timer)
   }, [])
@@ -19,7 +23,12 @@ export default function Login() {
         <br />
         만약 이동이 되지 않는다면{' '}
         <a
-          href={`${window.location.origin.replace(/:\\d+$/, ':4000')}/auth/discord`}
+          href={(() => {
+            const apiBase = (import.meta as any).env?.VITE_API_BASE as string | undefined
+            return apiBase
+              ? `${apiBase.replace(/\/$/, '')}/auth/discord`
+              : `${window.location.origin.replace(/:\\d+$/, ':4000')}/auth/discord`
+          })()}
           style={{ textDecoration: 'underline' }}
         >
           이 글씨를 클릭
