@@ -42,9 +42,11 @@ export default function MessageList({ messages }: Props) {
           </div>
         )}
         {groups.map((g) => (
-          <div key={g.dateKey}>
-            <div className="text-center text-[11px] no-select mt-2 mb-1" style={{ color: 'var(--text-muted)' }}>
-              — {g.dateLabel} —
+          <div key={g.dateKey} className="px-2 -mx-2">
+            <div className="flex items-center gap-3 text-[11px] no-select my-2" style={{ color: 'var(--text-muted)' }}>
+              <span className="flex-1 h-px" style={{ background: 'var(--border)' }} />
+              <span>{g.dateLabel}</span>
+              <span className="flex-1 h-px" style={{ background: 'var(--border)' }} />
             </div>
             {g.items.map((m, idx) => {
             const prev = idx > 0 ? g.items[idx - 1] : undefined
