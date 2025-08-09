@@ -19,6 +19,7 @@
   --accent: #5865f2;
   --hover-bg: rgba(0,0,0,0.06);
   --scroll-thumb: rgba(120, 124, 135, 0.6);
+  --divider: rgba(0,0,0,0.25);
 }
 
 html, body, #root {
@@ -59,6 +60,7 @@ body {
   --accent: #5865f2;
   --hover-bg: rgba(255,255,255,0.08);
   --scroll-thumb: rgba(168, 172, 186, 0.6);
+  --divider: rgba(255,255,255,0.18);
 }
 
 /* helpers */
