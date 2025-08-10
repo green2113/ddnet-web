@@ -10,10 +10,9 @@ export default function Login() {
     const authUrl = apiBase
       ? `${apiBase.replace(/\/$/, '')}/auth/discord`
       : '/auth/discord' // 환경변수 미설정 시에도 서버 절대경로가 프록시/도메인에서 처리되도록 상대 경로 유지
-    const timer = setTimeout(() => {
-      window.location.href = authUrl
-    }, 1500)
-    return () => clearTimeout(timer)
+    
+    window.location.href = authUrl
+    
   }, [])
 
   return (
