@@ -84,6 +84,9 @@ function App() {
         return next
       })
     })
+    socket.on('chat:delete', (id: string) => {
+      setMessages((prev) => prev.filter((m) => m.id !== id))
+    })
     return () => {
       socket.disconnect()
     }
@@ -155,7 +158,8 @@ function App() {
                   className="w-full text-left px-3 py-2 hover-surface cursor-pointer"
                   style={{ color: '#f87171' }}
                   onClick={() => {
-                    setMessages((prev) => prev.filter((m) => m.id !== menu.message!.id))
+                    // 서버에 삭제 요청(소켓). 성공 시 서버가 chat:delete 브로드캐스트함
+                    socketRef.current?.emit('chat:delete', { id: menu.message!.id })
                     setMenu({ visible: false, x: 0, y: 0, message: null })
                   }}
                 >
