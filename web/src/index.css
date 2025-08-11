@@ -55,7 +55,7 @@ body {
   --rail-bg: #1a1b1e;   /* guild rail */
   --sidebar-bg: #2b2d31;/* channel sidebar */
   --header-bg: #313338; /* header */
-  --border: rgba(0,0,0,0.25);
+  --border: rgba(255,255,255,0.15);
   --input-bg: #383a40;  /* input surface */
   --accent: #5865f2;
   --hover-bg: rgba(255,255,255,0.08);

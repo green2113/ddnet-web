@@ -19,12 +19,6 @@ primary_region = 'nrt'
   min_machines_running = 0
   processes = ['app']
 
-
-[[vm]]
-  memory = '1gb'
-  cpu_kind = 'shared'
-  cpus = 1
-
   [http_service.concurrency]
     type = "connections"
     soft_limit = 200
