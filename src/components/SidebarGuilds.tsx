@@ -13,7 +13,7 @@ export default function SidebarGuilds({ accent = 'var(--accent)' }: Props) {
         className="w-12 h-12 rounded-2xl grid place-items-center text-white text-base font-bold select-none cursor-pointer"
         style={{ background: accent }}
       >
-        DD
+        DS
       </div>
       <div className="w-12 h-[2px] rounded bg-black/10" />
       <button
