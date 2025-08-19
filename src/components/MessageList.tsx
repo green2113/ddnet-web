@@ -10,9 +10,10 @@ export type ChatMessage = {
 
 type Props = {
   messages: ChatMessage[]
+  loading?: boolean
 }
 
-export default function MessageList({ messages }: Props) {
+export default function MessageList({ messages, loading = false }: Props) {
   const formatTime = (ts: number) =>
     new Date(ts).toLocaleTimeString('ko-KR', {
       hour: '2-digit',
@@ -36,10 +37,33 @@ export default function MessageList({ messages }: Props) {
   return (
     <div className="flex-1 overflow-y-auto px-4 py-3 messages-scroll" id="messages-scroll">
       <div className="min-h-full flex flex-col justify-end">
-        {messages.length === 0 && (
-          <div className="text-center text-sm mt-16" style={{ color: 'var(--text-muted)' }}>
-            아직 메시지가 없습니다. 첫 메시지를 보내보세요!
+        {loading ? (
+          <div className="px-2 -mx-2">
+            <div className="flex items-center gap-3 text-[11px] no-select my-2" style={{ color: 'var(--text-muted)' }}>
+              <span className="flex-1 h-px" style={{ background: 'var(--divider)' }} />
+              <span>메시지를 불러오는 중…</span>
+              <span className="flex-1 h-px" style={{ background: 'var(--divider)' }} />
+            </div>
+            {[0,1,2,3,4].map((i) => (
+              <div key={i} className="relative px-2 -mx-2 mt-2">
+                <div className="absolute left-2 rounded-full skeleton" style={{ width: '40px', height: '40px', top: '3px' }} />
+                <div className="min-w-0 pl-[52px]">
+                  <div className="flex items-baseline gap-2 mb-2">
+                    <div className="skeleton" style={{ width: '120px', height: '14px' }} />
+                    <div className="skeleton" style={{ width: '60px', height: '12px' }} />
+                  </div>
+                  <div className="skeleton" style={{ width: `${70 + i*5}%`, height: '14px', marginBottom: '8px' }} />
+                  <div className="skeleton" style={{ width: `${45 + i*7}%`, height: '14px' }} />
+                </div>
+              </div>
+            ))}
           </div>
+        ) : (
+          messages.length === 0 && (
+            <div className="text-center text-sm mt-16" style={{ color: 'var(--text-muted)' }}>
+              아직 메시지가 없습니다. 첫 메시지를 보내보세요!
+            </div>
+          )
         )}
         {groups.map((g) => (
           <div key={g.dateKey} className="px-2 -mx-2">

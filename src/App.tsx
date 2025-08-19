@@ -25,6 +25,7 @@ type ChatMessage = {
 function App() {
   const [user, setUser] = useState<User | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [loadingMessages, setLoadingMessages] = useState(true)
   const [input, setInput] = useState('')
   const socketRef = useRef<Socket | null>(null)
   const [isDark, setIsDark] = useState(true)
@@ -37,6 +38,7 @@ function App() {
   }, [])
 
   useEffect(() => {
+    setLoadingMessages(true)
     axios
       .get(`${serverBase}/api/me`, { withCredentials: true })
       .then((res) => setUser(res.data || null))
@@ -51,8 +53,11 @@ function App() {
         if (Array.isArray(res.data)) {
           setMessages(res.data)
         }
+        setLoadingMessages(false)
       })
-      .catch(() => {})
+      .catch(() => {
+        setLoadingMessages(false)
+      })
   }, [serverBase])
 
   useEffect(() => {
@@ -136,7 +141,7 @@ function App() {
             onLogin={login}
             onLogout={logout}
           />
-          <MessageList messages={messages} />
+          <MessageList messages={messages} loading={loadingMessages} />
           <Composer value={input} onChange={setInput} onSend={sendMessage} />
           {menu.visible && menu.message && (
             <div

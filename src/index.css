@@ -20,6 +20,11 @@
   --hover-bg: rgba(0,0,0,0.06);
   --scroll-thumb: rgba(120, 124, 135, 0.6);
   --divider: rgba(0,0,0,0.25);
+
+  /* Skeleton */
+  --skeleton-base: #e7e9ee;
+  --skeleton-shine: rgba(255,255,255,0.6);
+  --skeleton-speed: 1.1s;
 }
 
 html, body, #root {
@@ -61,6 +66,10 @@ body {
   --hover-bg: rgba(255,255,255,0.08);
   --scroll-thumb: rgba(168, 172, 186, 0.6);
   --divider: rgba(255,255,255,0.18);
+
+  /* Skeleton */
+  --skeleton-base: #3a3c43;
+  --skeleton-shine: rgba(255,255,255,0.16);
 }
 
 /* helpers */
@@ -116,4 +125,33 @@ body {
 }
 .messages-scroll::-webkit-scrollbar-thumb:hover {
   background-color: rgba(168, 172, 186, 0.85);
+}
+
+/* Skeleton (shimmer) for loading state */
+.skeleton {
+  position: relative;
+  background: var(--skeleton-base);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, rgba(255,255,255,0), var(--skeleton-shine), rgba(255,255,255,0));
+  animation: skeleton-shimmer var(--skeleton-speed) ease-in-out infinite;
+  will-change: transform;
+  pointer-events: none;
+}
+@keyframes skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after {
+    animation: none;
+  }
 }
