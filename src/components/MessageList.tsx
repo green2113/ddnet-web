@@ -11,9 +11,11 @@ export type ChatMessage = {
 type Props = {
   messages: ChatMessage[]
   loading?: boolean
+  error?: boolean
+  onRetry?: () => void
 }
 
-export default function MessageList({ messages, loading = false }: Props) {
+export default function MessageList({ messages, loading = false, error = false, onRetry }: Props) {
   const formatTime = (ts: number) =>
     new Date(ts).toLocaleTimeString('ko-KR', {
       hour: '2-digit',
@@ -37,7 +39,19 @@ export default function MessageList({ messages, loading = false }: Props) {
   return (
     <div className="flex-1 overflow-y-auto px-4 py-3 messages-scroll" id="messages-scroll">
       <div className="min-h-full flex flex-col justify-end">
-        {loading ? (
+        {error ? (
+          <div className="text-center text-sm mt-16" style={{ color: 'var(--text-muted)' }}>
+            메시지를 불러오지 못했습니다.
+            <button
+              type="button"
+              className="ml-3 px-3 h-8 rounded-md cursor-pointer"
+              style={{ background: 'rgba(127,127,127,0.2)', color: 'var(--text-primary)' }}
+              onClick={() => onRetry && onRetry()}
+            >
+              다시 시도
+            </button>
+          </div>
+        ) : loading ? (
           <div className="px-2 -mx-2">
             <div className="flex items-center gap-3 text-[11px] no-select my-2" style={{ color: 'var(--text-muted)' }}>
               <span className="flex-1 h-px" style={{ background: 'var(--divider)' }} />
