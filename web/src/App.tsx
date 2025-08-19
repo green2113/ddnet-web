@@ -26,6 +26,7 @@ function App() {
   const [user, setUser] = useState<User | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [loadingMessages, setLoadingMessages] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [input, setInput] = useState('')
   const socketRef = useRef<Socket | null>(null)
   const [isDark, setIsDark] = useState(true)
@@ -37,16 +38,9 @@ function App() {
     return api ? api.replace(/\/$/, '') : ''
   }, [])
 
-  useEffect(() => {
+  const fetchHistory = () => {
     setLoadingMessages(true)
-    axios
-      .get(`${serverBase}/api/me`, { withCredentials: true })
-      .then((res) => setUser(res.data || null))
-      .catch(() => {
-        setUser(null)
-        // 자동 이동 대신 필요 시 모달로 유도
-      })
-
+    setLoadError(false)
     axios
       .get(`${serverBase}/api/history?limit=200`, { withCredentials: true })
       .then((res) => {
@@ -56,8 +50,21 @@ function App() {
         setLoadingMessages(false)
       })
       .catch(() => {
+        setLoadError(true)
         setLoadingMessages(false)
       })
+  }
+
+  useEffect(() => {
+    setLoadingMessages(true)
+    axios
+      .get(`${serverBase}/api/me`, { withCredentials: true })
+      .then((res) => setUser(res.data || null))
+      .catch(() => {
+        setUser(null)
+      })
+
+    fetchHistory()
   }, [serverBase])
 
   useEffect(() => {
@@ -141,7 +148,7 @@ function App() {
             onLogin={login}
             onLogout={logout}
           />
-          <MessageList messages={messages} loading={loadingMessages} />
+          <MessageList messages={messages} loading={loadingMessages} error={loadError} onRetry={fetchHistory} />
           <Composer value={input} onChange={setInput} onSend={sendMessage} />
           {menu.visible && menu.message && (
             <div
