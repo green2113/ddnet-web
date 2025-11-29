@@ -1,8 +1,12 @@
 export async function onRequest({ params }: { params: { path?: string[] } }) {
-  if (!params.path || params.path.length === 0) {
-    return new Response("Not found", { status: 404 });
+  const path = params.path?.join("/") ?? "";
+
+  // update.json이나 info.json이면 리다이렉트하지 않고 정적 자산으로 처리
+  if (path === "update.json" || path === "info.json") {
+    return new Response(null, { status: 404 }); // Pages가 정적 파일을 서빙하도록 넘김
   }
-  const filename = params.path.join("/");
-  const releaseUrl = `https://github.com/green2113/ddnet-web/releases/download/client/${filename}`;
+
+  const releaseUrl =
+    "https://github.com/<user>/<repo>/releases/download/<tag>/" + path;
   return Response.redirect(releaseUrl, 302);
 }
