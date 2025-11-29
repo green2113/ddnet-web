@@ -14,6 +14,6 @@ export async function onRequest(context: {
 
   // 나머지는 GitHub Releases로 리다이렉트
   const releaseUrl =
-    "https://github.com/<user>/<repo>/releases/download/<tag>/" + path;
+    "https://github.com/green2113/ddnet-web/releases/download/client/" + path;
   return Response.redirect(releaseUrl, 302);
 }
