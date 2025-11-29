@@ -9,7 +9,7 @@ export async function onRequest(context: {
 
   if (path.endsWith(".exe")) {
     const releaseUrl =
-      "https://github.com/<user>/<repo>/releases/download/<tag>/" + path;
+      "https://github.com/green2113/ddnet-web/releases/download/client/" + path;
     return Response.redirect(releaseUrl, 302);
   }
 
