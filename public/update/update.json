@@ -1,13 +1,5 @@
 [
     {
-        "version": "1.1",
-        "client": true,
-        "server": false,
-        "remove": [
-            "data/test/test.txt"
-        ]
-    },
-    {
         "version": "1.0",
         "client": true,
         "server": false
