@@ -2528,6 +2528,9 @@ Automatic reply when tagged.
 Enter the message to send as an auto-reply.
 == 자동 응답 시 자동으로 보내질 메세지를 입력해 주세요.
 
+Use custom colors
+== 사용자 색상 사용
+
 Skin Switch
 == 스킨 변경
 
