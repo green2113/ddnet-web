@@ -1,5 +1,15 @@
 [
     {
+        "version": "1.1",
+        "client": true,
+        "server": false,
+        "download": [
+            "data/languages/korean.txt",
+            "data/languages/simplified_chinese.txt",
+            "data/languages/traditional_chinese.txt"
+        ]
+    },
+    {
         "version": "1.0",
         "client": true,
         "server": false
