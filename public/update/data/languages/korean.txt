@@ -2528,9 +2528,6 @@ Automatic reply when tagged.
 Enter the message to send as an auto-reply.
 == 자동 응답 시 자동으로 보내질 메세지를 입력해 주세요.
 
-Use custom colors
-== 사용자 색상 사용
-
 Skin Switch
 == 스킨 변경
 
@@ -2539,6 +2536,9 @@ When you enter /skin %s, it reverts to the skin you have set.
 
 Use current skin
 == 현재 스킨 사용
+
+Use custom colors
+== 사용자 색상 사용
 
 Skin name
 == 스킨 이름
@@ -2561,5 +2561,5 @@ Please enter the feet color code.
 Use current skin
 == 현재 스킨 사용
 
-A new UClient update is available.
-== 새로운 UClient 업데이트가 있습니다.
+A new U-Client update is available.
+== 새로운 U-Client 업데이트가 있습니다.
