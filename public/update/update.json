@@ -1,5 +1,36 @@
 [
     {
+        "version": "1.3.0",
+        "client": true,
+        "server": false,
+        "download": [
+            "data/languages/korean.txt",
+            "data/languages/simplified_chinese.txt",
+            "data/languages/traditional_chinese.txt",
+            "data/languages/finnish.txt",
+            "data/languages/french.txt",
+            "data/languages/galician.txt",
+            "data/languages/german.txt",
+            "data/languages/greek.txt",
+            "data/languages/italian.txt",
+            "data/languages/japanese.txt",
+            "data/languages/kyrgzyz.txt",
+            "data/languages/norwegian.txt",
+            "data/languages/persian.txt",
+            "data/languages/polish.txt",
+            "data/languages/portuguese.txt",
+            "data/languages/romanian.txt",
+            "data/languages/russian.txt",
+            "data/languages/serbian_ctrillic.txt",
+            "data/languages/serbian.txt",
+            "data/languages/slovak.txt",
+            "data/languages/spanish.txt",
+            "data/languages/swedish.txt",
+            "data/languages/turkish.txt",
+            "data/languages/ukrainian.txt"
+        ]
+    },
+    {
         "version": "1.2.2",
         "client": true,
         "server": false
