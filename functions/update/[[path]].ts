@@ -7,10 +7,13 @@ export async function onRequest(context: {
   const segments = params.path ?? [];
   const path = segments.join("/");
 
-  if (path.endsWith(".exe")) {
-    const releaseUrl =
-      "https://github.com/green2113/ddnet-web/releases/download/client/" + path;
-    return Response.redirect(releaseUrl, 302);
+  // allow only the version JSON files to be served from Pages assets
+  const serveLocally =
+    path === "" || path === "update.json" || path === "update/info.json";
+
+  if (!serveLocally) {
+    const redirectUrl = "https://update.under1111.com/download/" + path;
+    return Response.redirect(redirectUrl, 302);
   }
 
   return env.ASSETS.fetch(request);
