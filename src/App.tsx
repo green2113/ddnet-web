@@ -39,9 +39,11 @@ function App() {
   const [channels, setChannels] = useState<Channel[]>([])
   const [hiddenChannelIds, setHiddenChannelIds] = useState<string[]>([])
   const [selectedChannelId, setSelectedChannelId] = useState<string>('')
+  const [activeChannelId, setActiveChannelId] = useState<string>('')
   const [isDark, setIsDark] = useState(true)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [menu, setMenu] = useState<{ visible: boolean; x: number; y: number; message: ChatMessage | null }>({ visible: false, x: 0, y: 0, message: null })
+  const activeChannelId = 'general'
 
   const playNotificationSound = () => {
     const AudioCtx = window.AudioContext || (window as any).webkitAudioContext

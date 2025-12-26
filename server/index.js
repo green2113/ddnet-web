@@ -33,10 +33,12 @@ app.set('trust proxy', 1)
 // Message history in memory (fallback when MongoDB is not configured)
 const MESSAGE_HISTORY_LIMIT = Number(process.env.MESSAGE_HISTORY_LIMIT || 500)
 const messageHistory = []
+const channelStore = []
 
 // Prefer MongoDB if configured; otherwise use JSONL file
 let mongoClient
 let messagesCol
+let channelsCol
 async function initMongo() {
   const uri = process.env.MONGODB_URI
   if (!uri) return
@@ -44,7 +46,9 @@ async function initMongo() {
   await mongoClient.connect()
   const db = mongoClient.db(process.env.MONGO_DB || 'ddnet')
   messagesCol = db.collection(process.env.MONGO_COLL || 'messages')
+  channelsCol = db.collection(process.env.MONGO_CHANNELS_COLL || 'channels')
   await messagesCol.createIndex({ ts: 1 })
+  await channelsCol.createIndex({ createdAt: 1 })
   console.log('[mongo] connected')
 }
 initMongo().catch((e) => console.error('[mongo] init failed', e?.message || e))
@@ -118,6 +122,121 @@ app.get('/api/me', (req, res) => {
   res.json(null)
 })
 
+const ADMIN_ID = '776421522188664843'
+const isAdminUser = (req) => req.user?.id === ADMIN_ID
+const isChannelVisible = (channel, userId) => {
+  if (!channel) return false
+  if (Array.isArray(channel.visibleTo)) {
+    return Boolean(userId && channel.visibleTo.includes(userId))
+  }
+  if (channel.visibleTo === null) {
+    return true
+  }
+  if (Array.isArray(channel.hiddenFor)) {
+    return !channel.hiddenFor.includes(userId)
+  }
+  return true
+}
+
+app.get('/api/channels', async (req, res) => {
+  const userId = req.user?.id
+  if (channelsCol) {
+    try {
+      const rows = await channelsCol.find({}, { projection: { _id: 0 } }).toArray()
+      const visible = rows.filter((channel) => isChannelVisible(channel, userId))
+      return res.json(visible)
+    } catch (err) {
+      console.error('[channels] list failed', err?.message || err)
+      return res.status(500).json({ error: 'failed to load channels' })
+    }
+  }
+  res.json(channelStore.filter((channel) => isChannelVisible(channel, userId)))
+})
+
+app.post('/api/channels', async (req, res) => {
+  if (!isAdminUser(req)) return res.status(403).json({ error: 'forbidden' })
+  const name = String(req.body?.name || '').trim()
+  if (!name) return res.status(400).json({ error: 'name required' })
+  const channel = {
+    id: req.body?.id || randomUUID(),
+    name,
+    createdAt: Date.now(),
+    createdBy: req.user?.id,
+    hiddenFor: Array.isArray(req.body?.hiddenFor) ? req.body.hiddenFor : [],
+    visibleTo: Array.isArray(req.body?.visibleTo) ? req.body.visibleTo : null,
+  }
+  if (channelsCol) {
+    try {
+      await channelsCol.insertOne(channel)
+      return res.status(201).json(channel)
+    } catch (err) {
+      console.error('[channels] create failed', err?.message || err)
+      return res.status(500).json({ error: 'failed to create channel' })
+    }
+  }
+  channelStore.push(channel)
+  res.status(201).json(channel)
+})
+
+app.delete('/api/channels/:id', async (req, res) => {
+  if (!isAdminUser(req)) return res.status(403).json({ error: 'forbidden' })
+  const channelId = req.params.id
+  if (!channelId) return res.status(400).json({ error: 'id required' })
+  if (channelsCol) {
+    try {
+      const result = await channelsCol.deleteOne({ id: channelId })
+      if (messagesCol) {
+        await messagesCol.deleteMany({ channelId })
+      }
+      return res.status(result.deletedCount ? 204 : 404).send()
+    } catch (err) {
+      console.error('[channels] delete failed', err?.message || err)
+      return res.status(500).json({ error: 'failed to delete channel' })
+    }
+  }
+  const idx = channelStore.findIndex((channel) => channel.id === channelId)
+  if (idx < 0) return res.status(404).json({ error: 'not found' })
+  channelStore.splice(idx, 1)
+  for (let i = messageHistory.length - 1; i >= 0; i -= 1) {
+    if (messageHistory[i]?.channelId === channelId) messageHistory.splice(i, 1)
+  }
+  res.sendStatus(204)
+})
+
+app.patch('/api/channels/:id/visibility', async (req, res) => {
+  if (!isAdminUser(req)) return res.status(403).json({ error: 'forbidden' })
+  const channelId = req.params.id
+  if (!channelId) return res.status(400).json({ error: 'id required' })
+  const hiddenFor = Array.isArray(req.body?.hiddenFor) ? req.body.hiddenFor : undefined
+  const visibleTo = Array.isArray(req.body?.visibleTo) || req.body?.visibleTo === null ? req.body.visibleTo : undefined
+  if (hiddenFor === undefined && visibleTo === undefined) {
+    return res.status(400).json({ error: 'visibility payload required' })
+  }
+  if (channelsCol) {
+    try {
+      const update = {
+        ...(hiddenFor !== undefined ? { hiddenFor } : {}),
+        ...(visibleTo !== undefined ? { visibleTo } : {}),
+      }
+      const result = await channelsCol.findOneAndUpdate(
+        { id: channelId },
+        { $set: update },
+        { returnDocument: 'after', projection: { _id: 0 } },
+      )
+      if (!result?.value) return res.status(404).json({ error: 'not found' })
+      return res.json(result.value)
+    } catch (err) {
+      console.error('[channels] update failed', err?.message || err)
+      return res.status(500).json({ error: 'failed to update channel' })
+    }
+  }
+  const channel = channelStore.find((item) => item.id === channelId)
+  if (!channel) return res.status(404).json({ error: 'not found' })
+  if (hiddenFor !== undefined) channel.hiddenFor = hiddenFor
+  if (visibleTo !== undefined) channel.visibleTo = visibleTo
+  res.json(channel)
+})
+
 // Normalize stored rows (both legacy flat docs and new nested docs) to message shape
 function normalizeMessageRow(row) {
   const hasNestedAuthor = row && typeof row === 'object' && row.author && typeof row.author === 'object'
@@ -140,15 +259,23 @@ function normalizeMessageRow(row) {
     content: row?.content || '',
     source: row?.source || 'web',
     timestamp: row?.timestamp || row?.ts || Date.now(),
+    channelId: row?.channelId || row?.channel_id || 'general',
   }
 }
 
 app.get('/api/history', async (req, res) => {
   const limit = Math.min(Number(req.query.limit) || 200, MESSAGE_HISTORY_LIMIT)
+  const channelId = typeof req.query.channelId === 'string' ? req.query.channelId : ''
+  const isGeneral = channelId === 'general'
+  const mongoFilter = channelId
+    ? isGeneral
+      ? { $or: [{ channelId }, { channelId: { $exists: false } }] }
+      : { channelId }
+    : {}
   if (messagesCol) {
     try {
       const rows = await messagesCol
-        .find({}, { projection: { _id: 0 } })
+        .find(mongoFilter, { projection: { _id: 0 } })
         .sort({ ts: 1 })
         .limit(limit)
         .toArray()
@@ -158,8 +285,33 @@ app.get('/api/history', async (req, res) => {
       console.error('[mongo] history failed', e?.message || e)
     }
   }
-  const start = Math.max(messageHistory.length - limit, 0)
-  res.json(messageHistory.slice(start))
+  const normalized = messageHistory.map(normalizeMessageRow)
+  const filtered = channelId
+    ? normalized.filter((message) => (message.channelId || 'general') === channelId)
+    : normalized
+  const start = Math.max(filtered.length - limit, 0)
+  res.json(filtered.slice(start))
+})
+
+app.delete('/api/channels/:id', async (req, res) => {
+  const channelId = req.params.id
+  if (!channelId) return res.sendStatus(400)
+  if (messagesCol) {
+    try {
+      await messagesCol.deleteMany({ channelId })
+    } catch (e) {
+      console.error('[mongo] channel delete failed', e?.message || e)
+      return res.sendStatus(500)
+    }
+  } else {
+    for (let i = messageHistory.length - 1; i >= 0; i -= 1) {
+      const messageChannelId = messageHistory[i]?.channelId || 'general'
+      if (messageChannelId === channelId) {
+        messageHistory.splice(i, 1)
+      }
+    }
+  }
+  res.sendStatus(204)
 })
 
 // (Discord 봇 미사용) 디스코드 채널 브릿지는 제거되었습니다.
@@ -187,6 +339,7 @@ io.on('connection', (socket) => {
       content: String(payload?.content || ''),
       timestamp: Date.now(),
       source: payload?.source === 'ddnet' ? 'ddnet' : 'web',
+      channelId: String(payload?.channelId || 'general'),
     }
 
     // Broadcast to web clients
@@ -269,6 +422,7 @@ app.post('/bridge/ddnet/incoming', (req, res) => {
     content,
     timestamp: timestamp || Date.now(),
     source: 'ddnet',
+    channelId: 'ddnet',
   }
   io.emit('chat:message', bridged)
   if (messagesCol) {
@@ -280,5 +434,3 @@ app.post('/bridge/ddnet/incoming', (req, res) => {
   }
   res.sendStatus(204)
 })
-
-
