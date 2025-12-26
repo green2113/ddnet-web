@@ -68,6 +68,12 @@ function App() {
   }, [serverBase])
 
   useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+  }, [])
+
+  useEffect(() => {
     const handler = (e: any) => {
       const { x, y, message } = e.detail || {}
       setMenu({ visible: true, x, y, message })
@@ -95,6 +101,11 @@ function App() {
         })
         return next
       })
+      const isOwn = user && msg.author?.id === user.id
+      const hasFocus = document.visibilityState === 'visible'
+      if (!isOwn && !hasFocus && 'Notification' in window && Notification.permission === 'granted') {
+        new Notification(`${msg.author?.username || '누군가'}`, { body: msg.content || '' })
+      }
     })
     socket.on('chat:delete', (id: string) => {
       setMessages((prev) => prev.filter((m) => m.id !== id))
@@ -102,7 +113,7 @@ function App() {
     return () => {
       socket.disconnect()
     }
-  }, [serverBase])
+  }, [serverBase, user])
 
   // 메시지 변경 시 항상 스크롤을 맨 아래로 유지 (하단 정렬)
   useEffect(() => {
