@@ -5,10 +5,28 @@ type Props = {
   channels: Array<{ id: string; name: string }>
   activeId?: string
   serverName?: string
+  isAdmin?: boolean
+  onCreateChannel?: () => void
+  onSelectChannel?: (id: string) => void
+  onChannelAction?: (id: string, action: 'delete' | 'hide') => void
 }
 
-export default function SidebarChannels({ channels, activeId, serverName = 'DDNet Server' }: Props) {
+export default function SidebarChannels({
+  channels,
+  activeId,
+  serverName = 'DDNet Server',
+  isAdmin = false,
+  onCreateChannel,
+  onSelectChannel,
+  onChannelAction,
+}: Props) {
   const [open, setOpen] = useState(false)
+  const [contextMenu, setContextMenu] = useState<{ visible: boolean; x: number; y: number; channelId: string | null }>({
+    visible: false,
+    x: 0,
+    y: 0,
+    channelId: null,
+  })
   const wrapRef = useRef<HTMLDivElement | null>(null)
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
@@ -17,6 +35,14 @@ export default function SidebarChannels({ channels, activeId, serverName = 'DDNe
     }
     document.addEventListener('click', onDoc)
     return () => document.removeEventListener('click', onDoc)
+  }, [])
+
+  useEffect(() => {
+    const closeContextMenu = () => {
+      setContextMenu((prev) => ({ ...prev, visible: false }))
+    }
+    document.addEventListener('click', closeContextMenu)
+    return () => document.removeEventListener('click', closeContextMenu)
   }, [])
 
   return (
@@ -57,8 +83,17 @@ export default function SidebarChannels({ channels, activeId, serverName = 'DDNe
       </div>
 
       <div className="p-3">
-        <div className="text-[11px] uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
-          text channels
+        <div className="flex items-center justify-between text-[11px] uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
+          <span>text channels</span>
+          <button
+            type="button"
+            aria-label="채널 추가"
+            className="w-5 h-5 rounded flex items-center justify-center hover:opacity-80"
+            style={{ color: 'var(--text-muted)', background: 'transparent' }}
+            onClick={() => onCreateChannel && onCreateChannel()}
+          >
+            <span className="text-base leading-none">+</span>
+          </button>
         </div>
         <div className="flex-1 space-y-1">
           {channels.map((c) => (
@@ -69,6 +104,12 @@ export default function SidebarChannels({ channels, activeId, serverName = 'DDNe
                 color: 'var(--text-primary)',
                 background: c.id === activeId ? 'color-mix(in oklch, var(--accent) 14%, transparent)' : 'transparent',
               }}
+              onClick={() => onSelectChannel && onSelectChannel(c.id)}
+              onContextMenu={(e) => {
+                if (!isAdmin) return
+                e.preventDefault()
+                setContextMenu({ visible: true, x: e.clientX, y: e.clientY, channelId: c.id })
+              }}
             >
               <span style={{ color: 'var(--text-muted)' }}>#</span>
               <span className="truncate">{c.name}</span>
@@ -76,6 +117,33 @@ export default function SidebarChannels({ channels, activeId, serverName = 'DDNe
           ))}
         </div>
       </div>
+      {contextMenu.visible && contextMenu.channelId && isAdmin && (
+        <div
+          className="fixed z-50 min-w-[160px] rounded-md p-2 text-sm"
+          style={{ top: contextMenu.y, left: contextMenu.x, background: 'var(--header-bg)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            className="w-full text-left px-3 py-2 hover-surface cursor-pointer"
+            style={{ color: '#f87171' }}
+            onClick={() => {
+              if (contextMenu.channelId) onChannelAction && onChannelAction(contextMenu.channelId, 'delete')
+              setContextMenu({ visible: false, x: 0, y: 0, channelId: null })
+            }}
+          >
+            채널 삭제
+          </button>
+          <button
+            className="w-full text-left px-3 py-2 hover-surface cursor-pointer"
+            onClick={() => {
+              if (contextMenu.channelId) onChannelAction && onChannelAction(contextMenu.channelId, 'hide')
+              setContextMenu({ visible: false, x: 0, y: 0, channelId: null })
+            }}
+          >
+            채널 숨기기
+          </button>
+        </div>
+      )}
     </aside>
   )
 }
@@ -114,5 +182,4 @@ function MenuItem({ label, icon, bold }: { label: string; icon?: string; bold?: 
     </button>
   )
 }
-
 
