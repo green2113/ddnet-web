@@ -104,7 +104,7 @@ function App() {
       const isOwn = user && msg.author?.id === user.id
       const hasFocus = document.visibilityState === 'visible'
       if (!isOwn && !hasFocus && 'Notification' in window && Notification.permission === 'granted') {
-        new Notification(`${msg.author?.username || '누군가'}`, { body: msg.content || '' })
+        new Notification(`${msg.author?.displayName || '누군가'}`, { body: msg.content || '' })
       }
     })
     socket.on('chat:delete', (id: string) => {
