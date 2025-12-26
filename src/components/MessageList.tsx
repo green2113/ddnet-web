@@ -6,37 +6,46 @@ export type ChatMessage = {
   content: string
   timestamp: number
   source: 'ddnet' | 'discord' | 'web'
-  channelId?: string
-  channel?: string
 }
 
 type Props = {
   messages: ChatMessage[]
-  activeChannelId?: string
   loading?: boolean
   error?: boolean
   onRetry?: () => void
 }
 
-export default function MessageList({ messages, activeChannelId, loading = false, error = false, onRetry }: Props) {
+export default function MessageList({ messages, loading = false, error = false, onRetry }: Props) {
   const formatTime = (ts: number) =>
     new Date(ts).toLocaleTimeString('ko-KR', {
       hour: '2-digit',
       minute: '2-digit',
       hour12: true,
     })
-  const filteredMessages = activeChannelId
-    ? messages.filter((message) => (message.channelId || message.channel || 'general') === activeChannelId)
-    : messages
+
+  const renderContent = (content: string) => {
+    const parts = content.split(/(https?:\/\/[^\s]+)/g)
+    return parts.map((part, idx) => {
+      if (/^https?:\/\//.test(part)) {
+        return (
+          <a key={`${part}-${idx}`} href={part} target="_blank" rel="noreferrer" className="underline" style={{ color: 'var(--accent)' }}>
+            {part}
+          </a>
+        )
+      }
+      return <span key={idx}>{part}</span>
+    })
+  }
+
   // 날짜별 그룹 전개
-  const groups = [] as Array<{ dateKey: string; dateLabel: string; items: typeof filteredMessages }>
-  let current: { dateKey: string; dateLabel: string; items: typeof filteredMessages } | null = null
-  for (const m of filteredMessages) {
+  const groups = [] as Array<{ dateKey: string; dateLabel: string; items: typeof messages }>
+  let current: { dateKey: string; dateLabel: string; items: typeof messages } | null = null
+  for (const m of messages) {
     const d = new Date(m.timestamp)
     const dateKey = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`
     const dateLabel = d.toLocaleDateString()
     if (!current || current.dateKey !== dateKey) {
-      current = { dateKey, dateLabel, items: [] as typeof filteredMessages }
+      current = { dateKey, dateLabel, items: [] as typeof messages }
       groups.push(current)
     }
     current.items.push(m)
@@ -79,7 +88,7 @@ export default function MessageList({ messages, activeChannelId, loading = false
             ))}
           </div>
         ) : (
-          filteredMessages.length === 0 && (
+          messages.length === 0 && (
             <div className="text-center text-sm mt-16" style={{ color: 'var(--text-muted)' }}>
               아직 메시지가 없습니다. 첫 메시지를 보내보세요!
             </div>
@@ -160,9 +169,7 @@ export default function MessageList({ messages, activeChannelId, loading = false
                     </div>
                   )}
                   <div className="whitespace-pre-wrap break-words">
-                    <span>
-                      {m.content}
-                      </span>
+                    <span>{renderContent(m.content)}</span>
                   </div>
                 </div>
               </div>
@@ -174,4 +181,3 @@ export default function MessageList({ messages, activeChannelId, loading = false
     </div>
   )
 }
-
