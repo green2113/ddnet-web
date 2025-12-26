@@ -9,7 +9,7 @@ export async function onRequest(context: {
 
   // allow only the version JSON files to be served from Pages assets
   const serveLocally =
-    path === "" || path === "update.json" || path === "update/info.json";
+    path === "" || path === "update.json" || path === "info.json";
 
   if (!serveLocally) {
     const redirectUrl = "https://update.under1111.com/download/" + path;
