@@ -23,6 +23,11 @@ const io = new SocketIOServer(httpServer, {
     credentials: true,
   },
 })
+const ADMIN_USER_ID = '776421522188664843'
+const CHANNELS = [
+  { id: 'general', name: 'general' },
+  { id: 'ddnet', name: 'ddnet-bridge' },
+]
 
 app.use(cors({ origin: ORIGIN || 'http://localhost:5173', credentials: true }))
 app.use(express.json())
@@ -116,6 +121,29 @@ app.post('/auth/logout', (req, res) => {
 app.get('/api/me', (req, res) => {
   if (req.user) return res.json(req.user)
   res.json(null)
+})
+
+function canViewChannel(channel, userId, isAdmin) {
+  if (isAdmin) return true
+  if (Array.isArray(channel.visibleTo) && channel.visibleTo.length > 0) {
+    return Boolean(userId) && channel.visibleTo.includes(userId)
+  }
+  if (Array.isArray(channel.hiddenFor) && channel.hiddenFor.length > 0) {
+    return !userId || !channel.hiddenFor.includes(userId)
+  }
+  return true
+}
+
+app.get('/api/channels', (req, res) => {
+  const userId = req.user?.id || null
+  const isAdmin = userId === ADMIN_USER_ID
+  const visible = CHANNELS.filter((channel) => canViewChannel(channel, userId, isAdmin))
+  res.json(
+    visible.map(({ id, name }) => ({
+      id,
+      name,
+    })),
+  )
 })
 
 // Normalize stored rows (both legacy flat docs and new nested docs) to message shape
@@ -280,5 +308,4 @@ app.post('/bridge/ddnet/incoming', (req, res) => {
   }
   res.sendStatus(204)
 })
-
 
