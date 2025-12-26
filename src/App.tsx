@@ -30,6 +30,12 @@ type Channel = {
   name: string
 }
 
+type Channel = {
+  id: string
+  name: string
+  hidden?: boolean
+}
+
 function App() {
   const adminId = '776421522188664843'
   const [user, setUser] = useState<User | null>(null)
@@ -45,6 +51,24 @@ function App() {
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [menu, setMenu] = useState<{ visible: boolean; x: number; y: number; message: ChatMessage | null }>({ visible: false, x: 0, y: 0, message: null })
   const activeChannelId = 'general'
+
+  const playNotificationSound = () => {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext
+    if (!AudioCtx) return
+    const ctx = new AudioCtx()
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.type = 'sine'
+    osc.frequency.value = 880
+    gain.gain.value = 0.08
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.start()
+    osc.stop(ctx.currentTime + 0.15)
+    osc.onended = () => {
+      ctx.close()
+    }
+  }
 
   const playNotificationSound = () => {
     const AudioCtx = window.AudioContext || (window as any).webkitAudioContext
