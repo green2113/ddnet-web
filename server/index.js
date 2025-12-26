@@ -24,6 +24,11 @@ const io = new SocketIOServer(httpServer, {
     credentials: true,
   },
 })
+const ADMIN_USER_ID = '776421522188664843'
+const CHANNELS = [
+  { id: 'general', name: 'general' },
+  { id: 'ddnet', name: 'ddnet-bridge' },
+]
 
 app.use(cors({ origin: ORIGIN || 'http://localhost:5173', credentials: true }))
 app.use(express.json())
@@ -34,6 +39,7 @@ app.set('trust proxy', 1)
 // Message history in memory (fallback when MongoDB is not configured)
 const MESSAGE_HISTORY_LIMIT = Number(process.env.MESSAGE_HISTORY_LIMIT || 500)
 const messageHistory = []
+const channelStore = []
 
 const defaultChannels = () => [
   { id: 'general', name: 'general', hidden: false, createdAt: Date.now(), createdBy: 'system' },
@@ -91,7 +97,6 @@ async function initMongo() {
   await mongoClient.connect()
   const db = mongoClient.db(process.env.MONGO_DB || 'ddnet')
   messagesCol = db.collection(process.env.MONGO_COLL || 'messages')
-  await messagesCol.createIndex({ ts: 1 })
   channelsCol = db.collection(process.env.MONGO_CHANNELS_COLL || 'channels')
   await channelsCol.createIndex({ name: 1 }, { unique: true })
   const existing = await channelsCol.countDocuments()
@@ -268,6 +273,7 @@ function normalizeMessageRow(row) {
     source: row?.source || 'web',
     channelId: row?.channelId || 'general',
     timestamp: row?.timestamp || row?.ts || Date.now(),
+    channelId: row?.channelId || row?.channel_id || 'general',
   }
 }
 
@@ -322,6 +328,7 @@ io.on('connection', (socket) => {
       channelId,
       timestamp: Date.now(),
       source: payload?.source === 'ddnet' ? 'ddnet' : 'web',
+      channelId: String(payload?.channelId || 'general'),
     }
 
     // Broadcast to web clients
@@ -405,6 +412,7 @@ app.post('/bridge/ddnet/incoming', (req, res) => {
     channelId: 'ddnet-bridge',
     timestamp: timestamp || Date.now(),
     source: 'ddnet',
+    channelId: 'ddnet',
   }
   io.emit('chat:message', bridged)
   if (messagesCol) {
