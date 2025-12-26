@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { io, Socket } from 'socket.io-client'
 import axios from 'axios'
+import { useNavigate, useParams } from 'react-router-dom'
 import SidebarGuilds from './components/SidebarGuilds'
 import SidebarChannels from './components/SidebarChannels'
 import Header from './components/Header'
@@ -43,6 +44,8 @@ function App() {
   const [isDark, setIsDark] = useState(true)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [menu, setMenu] = useState<{ visible: boolean; x: number; y: number; message: ChatMessage | null }>({ visible: false, x: 0, y: 0, message: null })
+  const { channelId: routeChannelId } = useParams()
+  const navigate = useNavigate()
 
   const playNotificationSound = () => {
     const AudioCtx = window.AudioContext || (window as any).webkitAudioContext
@@ -110,10 +113,15 @@ function App() {
 
   useEffect(() => {
     if (!channels.length) return
+    const requested = routeChannelId && channels.find((channel) => channel.id === routeChannelId)
+    if (requested) {
+      setActiveChannelId(requested.id)
+      return
+    }
     if (!activeChannelId || !channels.find((channel) => channel.id === activeChannelId)) {
       setActiveChannelId(channels[0].id)
     }
-  }, [channels, activeChannelId])
+  }, [channels, activeChannelId, routeChannelId])
 
   useEffect(() => {
     activeChannelRef.current = activeChannelId
@@ -121,6 +129,13 @@ function App() {
       fetchHistory(activeChannelId)
     }
   }, [activeChannelId])
+
+  useEffect(() => {
+    if (!activeChannelId) return
+    if (routeChannelId !== activeChannelId) {
+      navigate(`/channels/${activeChannelId}`, { replace: true })
+    }
+  }, [activeChannelId, navigate, routeChannelId])
 
   useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default') {
@@ -217,7 +232,10 @@ function App() {
         <SidebarChannels
           channels={channels}
           activeId={activeChannelId}
-          onSelect={setActiveChannelId}
+          onSelect={(channelId) => {
+            setActiveChannelId(channelId)
+            navigate(`/channels/${channelId}`)
+          }}
           onCreateChannel={() => {
             if (!canManageChannels) return
             const name = window.prompt('채널 이름을 입력하세요')
