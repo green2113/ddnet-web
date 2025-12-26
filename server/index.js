@@ -23,6 +23,11 @@ const io = new SocketIOServer(httpServer, {
     credentials: true,
   },
 })
+const ADMIN_USER_ID = '776421522188664843'
+const CHANNELS = [
+  { id: 'general', name: 'general' },
+  { id: 'ddnet', name: 'ddnet-bridge' },
+]
 
 app.use(cors({ origin: ORIGIN || 'http://localhost:5173', credentials: true }))
 app.use(express.json())
@@ -122,6 +127,13 @@ app.get('/api/me', (req, res) => {
   res.json(null)
 })
 
+function canViewChannel(channel, userId, isAdmin) {
+  if (isAdmin) return true
+  if (Array.isArray(channel.visibleTo) && channel.visibleTo.length > 0) {
+    return Boolean(userId) && channel.visibleTo.includes(userId)
+  }
+  if (Array.isArray(channel.hiddenFor) && channel.hiddenFor.length > 0) {
+    return !userId || !channel.hiddenFor.includes(userId)
 const ADMIN_ID = '776421522188664843'
 const isAdminUser = (req) => req.user?.id === ADMIN_ID
 const isChannelVisible = (channel, userId) => {
@@ -434,3 +446,4 @@ app.post('/bridge/ddnet/incoming', (req, res) => {
   }
   res.sendStatus(204)
 })
+
