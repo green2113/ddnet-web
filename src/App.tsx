@@ -16,10 +16,17 @@ type User = {
 
 type ChatMessage = {
   id: string
-  author: { id: string; username: string; avatar?: string | null }
+  author: { id: string; username: string; displayName?: string; avatar?: string | null }
   content: string
   timestamp: number
   source: 'ddnet' | 'discord' | 'web'
+  channelId?: string
+  channel?: string
+}
+
+type Channel = {
+  id: string
+  name: string
 }
 
 function App() {
@@ -29,11 +36,14 @@ function App() {
   const [loadError, setLoadError] = useState(false)
   const [input, setInput] = useState('')
   const socketRef = useRef<Socket | null>(null)
+  const [channels, setChannels] = useState<Channel[]>([])
+  const [hiddenChannelIds, setHiddenChannelIds] = useState<string[]>([])
+  const [selectedChannelId, setSelectedChannelId] = useState<string>('')
   const [isDark, setIsDark] = useState(true)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [menu, setMenu] = useState<{ visible: boolean; x: number; y: number; message: ChatMessage | null }>({ visible: false, x: 0, y: 0, message: null })
 
-    const playNotificationSound = () => {
+  const playNotificationSound = () => {
     const AudioCtx = window.AudioContext || (window as any).webkitAudioContext
     if (!AudioCtx) return
     const ctx = new AudioCtx()
@@ -50,20 +60,30 @@ function App() {
       ctx.close()
     }
   }
-  
+
   const serverBase = useMemo(() => {
     const api = (import.meta as any).env?.VITE_API_BASE as string | undefined
     return api ? api.replace(/\/$/, '') : ''
   }, [])
 
-  const fetchHistory = () => {
+  const adminId = useMemo(() => (import.meta as any).env?.VITE_ADMIN_ID as string | undefined, [])
+  const isAdmin = Boolean(adminId && user?.id === adminId)
+
+  const visibleChannels = useMemo(() => channels.filter((channel) => !hiddenChannelIds.includes(channel.id)), [channels, hiddenChannelIds])
+  const defaultChannelId = visibleChannels[0]?.id || 'general'
+
+  const fetchHistory = (channelId = selectedChannelId || defaultChannelId) => {
     setLoadingMessages(true)
     setLoadError(false)
     axios
-      .get(`${serverBase}/api/history?limit=200`, { withCredentials: true })
+      .get(`${serverBase}/api/history`, { withCredentials: true, params: { limit: 200, channel: channelId } })
       .then((res) => {
         if (Array.isArray(res.data)) {
-          setMessages(res.data)
+          const normalized = res.data.map((message: ChatMessage) => ({
+            ...message,
+            channelId: message.channelId || message.channel || channelId,
+          }))
+          setMessages(normalized)
         }
         setLoadingMessages(false)
       })
@@ -84,6 +104,39 @@ function App() {
 
     fetchHistory()
   }, [serverBase])
+
+  useEffect(() => {
+    const fallbackChannels: Channel[] = [
+      { id: 'general', name: 'general' },
+      { id: 'ddnet', name: 'ddnet-bridge' },
+    ]
+
+    axios
+      .get(`${serverBase}/api/channels`, { withCredentials: true })
+      .then((res) => {
+        if (Array.isArray(res.data) && res.data.length > 0) {
+          setChannels(res.data)
+          return
+        }
+        setChannels(fallbackChannels)
+      })
+      .catch(() => {
+        setChannels(fallbackChannels)
+      })
+  }, [serverBase])
+
+  useEffect(() => {
+    if (!visibleChannels.length) return
+    const stillExists = visibleChannels.some((channel) => channel.id === selectedChannelId)
+    if (!stillExists) {
+      setSelectedChannelId(visibleChannels[0].id)
+    }
+  }, [selectedChannelId, visibleChannels])
+
+  useEffect(() => {
+    if (!selectedChannelId) return
+    fetchHistory(selectedChannelId)
+  }, [selectedChannelId])
 
   useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default') {
@@ -110,8 +163,12 @@ function App() {
     socketRef.current = socket
     socket.on('connect', () => {})
     socket.on('chat:message', (msg: ChatMessage) => {
+      const normalized = {
+        ...msg,
+        channelId: msg.channelId || msg.channel || defaultChannelId,
+      }
       setMessages((prev) => {
-        const next = [...prev, msg]
+        const next = [...prev, normalized]
         // 하단 정렬 유지: 새 메시지 후 스크롤 맨 아래
         requestAnimationFrame(() => {
           const el = document.getElementById('messages-scroll')
@@ -132,7 +189,7 @@ function App() {
     return () => {
       socket.disconnect()
     }
-  }, [serverBase, user])
+  }, [serverBase, user, defaultChannelId])
 
   // 메시지 변경 시 항상 스크롤을 맨 아래로 유지 (하단 정렬)
   useEffect(() => {
@@ -159,18 +216,61 @@ function App() {
     socketRef.current?.emit('chat:send', {
       content: input,
       source: 'web',
+      channelId: selectedChannelId || defaultChannelId,
     })
     setInput('')
   }
+
+  const handleCreateChannel = () => {
+    const name = window.prompt('새 채널 이름을 입력하세요')
+    if (!name) return
+    const trimmed = name.trim()
+    if (!trimmed) return
+    const baseId = trimmed
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-_]/g, '')
+    if (!baseId) return
+    let nextId = baseId
+    let index = 1
+    while (channels.some((channel) => channel.id === nextId)) {
+      nextId = `${baseId}-${index}`
+      index += 1
+    }
+    const nextChannel = { id: nextId, name: trimmed }
+    setChannels((prev) => [...prev, nextChannel])
+    setSelectedChannelId(nextId)
+  }
+
+  const handleChannelAction = (channelId: string, action: 'delete' | 'hide') => {
+    if (action === 'delete') {
+      setChannels((prev) => prev.filter((channel) => channel.id !== channelId))
+      setHiddenChannelIds((prev) => prev.filter((id) => id !== channelId))
+      return
+    }
+    if (action === 'hide') {
+      setHiddenChannelIds((prev) => (prev.includes(channelId) ? prev : [...prev, channelId]))
+    }
+  }
+
+  const activeChannel = visibleChannels.find((channel) => channel.id === selectedChannelId) || visibleChannels[0]
+  const activeChannelName = activeChannel?.name || 'general'
 
   return (
     <div className={(isDark ? 'theme-dark ' : '') + 'app-shell flex'} style={{ background: 'var(--bg-app)', color: 'var(--text-primary)' }}>
       <SidebarGuilds />
       <div className="flex-1 flex min-w-0">
-        <SidebarChannels channels={[{ id: 'general', name: 'general' }, { id: 'ddnet', name: 'ddnet-bridge' }]} activeId={'general'} />
+        <SidebarChannels
+          channels={visibleChannels}
+          activeId={selectedChannelId || defaultChannelId}
+          onCreateChannel={handleCreateChannel}
+          onSelectChannel={setSelectedChannelId}
+          onChannelAction={handleChannelAction}
+          isAdmin={isAdmin}
+        />
         <main className="flex-1 flex flex-col min-w-0">
           <Header
-            title="# general"
+            title={`# ${activeChannelName}`}
             isDark={isDark}
             onLight={() => setIsDark(false)}
             onDark={() => setIsDark(true)}
@@ -178,7 +278,7 @@ function App() {
             onLogin={login}
             onLogout={logout}
           />
-          <MessageList messages={messages} loading={loadingMessages} error={loadError} onRetry={fetchHistory} />
+          <MessageList messages={messages} activeChannelId={selectedChannelId || defaultChannelId} loading={loadingMessages} error={loadError} onRetry={fetchHistory} />
           <Composer value={input} onChange={setInput} onSend={sendMessage} />
           {menu.visible && menu.message && (
             <div
