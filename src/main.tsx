@@ -7,6 +7,7 @@ import Login from './routes/Login.tsx'
 
 const router = createBrowserRouter([
   { path: '/', element: <App /> },
+  { path: '/channels/:channelId', element: <App /> },
   { path: '/login', element: <Login /> },
 ])
 
