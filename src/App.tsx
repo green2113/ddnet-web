@@ -38,6 +38,7 @@ function App() {
   const socketRef = useRef<Socket | null>(null)
   const [channels, setChannels] = useState<Channel[]>([])
   const [hiddenChannelIds, setHiddenChannelIds] = useState<string[]>([])
+  const [selectedChannelId, setSelectedChannelId] = useState<string>('')
   const [activeChannelId, setActiveChannelId] = useState<string>('')
   const [isDark, setIsDark] = useState(true)
   const [showAuthModal, setShowAuthModal] = useState(false)
@@ -73,7 +74,7 @@ function App() {
   const visibleChannels = useMemo(() => channels.filter((channel) => !hiddenChannelIds.includes(channel.id)), [channels, hiddenChannelIds])
   const defaultChannelId = visibleChannels[0]?.id || 'general'
 
-  const fetchHistory = (channelId = activeChannelId || defaultChannelId) => {
+  const fetchHistory = (channelId = selectedChannelId || defaultChannelId) => {
     setLoadingMessages(true)
     setLoadError(false)
     axios
@@ -128,16 +129,16 @@ function App() {
 
   useEffect(() => {
     if (!visibleChannels.length) return
-    const stillExists = visibleChannels.some((channel) => channel.id === activeChannelId)
+    const stillExists = visibleChannels.some((channel) => channel.id === selectedChannelId)
     if (!stillExists) {
-      setActiveChannelId(visibleChannels[0].id)
+      setSelectedChannelId(visibleChannels[0].id)
     }
-  }, [activeChannelId, visibleChannels])
+  }, [selectedChannelId, visibleChannels])
 
   useEffect(() => {
-    if (!activeChannelId) return
-    fetchHistory(activeChannelId)
-  }, [activeChannelId])
+    if (!selectedChannelId) return
+    fetchHistory(selectedChannelId)
+  }, [selectedChannelId])
 
   useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default') {
@@ -217,7 +218,7 @@ function App() {
     socketRef.current?.emit('chat:send', {
       content: input,
       source: 'web',
-      channelId: activeChannelId || defaultChannelId,
+      channelId: selectedChannelId || defaultChannelId,
     })
     setInput('')
   }
@@ -240,7 +241,7 @@ function App() {
     }
     const nextChannel = { id: nextId, name: trimmed }
     setChannels((prev) => [...prev, nextChannel])
-    setActiveChannelId(nextId)
+    setSelectedChannelId(nextId)
   }
 
   const handleChannelAction = (channelId: string, action: 'delete' | 'hide') => {
@@ -254,7 +255,7 @@ function App() {
     }
   }
 
-  const activeChannel = visibleChannels.find((channel) => channel.id === activeChannelId) || visibleChannels[0]
+  const activeChannel = visibleChannels.find((channel) => channel.id === selectedChannelId) || visibleChannels[0]
   const activeChannelName = activeChannel?.name || 'general'
 
   return (
@@ -263,9 +264,9 @@ function App() {
       <div className="flex-1 flex min-w-0">
         <SidebarChannels
           channels={visibleChannels}
-          activeId={activeChannelId || defaultChannelId}
+          activeId={selectedChannelId || defaultChannelId}
           onCreateChannel={handleCreateChannel}
-          onSelectChannel={setActiveChannelId}
+          onSelectChannel={setSelectedChannelId}
           onChannelAction={handleChannelAction}
           isAdmin={isAdmin}
         />
@@ -279,7 +280,7 @@ function App() {
             onLogin={login}
             onLogout={logout}
           />
-          <MessageList messages={messages} activeChannelId={activeChannelId || defaultChannelId} loading={loadingMessages} error={loadError} onRetry={fetchHistory} />
+          <MessageList messages={messages} activeChannelId={selectedChannelId || defaultChannelId} loading={loadingMessages} error={loadError} onRetry={fetchHistory} />
           <Composer value={input} onChange={setInput} onSend={sendMessage} />
           {menu.visible && menu.message && (
             <div
