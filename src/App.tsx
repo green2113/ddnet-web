@@ -21,6 +21,13 @@ type ChatMessage = {
   timestamp: number
   channelId: string
   source: 'ddnet' | 'discord' | 'web'
+  channelId?: string
+  channel?: string
+}
+
+type Channel = {
+  id: string
+  name: string
 }
 
 type Channel = {
@@ -35,7 +42,7 @@ function App() {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [loadingMessages, setLoadingMessages] = useState(true)
   const [loadError, setLoadError] = useState(false)
-  const [channels, setChannels] = useState<Channel[]>([])
+  const [channels, setChannels] = useState<Array<{ id: string; name: string; hidden?: boolean }>>([])
   const [activeChannelId, setActiveChannelId] = useState('')
   const [input, setInput] = useState('')
   const socketRef = useRef<Socket | null>(null)
@@ -43,6 +50,43 @@ function App() {
   const [isDark, setIsDark] = useState(true)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [menu, setMenu] = useState<{ visible: boolean; x: number; y: number; message: ChatMessage | null }>({ visible: false, x: 0, y: 0, message: null })
+  const activeChannelId = 'general'
+
+  const playNotificationSound = () => {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext
+    if (!AudioCtx) return
+    const ctx = new AudioCtx()
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.type = 'sine'
+    osc.frequency.value = 880
+    gain.gain.value = 0.08
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.start()
+    osc.stop(ctx.currentTime + 0.15)
+    osc.onended = () => {
+      ctx.close()
+    }
+  }
+
+  const playNotificationSound = () => {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext
+    if (!AudioCtx) return
+    const ctx = new AudioCtx()
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.type = 'sine'
+    osc.frequency.value = 880
+    gain.gain.value = 0.08
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.start()
+    osc.stop(ctx.currentTime + 0.15)
+    osc.onended = () => {
+      ctx.close()
+    }
+  }
 
   const playNotificationSound = () => {
     const AudioCtx = window.AudioContext || (window as any).webkitAudioContext
@@ -75,7 +119,11 @@ function App() {
       .get(`${serverBase}/api/history`, { params: { limit: 200, channelId }, withCredentials: true })
       .then((res) => {
         if (Array.isArray(res.data)) {
-          setMessages(res.data)
+          const normalized = res.data.map((message: ChatMessage) => ({
+            ...message,
+            channelId: message.channelId || message.channel || channelId,
+          }))
+          setMessages(normalized)
         }
         setLoadingMessages(false)
       })
@@ -203,6 +251,7 @@ function App() {
       content: input,
       channelId: activeChannelId,
       source: 'web',
+      channelId: selectedChannelId || defaultChannelId,
     })
     setInput('')
   }
