@@ -33,6 +33,24 @@ function App() {
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [menu, setMenu] = useState<{ visible: boolean; x: number; y: number; message: ChatMessage | null }>({ visible: false, x: 0, y: 0, message: null })
 
+    const playNotificationSound = () => {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext
+    if (!AudioCtx) return
+    const ctx = new AudioCtx()
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.type = 'sine'
+    osc.frequency.value = 880
+    gain.gain.value = 0.08
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.start()
+    osc.stop(ctx.currentTime + 0.15)
+    osc.onended = () => {
+      ctx.close()
+    }
+  }
+  
   const serverBase = useMemo(() => {
     const api = (import.meta as any).env?.VITE_API_BASE as string | undefined
     return api ? api.replace(/\/$/, '') : ''
@@ -105,6 +123,7 @@ function App() {
       const hasFocus = document.visibilityState === 'visible'
       if (!isOwn && !hasFocus && 'Notification' in window && Notification.permission === 'granted') {
         new Notification(`${msg.author?.displayName || '누군가'}`, { body: msg.content || '' })
+        playNotificationSound()
       }
     })
     socket.on('chat:delete', (id: string) => {
