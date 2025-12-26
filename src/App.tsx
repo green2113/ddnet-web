@@ -16,10 +16,11 @@ type User = {
 
 type ChatMessage = {
   id: string
-  author: { id: string; username: string; avatar?: string | null }
+  author: { id: string; username: string; displayName?: string; avatar?: string | null }
   content: string
   timestamp: number
   source: 'ddnet' | 'discord' | 'web'
+  channelId: string
 }
 
 function App() {
@@ -32,6 +33,7 @@ function App() {
   const [isDark, setIsDark] = useState(true)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [menu, setMenu] = useState<{ visible: boolean; x: number; y: number; message: ChatMessage | null }>({ visible: false, x: 0, y: 0, message: null })
+  const activeChannelId = 'general'
 
     const playNotificationSound = () => {
     const AudioCtx = window.AudioContext || (window as any).webkitAudioContext
@@ -60,7 +62,7 @@ function App() {
     setLoadingMessages(true)
     setLoadError(false)
     axios
-      .get(`${serverBase}/api/history?limit=200`, { withCredentials: true })
+      .get(`${serverBase}/api/history?limit=200&channelId=${encodeURIComponent(activeChannelId)}`, { withCredentials: true })
       .then((res) => {
         if (Array.isArray(res.data)) {
           setMessages(res.data)
@@ -159,6 +161,7 @@ function App() {
     socketRef.current?.emit('chat:send', {
       content: input,
       source: 'web',
+      channelId: activeChannelId,
     })
     setInput('')
   }

@@ -259,15 +259,23 @@ function normalizeMessageRow(row) {
     content: row?.content || '',
     source: row?.source || 'web',
     timestamp: row?.timestamp || row?.ts || Date.now(),
+    channelId: row?.channelId || row?.channel_id || 'general',
   }
 }
 
 app.get('/api/history', async (req, res) => {
   const limit = Math.min(Number(req.query.limit) || 200, MESSAGE_HISTORY_LIMIT)
+  const channelId = typeof req.query.channelId === 'string' ? req.query.channelId : ''
+  const isGeneral = channelId === 'general'
+  const mongoFilter = channelId
+    ? isGeneral
+      ? { $or: [{ channelId }, { channelId: { $exists: false } }] }
+      : { channelId }
+    : {}
   if (messagesCol) {
     try {
       const rows = await messagesCol
-        .find({}, { projection: { _id: 0 } })
+        .find(mongoFilter, { projection: { _id: 0 } })
         .sort({ ts: 1 })
         .limit(limit)
         .toArray()
@@ -277,8 +285,33 @@ app.get('/api/history', async (req, res) => {
       console.error('[mongo] history failed', e?.message || e)
     }
   }
-  const start = Math.max(messageHistory.length - limit, 0)
-  res.json(messageHistory.slice(start))
+  const normalized = messageHistory.map(normalizeMessageRow)
+  const filtered = channelId
+    ? normalized.filter((message) => (message.channelId || 'general') === channelId)
+    : normalized
+  const start = Math.max(filtered.length - limit, 0)
+  res.json(filtered.slice(start))
+})
+
+app.delete('/api/channels/:id', async (req, res) => {
+  const channelId = req.params.id
+  if (!channelId) return res.sendStatus(400)
+  if (messagesCol) {
+    try {
+      await messagesCol.deleteMany({ channelId })
+    } catch (e) {
+      console.error('[mongo] channel delete failed', e?.message || e)
+      return res.sendStatus(500)
+    }
+  } else {
+    for (let i = messageHistory.length - 1; i >= 0; i -= 1) {
+      const messageChannelId = messageHistory[i]?.channelId || 'general'
+      if (messageChannelId === channelId) {
+        messageHistory.splice(i, 1)
+      }
+    }
+  }
+  res.sendStatus(204)
 })
 
 // (Discord 봇 미사용) 디스코드 채널 브릿지는 제거되었습니다.
@@ -306,6 +339,7 @@ io.on('connection', (socket) => {
       content: String(payload?.content || ''),
       timestamp: Date.now(),
       source: payload?.source === 'ddnet' ? 'ddnet' : 'web',
+      channelId: String(payload?.channelId || 'general'),
     }
 
     // Broadcast to web clients
@@ -388,6 +422,7 @@ app.post('/bridge/ddnet/incoming', (req, res) => {
     content,
     timestamp: timestamp || Date.now(),
     source: 'ddnet',
+    channelId: 'ddnet',
   }
   io.emit('chat:message', bridged)
   if (messagesCol) {
