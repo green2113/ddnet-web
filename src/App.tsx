@@ -16,33 +16,57 @@ type User = {
 
 type ChatMessage = {
   id: string
-  author: { id: string; username: string; avatar?: string | null }
+  author: { id: string; username: string; displayName?: string; avatar?: string | null }
   content: string
   timestamp: number
+  channelId: string
   source: 'ddnet' | 'discord' | 'web'
 }
 
 function App() {
+  const adminId = '776421522188664843'
   const [user, setUser] = useState<User | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [loadingMessages, setLoadingMessages] = useState(true)
   const [loadError, setLoadError] = useState(false)
+  const [channels, setChannels] = useState<Array<{ id: string; name: string; hidden?: boolean }>>([])
+  const [activeChannelId, setActiveChannelId] = useState('')
   const [input, setInput] = useState('')
   const socketRef = useRef<Socket | null>(null)
+  const activeChannelRef = useRef('')
   const [isDark, setIsDark] = useState(true)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [menu, setMenu] = useState<{ visible: boolean; x: number; y: number; message: ChatMessage | null }>({ visible: false, x: 0, y: 0, message: null })
+
+  const playNotificationSound = () => {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext
+    if (!AudioCtx) return
+    const ctx = new AudioCtx()
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.type = 'sine'
+    osc.frequency.value = 880
+    gain.gain.value = 0.08
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.start()
+    osc.stop(ctx.currentTime + 0.15)
+    osc.onended = () => {
+      ctx.close()
+    }
+  }
 
   const serverBase = useMemo(() => {
     const api = (import.meta as any).env?.VITE_API_BASE as string | undefined
     return api ? api.replace(/\/$/, '') : ''
   }, [])
 
-  const fetchHistory = () => {
+  const fetchHistory = (channelId: string) => {
+    if (!channelId) return
     setLoadingMessages(true)
     setLoadError(false)
     axios
-      .get(`${serverBase}/api/history?limit=200`, { withCredentials: true })
+      .get(`${serverBase}/api/history`, { params: { limit: 200, channelId }, withCredentials: true })
       .then((res) => {
         if (Array.isArray(res.data)) {
           setMessages(res.data)
@@ -55,6 +79,17 @@ function App() {
       })
   }
 
+  const fetchChannels = () => {
+    axios
+      .get(`${serverBase}/api/channels`, { withCredentials: true })
+      .then((res) => {
+        if (Array.isArray(res.data)) {
+          setChannels(res.data)
+        }
+      })
+      .catch(() => {})
+  }
+
   useEffect(() => {
     setLoadingMessages(true)
     axios
@@ -64,8 +99,28 @@ function App() {
         setUser(null)
       })
 
-    fetchHistory()
+    fetchChannels()
   }, [serverBase])
+
+  useEffect(() => {
+    if (!channels.length) return
+    if (!activeChannelId || !channels.find((channel) => channel.id === activeChannelId)) {
+      setActiveChannelId(channels[0].id)
+    }
+  }, [channels, activeChannelId])
+
+  useEffect(() => {
+    activeChannelRef.current = activeChannelId
+    if (activeChannelId) {
+      fetchHistory(activeChannelId)
+    }
+  }, [activeChannelId])
+
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+  }, [])
 
   useEffect(() => {
     const handler = (e: any) => {
@@ -85,16 +140,27 @@ function App() {
     const socket = io(serverBase, { withCredentials: true })
     socketRef.current = socket
     socket.on('connect', () => {})
+    socket.on('channels:update', () => {
+      fetchChannels()
+    })
     socket.on('chat:message', (msg: ChatMessage) => {
-      setMessages((prev) => {
-        const next = [...prev, msg]
-        // 하단 정렬 유지: 새 메시지 후 스크롤 맨 아래
-        requestAnimationFrame(() => {
-          const el = document.getElementById('messages-scroll')
-          if (el) el.scrollTop = el.scrollHeight
+      if (msg.channelId === activeChannelRef.current) {
+        setMessages((prev) => {
+          const next = [...prev, msg]
+          // 하단 정렬 유지: 새 메시지 후 스크롤 맨 아래
+          requestAnimationFrame(() => {
+            const el = document.getElementById('messages-scroll')
+            if (el) el.scrollTop = el.scrollHeight
+          })
+          return next
         })
-        return next
-      })
+      }
+      const isOwn = user && msg.author?.id === user.id
+      const hasFocus = document.visibilityState === 'visible'
+      if (!isOwn && !hasFocus && 'Notification' in window && Notification.permission === 'granted') {
+        new Notification(`${msg.author?.displayName || msg.author?.username || '누군가'}`, { body: msg.content || '' })
+        playNotificationSound()
+      }
     })
     socket.on('chat:delete', (id: string) => {
       setMessages((prev) => prev.filter((m) => m.id !== id))
@@ -102,7 +168,7 @@ function App() {
     return () => {
       socket.disconnect()
     }
-  }, [serverBase])
+  }, [serverBase, user])
 
   // 메시지 변경 시 항상 스크롤을 맨 아래로 유지 (하단 정렬)
   useEffect(() => {
@@ -122,25 +188,52 @@ function App() {
 
   const sendMessage = () => {
     if (!input.trim()) return
+    if (!activeChannelId) return
     if (!user) {
       setShowAuthModal(true)
       return
     }
     socketRef.current?.emit('chat:send', {
       content: input,
+      channelId: activeChannelId,
       source: 'web',
     })
     setInput('')
   }
 
+  const activeChannel = channels.find((channel) => channel.id === activeChannelId)
+  const canManageChannels = user?.id === adminId
+
   return (
     <div className={(isDark ? 'theme-dark ' : '') + 'app-shell flex'} style={{ background: 'var(--bg-app)', color: 'var(--text-primary)' }}>
       <SidebarGuilds />
       <div className="flex-1 flex min-w-0">
-        <SidebarChannels channels={[{ id: 'general', name: 'general' }, { id: 'ddnet', name: 'ddnet-bridge' }]} activeId={'general'} />
+        <SidebarChannels
+          channels={channels}
+          activeId={activeChannelId}
+          onSelect={setActiveChannelId}
+          onCreateChannel={() => {
+            if (!canManageChannels) return
+            const name = window.prompt('채널 이름을 입력하세요')
+            if (!name) return
+            axios.post(`${serverBase}/api/channels`, { name }, { withCredentials: true }).then(fetchChannels).catch(() => {})
+          }}
+          onDeleteChannel={(channelId) => {
+            if (!canManageChannels) return
+            axios.delete(`${serverBase}/api/channels/${channelId}`, { withCredentials: true }).then(fetchChannels).catch(() => {})
+          }}
+          onToggleChannelHidden={(channelId, hidden) => {
+            if (!canManageChannels) return
+            axios
+              .patch(`${serverBase}/api/channels/${channelId}/hidden`, { hidden }, { withCredentials: true })
+              .then(fetchChannels)
+              .catch(() => {})
+          }}
+          canManage={canManageChannels}
+        />
         <main className="flex-1 flex flex-col min-w-0">
           <Header
-            title="# general"
+            title={`# ${activeChannel?.name || 'general'}`}
             isDark={isDark}
             onLight={() => setIsDark(false)}
             onDark={() => setIsDark(true)}
@@ -148,7 +241,7 @@ function App() {
             onLogin={login}
             onLogout={logout}
           />
-          <MessageList messages={messages} loading={loadingMessages} error={loadError} onRetry={fetchHistory} />
+          <MessageList messages={messages} loading={loadingMessages} error={loadError} onRetry={() => fetchHistory(activeChannelId)} />
           <Composer value={input} onChange={setInput} onSend={sendMessage} />
           {menu.visible && menu.message && (
             <div
