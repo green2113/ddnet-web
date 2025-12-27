@@ -333,7 +333,7 @@ function App() {
             onLogout={logout}
             onToggleChannels={() => setShowMobileChannels((prev) => !prev)}
           />
-          <MessageList messages={messages} loading={loadingMessages} error={loadError} onRetry={() => fetchHistory(activeChannelId)} />
+          <MessageList messages={messages} adminIds={adminIds} loading={loadingMessages} error={loadError} onRetry={() => fetchHistory(activeChannelId)} />
           <Composer value={input} onChange={setInput} onSend={sendMessage} />
           {menu.visible && menu.message && (
             <div
