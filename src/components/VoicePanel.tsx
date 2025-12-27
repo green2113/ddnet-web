@@ -27,8 +27,21 @@ const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }]
 export default function VoicePanel({ channelId, socket, user, onRequireLogin }: VoicePanelProps) {
   const [joined, setJoined] = useState(false)
   const [members, setMembers] = useState<VoiceMember[]>([])
+  const [speakingIds, setSpeakingIds] = useState<string[]>([])
   const localStreamRef = useRef<MediaStream | null>(null)
   const peersRef = useRef<Map<string, RTCPeerConnection>>(new Map())
+  const speakingRef = useRef<Set<string>>(new Set())
+  const analyserRef = useRef<
+    Map<
+      string,
+      {
+        ctx: AudioContext
+        analyser: AnalyserNode
+        data: Uint8Array
+        raf: number
+      }
+    >
+  >(new Map())
 
   const cleanupPeer = (peerId: string) => {
     const peer = peersRef.current.get(peerId)
@@ -36,11 +49,54 @@ export default function VoicePanel({ channelId, socket, user, onRequireLogin }: 
       peer.close()
       peersRef.current.delete(peerId)
     }
+    const analyser = analyserRef.current.get(peerId)
+    if (analyser) {
+      cancelAnimationFrame(analyser.raf)
+      analyser.ctx.close()
+      analyserRef.current.delete(peerId)
+    }
+    if (speakingRef.current.has(peerId)) {
+      speakingRef.current.delete(peerId)
+      setSpeakingIds(Array.from(speakingRef.current))
+    }
     const audio = document.getElementById(`voice-audio-${peerId}`) as HTMLAudioElement | null
     if (audio) {
       audio.srcObject = null
       audio.remove()
     }
+  }
+
+  const startSpeakingMonitor = (peerId: string, stream: MediaStream) => {
+    if (analyserRef.current.has(peerId)) return
+    const ctx = new AudioContext()
+    const source = ctx.createMediaStreamSource(stream)
+    const analyser = ctx.createAnalyser()
+    analyser.fftSize = 512
+    source.connect(analyser)
+    const data = new Uint8Array(analyser.frequencyBinCount)
+
+    const tick = () => {
+      analyser.getByteFrequencyData(data)
+      let sum = 0
+      for (const value of data) sum += value
+      const avg = sum / data.length
+      const isSpeaking = avg > 22
+      const currentlySpeaking = speakingRef.current.has(peerId)
+      if (isSpeaking !== currentlySpeaking) {
+        if (isSpeaking) {
+          speakingRef.current.add(peerId)
+        } else {
+          speakingRef.current.delete(peerId)
+        }
+        setSpeakingIds(Array.from(speakingRef.current))
+      }
+      const raf = requestAnimationFrame(tick)
+      const current = analyserRef.current.get(peerId)
+      if (current) current.raf = raf
+    }
+
+    const raf = requestAnimationFrame(tick)
+    analyserRef.current.set(peerId, { ctx, analyser, data, raf })
   }
 
   const leaveVoice = () => {
@@ -83,6 +139,7 @@ export default function VoicePanel({ channelId, socket, user, onRequireLogin }: 
       const [stream] = event.streams
       if (stream) {
         audio.srcObject = stream
+        startSpeakingMonitor(peerId, stream)
       }
     }
 
@@ -208,22 +265,32 @@ export default function VoicePanel({ channelId, socket, user, onRequireLogin }: 
         )}
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-        {members.map((member) => (
-          <div key={member.id} className="flex items-center gap-3 rounded-md px-3 py-2" style={{ background: 'var(--panel)' }}>
-            <div className="w-10 h-10 rounded-full overflow-hidden" style={{ background: 'var(--input-bg)' }}>
-              {member.avatar ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={member.avatar} alt={member.username} className="w-full h-full object-cover" />
-              ) : null}
-            </div>
-            <div className="min-w-0">
-              <div className="text-sm font-medium truncate">{member.displayName || member.username}</div>
-              <div className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
-                {member.username}
+        {members.map((member) => {
+          const isSpeaking = speakingIds.includes(member.id)
+          return (
+            <div
+              key={member.id}
+              className="flex items-center gap-3 rounded-md px-3 py-2 transition-shadow"
+              style={{
+                background: 'var(--panel)',
+                boxShadow: isSpeaking ? '0 0 0 2px rgba(34,197,94,0.9), 0 0 12px rgba(34,197,94,0.6)' : 'none',
+              }}
+            >
+              <div className="w-10 h-10 rounded-full overflow-hidden" style={{ background: 'var(--input-bg)' }}>
+                {member.avatar ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={member.avatar} alt={member.username} className="w-full h-full object-cover" />
+                ) : null}
+              </div>
+              <div className="min-w-0">
+                <div className="text-sm font-medium truncate">{member.displayName || member.username}</div>
+                <div className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
+                  {member.username}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
