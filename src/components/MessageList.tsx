@@ -105,6 +105,7 @@ export default function MessageList({ messages, adminIds = [], loading = false, 
             {g.items.map((m, idx) => {
               const prev = idx > 0 ? g.items[idx - 1] : undefined
               const isHead = !prev || prev.author.id !== m.author.id
+              const isAdmin = adminIds.includes(m.author.id)
               let pressTimer: number | null = null
               let touchX = 0
               let touchY = 0
@@ -155,13 +156,14 @@ export default function MessageList({ messages, adminIds = [], loading = false, 
                       style={{ color: 'var(--text-muted)' }}
                     >
                       {formatTime(m.timestamp)}
+                      {isAdmin ? <span className="ml-1">👑</span> : null}
                     </div>
                   )}
                   <div className="min-w-0 pl-[52px]">
                     {isHead && (
                       <div className="flex items-baseline gap-2 flex-wrap">
                         <span className="font-medium">{m.author.displayName || m.author.username}</span>
-                        {adminIds.includes(m.author.id) ? (
+                        {isAdmin ? (
                           <span className="text-[11px] px-1.5 py-0.5 rounded uppercase" style={{ background: 'rgba(250,204,21,0.2)', color: '#facc15' }}>
                             👑 관리자
                           </span>
