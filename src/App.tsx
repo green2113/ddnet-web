@@ -218,7 +218,7 @@ function App() {
   }, [messages])
 
   const login = () => {
-    // 로그인 진입은 항상 프런트를 경유하지만, /login 내부에서 VITE_API_BASE를 사용해 서버로 이동
+    // 로그인 진입은 항상 프런트를 경유하지만, /login 부에서 VITE_API_BASE를 사용해 서버로 이동
     window.location.href = '/login'
   }
 
@@ -350,7 +350,7 @@ function App() {
               >
                 메시지 복사
               </button>
-              {user && menu.message.author.id === user.id && (
+              {user && (menu.message.author.id === user.id || adminIds.includes(user.id)) && (
                 <button
                   className="w-full text-left px-3 py-2 hover-surface cursor-pointer"
                   style={{ color: '#f87171' }}
