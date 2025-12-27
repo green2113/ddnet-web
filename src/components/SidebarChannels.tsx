@@ -48,8 +48,8 @@ export default function SidebarChannels({
       if (event.button !== 0) return
       setChannelMenu((prev) => ({ ...prev, visible: false }))
     }
-    window.addEventListener('click', closeMenu)
-    return () => window.removeEventListener('click', closeMenu)
+    window.addEventListener('mousedown', closeMenu)
+    return () => window.removeEventListener('mousedown', closeMenu)
   }, [])
 
   return (
@@ -120,8 +120,15 @@ export default function SidebarChannels({
               }}
               draggable={canManage}
               onClick={() => onSelect?.(c.id)}
-              onDragStart={() => {
+              onDragStart={(event) => {
                 dragIdRef.current = c.id
+                if (event.dataTransfer) {
+                  event.dataTransfer.setData('text/plain', c.id)
+                  event.dataTransfer.effectAllowed = 'move'
+                }
+              }}
+              onDragEnd={() => {
+                dragIdRef.current = null
               }}
               onDragOver={(e) => {
                 if (!canManage || !dragIdRef.current) return
