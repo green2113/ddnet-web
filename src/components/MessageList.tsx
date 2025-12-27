@@ -17,6 +17,7 @@ type Props = {
 }
 
 export default function MessageList({ messages, adminIds = [], loading = false, error = false, onRetry }: Props) {
+  const adminIdSet = new Set(adminIds)
   const formatTime = (ts: number) =>
     new Date(ts).toLocaleTimeString('ko-KR', {
       hour: '2-digit',
@@ -105,7 +106,7 @@ export default function MessageList({ messages, adminIds = [], loading = false, 
             {g.items.map((m, idx) => {
               const prev = idx > 0 ? g.items[idx - 1] : undefined
               const isHead = !prev || prev.author.id !== m.author.id
-              const isAdmin = adminIds.includes(m.author.id)
+              const isAdmin = adminIdSet.has(m.author.id)
               let pressTimer: number | null = null
               let touchX = 0
               let touchY = 0
@@ -156,7 +157,6 @@ export default function MessageList({ messages, adminIds = [], loading = false, 
                       style={{ color: 'var(--text-muted)' }}
                     >
                       {formatTime(m.timestamp)}
-                      {isAdmin ? <span className="ml-1">👑</span> : null}
                     </div>
                   )}
                   <div className="min-w-0 pl-[52px]">
