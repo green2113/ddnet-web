@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 type Props = {
   channels: Array<{ id: string; name: string; hidden?: boolean }>
@@ -214,119 +215,129 @@ export default function SidebarChannels({
           ))}
         </div>
       </div>
-      {channelMenu.visible && channelMenu.channel && canManage && (
-        <div
-          className="fixed z-50 min-w-[180px] rounded-md p-2 text-sm"
-          style={{ top: channelMenu.y, left: channelMenu.x, background: 'var(--header-bg)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            className="w-full text-left px-3 py-2 hover-surface cursor-pointer"
-            onClick={() => {
-              const name = window.prompt('채널 이름을 입력하세요', channelMenu.channel!.name)
-              if (!name) return
-              onRenameChannel?.(channelMenu.channel!.id, name)
-              setChannelMenu({ visible: false, x: 0, y: 0, channel: null })
-            }}
-          >
-            채널 이름
-          </button>
-          <button
-            className="w-full text-left px-3 py-2 hover-surface cursor-pointer"
-            onClick={() => {
-              onToggleChannelHidden?.(channelMenu.channel!.id, !channelMenu.channel!.hidden)
-              setChannelMenu({ visible: false, x: 0, y: 0, channel: null })
-            }}
-          >
-            {channelMenu.channel.hidden ? '채널 표시' : '채널 숨기기'}
-          </button>
-          <button
-            className="w-full text-left px-3 py-2 hover-surface cursor-pointer"
-            style={{ color: '#f87171' }}
-            onClick={() => {
-              onDeleteChannel?.(channelMenu.channel!.id)
-              setChannelMenu({ visible: false, x: 0, y: 0, channel: null })
-            }}
-          >
-            채널 삭제
-          </button>
-        </div>
-      )}
-      {showSettings && canManage && (
-        <div className="fixed inset-0 z-[60] flex" style={{ background: 'rgba(0,0,0,0.65)' }}>
-          <div className="w-[280px] bg-[#1e1f2b] p-6 text-sm text-white">
-            <div className="text-xs uppercase opacity-60 mb-3">DD Server</div>
-            <button className="w-full text-left px-3 py-2 rounded-md" style={{ background: 'rgba(255,255,255,0.08)' }}>
-              서버 프로필
-            </button>
-            <div className="mt-6 text-xs uppercase opacity-60 mb-3">관리</div>
-            <button className="w-full text-left px-3 py-2 rounded-md" style={{ background: 'rgba(255,255,255,0.08)' }}>
-              관리자
-            </button>
-          </div>
-          <div className="flex-1 bg-[#2b2c3c] p-8 text-white overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <div className="text-lg font-semibold">관리자</div>
-                <div className="text-sm opacity-70">관리자 ID를 추가하거나 삭제할 수 있습니다.</div>
-              </div>
+      {channelMenu.visible && channelMenu.channel && canManage
+        ? createPortal(
+            <div
+              className="fixed z-50 min-w-[180px] rounded-md p-2 text-sm"
+              style={{ top: channelMenu.y, left: channelMenu.x, background: 'var(--header-bg)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+              onClick={(e) => e.stopPropagation()}
+            >
               <button
-                className="h-8 w-8 rounded-full border border-white/20"
-                onClick={() => setShowSettings(false)}
-                aria-label="Close settings"
+                className="w-full text-left px-3 py-2 hover-surface cursor-pointer"
+                onClick={() => {
+                  const name = window.prompt('채널 이름을 입력하세요', channelMenu.channel!.name)
+                  if (!name) return
+                  onRenameChannel?.(channelMenu.channel!.id, name)
+                  setChannelMenu({ visible: false, x: 0, y: 0, channel: null })
+                }}
               >
-                ✕
+                채널 이름
               </button>
-            </div>
-            <div className="mb-6">
-              <label className="text-xs uppercase opacity-60">관리자 추가</label>
-              <div className="mt-2 flex gap-2">
-                <input
-                  value={adminInput}
-                  onChange={(e) => setAdminInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && adminInput.trim()) {
-                      onAddAdmin?.(adminInput.trim())
-                      setAdminInput('')
-                    }
-                  }}
-                  className="flex-1 h-10 rounded-md px-3 text-white"
-                  style={{ background: '#1f202b', border: '1px solid rgba(255,255,255,0.1)' }}
-                  placeholder="Discord 사용자 ID"
-                />
-                <button
-                  className="px-4 h-10 rounded-md text-white"
-                  style={{ background: '#5865f2' }}
-                  onClick={() => {
-                    if (!adminInput.trim()) return
-                    onAddAdmin?.(adminInput.trim())
-                    setAdminInput('')
-                  }}
-                >
-                  입력
+              <button
+                className="w-full text-left px-3 py-2 hover-surface cursor-pointer"
+                onClick={() => {
+                  const nextHidden = !channelMenu.channel!.hidden
+                  if (nextHidden) {
+                    setShowHiddenChannels(true)
+                  }
+                  onToggleChannelHidden?.(channelMenu.channel!.id, nextHidden)
+                  setChannelMenu({ visible: false, x: 0, y: 0, channel: null })
+                }}
+              >
+                {channelMenu.channel.hidden ? '채널 표시' : '채널 숨기기'}
+              </button>
+              <button
+                className="w-full text-left px-3 py-2 hover-surface cursor-pointer"
+                style={{ color: '#f87171' }}
+                onClick={() => {
+                  onDeleteChannel?.(channelMenu.channel!.id)
+                  setChannelMenu({ visible: false, x: 0, y: 0, channel: null })
+                }}
+              >
+                채널 삭제
+              </button>
+            </div>,
+            document.body
+          )
+        : null}
+      {showSettings && canManage
+        ? createPortal(
+            <div className="fixed inset-0 z-[70] flex" style={{ background: 'rgba(0,0,0,0.65)' }}>
+              <div className="w-[280px] bg-[#1e1f2b] p-6 text-sm text-white">
+                <div className="text-xs uppercase opacity-60 mb-3">DD Server</div>
+                <button className="w-full text-left px-3 py-2 rounded-md" style={{ background: 'rgba(255,255,255,0.08)' }}>
+                  서버 프로필
+                </button>
+                <div className="mt-6 text-xs uppercase opacity-60 mb-3">관리</div>
+                <button className="w-full text-left px-3 py-2 rounded-md" style={{ background: 'rgba(255,255,255,0.08)' }}>
+                  관리자
                 </button>
               </div>
-            </div>
-            <div>
-              <label className="text-xs uppercase opacity-60">관리자 목록</label>
-              <div className="mt-2 space-y-2">
-                {adminIds.map((id) => (
-                  <div key={id} className="flex items-center justify-between rounded-md px-3 py-2" style={{ background: '#1f202b' }}>
-                    <span className="text-sm">{id}</span>
+              <div className="flex-1 bg-[#2b2c3c] p-8 text-white overflow-y-auto">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <div className="text-lg font-semibold">관리자</div>
+                    <div className="text-sm opacity-70">관리자 ID를 추가하거나 삭제할 수 있습니다.</div>
+                  </div>
+                  <button
+                    className="h-8 w-8 rounded-full border border-white/20"
+                    onClick={() => setShowSettings(false)}
+                    aria-label="Close settings"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="mb-6">
+                  <label className="text-xs uppercase opacity-60">관리자 추가</label>
+                  <div className="mt-2 flex gap-2">
+                    <input
+                      value={adminInput}
+                      onChange={(e) => setAdminInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && adminInput.trim()) {
+                          onAddAdmin?.(adminInput.trim())
+                          setAdminInput('')
+                        }
+                      }}
+                      className="flex-1 h-10 rounded-md px-3 text-white"
+                      style={{ background: '#1f202b', border: '1px solid rgba(255,255,255,0.1)' }}
+                      placeholder="Discord 사용자 ID"
+                    />
                     <button
-                      className="text-sm text-red-300 hover:text-red-400"
-                      onClick={() => onRemoveAdmin?.(id)}
-                      aria-label={`Remove ${id}`}
+                      className="px-4 h-10 rounded-md text-white"
+                      style={{ background: '#5865f2' }}
+                      onClick={() => {
+                        if (!adminInput.trim()) return
+                        onAddAdmin?.(adminInput.trim())
+                        setAdminInput('')
+                      }}
                     >
-                      ×
+                      입력
                     </button>
                   </div>
-                ))}
+                </div>
+                <div>
+                  <label className="text-xs uppercase opacity-60">관리자 목록</label>
+                  <div className="mt-2 space-y-2">
+                    {adminIds.map((id) => (
+                      <div key={id} className="flex items-center justify-between rounded-md px-3 py-2" style={{ background: '#1f202b' }}>
+                        <span className="text-sm">{id}</span>
+                        <button
+                          className="text-sm text-red-300 hover:text-red-400"
+                          onClick={() => onRemoveAdmin?.(id)}
+                          aria-label={`Remove ${id}`}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
+            </div>,
+            document.body
+          )
+        : null}
     </aside>
   )
 }
@@ -336,7 +347,7 @@ function Icon({ name }: { name: string }) {
     case 'settings':
       return (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-          <path fill="currentColor" fillRule="evenodd" d="M10.56 1.1c-.46.05-.7.53-.64.98.18 1.16-.19 2.2-.98 2.53-.8.33-1.79-.15-2.49-1.1-.27-.36-.78-.52-1.14-.24-.77.59-1.45 1.27-2.04 2.04-.28.36-.12.87.24 1.14.96.7 1.43 1.7 1.1 2.49-.33.8-1.37 1.16-2.53.98-.45-.07-.93.18-.99.64a11.1 11.1 0 0 0 0 2.88c.06.46.54.7.99.64 1.16-.18 2.2.19 2.53.98.33.8-.14 1.79-1.1 2.49-.36.27-.52.78-.24 1.14.59.77 1.27 1.45 2.04 2.04.36.28.87.12 1.14-.24.7-.95 1.7-1.43 2.49-1.1.8.33 1.16 1.37.98 2.53-.07.45.18.93.64.99a11.1 11.1 0 0 0 2.88 0c.46-.06.7-.54.64-.99-.18-1.16.19-2.2.98-2.53.8-.33 1.79.14 2.49 1.1.27.36.78.52 1.14.24.77-.59 1.45-1.27 2.04-2.04.28-.36.12.87-.24-1.14.96-.7 1.43-1.7 1.1-2.49.33-.8 1.37-1.16 2.53-.98.45.07.93-.18.99-.64a11.1 11.1 0 0 0 0-2.88c-.06-.46-.54-.7-.99-.64-1.16.18-2.2-.19-2.53-.98-.33-.8.14-1.79 1.1-2.49.36-.27.52-.78.24-1.14a11.07 11.07 0 0 0-2.04-2.04c-.36-.28.87-.12-1.14.24-.7.96-1.7 1.43-2.49 1.1-.8-.33-1.16-1.37-.98-2.53.07-.45.18-.93.64-.99a11.1 11.1 0 0 0-2.88 0ZM16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z" clipRule="evenodd"></path>
+          <path fill="currentColor" fillRule="evenodd" d="M10.56 1.1c-.46.05-.7.53-.64.98.18 1.16-.19 2.2-.98 2.53-.8.33-1.79-.15-2.49-1.1-.27-.36-.78-.52-1.14-.24-.77.59-1.45 1.27-2.04 2.04-.28.36-.12.87.24 1.14.96.7 1.43 1.7 1.1 2.49-.33.8-1.37 1.16-2.53.98-.45-.07-.93.18-.99.64a11.1 11.1 0 0 0 0 2.88c.06.46.54.7.99.64 1.16-.18 2.2.19 2.53.98.33.8-.14 1.79-1.1 2.49-.36.27-.52.78-.24 1.14.59.77 1.27 1.45 2.04 2.04.36.28.87.12 1.14-.24.7-.95 1.7-1.43 2.49-1.1.8.33 1.16 1.37.98 2.53-.07.45.18.93.64.99a11.1 11.1 0 0 0 2.88 0c.46-.06.7-.54.64-.99-.18-1.16.19-2.2.98-2.53.8-.33 1.79.14 2.49 1.1.27.36.78.52 1.14.24.77-.59 1.45-1.27 2.04-2.04.28-.36.12.87-.24-1.14.96-.7 1.43-1.7 1.0-2.49.33-.8 1.37-1.16 2.53-.98.45.07.93-.18.99-.64a11.1 11.1 0 0 0 0-2.88c-.06-.46-.54-.7-.99-.64-1.16.18-2.2-.19-2.53-.98-.33-.8-.14-1.79 1.1-2.49.36-.27.52-.78.24-1.14a11.07 11.07 0 0 0-2.04-2.04c-.36-.28.87-.12-1.14.24-.7.96-1.7 1.43-2.49 1.1-.8-.33-1.16-1.37-.98-2.53.07-.45.18-.93.64-.99a11.1 11.1 0 0 0-2.88 0ZM16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z" clipRule="evenodd"></path>
         </svg>
       )
     case 'bell':
