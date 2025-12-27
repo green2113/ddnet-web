@@ -9,7 +9,6 @@ type Props = {
   onDeleteChannel?: (channelId: string) => void
   onToggleChannelHidden?: (channelId: string, hidden: boolean) => void
   onRenameChannel?: (channelId: string, name: string) => void
-  onReorderChannels?: (orderedIds: string[]) => void
   canManage?: boolean
 }
 
@@ -22,7 +21,6 @@ export default function SidebarChannels({
   onDeleteChannel,
   onToggleChannelHidden,
   onRenameChannel,
-  onReorderChannels,
   canManage = false,
 }: Props) {
   const [open, setOpen] = useState(false)
@@ -32,7 +30,6 @@ export default function SidebarChannels({
     y: 0,
     channel: null,
   })
-  const dragIdRef = useRef<string | null>(null)
   const wrapRef = useRef<HTMLDivElement | null>(null)
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
@@ -117,37 +114,9 @@ export default function SidebarChannels({
               style={{
                 color: 'var(--text-primary)',
                 background: c.id === activeId ? 'color-mix(in oklch, var(--accent) 14%, transparent)' : 'transparent',
+                userSelect: 'none',
               }}
-              draggable={canManage}
               onClick={() => onSelect?.(c.id)}
-              onDragStart={(event) => {
-                dragIdRef.current = c.id
-                if (event.dataTransfer) {
-                  event.dataTransfer.setData('text/plain', c.id)
-                  event.dataTransfer.effectAllowed = 'move'
-                }
-              }}
-              onDragEnd={() => {
-                dragIdRef.current = null
-              }}
-              onDragOver={(e) => {
-                if (!canManage || !dragIdRef.current) return
-                e.preventDefault()
-              }}
-              onDrop={(e) => {
-                if (!canManage) return
-                e.preventDefault()
-                const draggedId = dragIdRef.current
-                dragIdRef.current = null
-                if (!draggedId || draggedId === c.id) return
-                const updated = [...channels]
-                const fromIndex = updated.findIndex((channel) => channel.id === draggedId)
-                const toIndex = updated.findIndex((channel) => channel.id === c.id)
-                if (fromIndex === -1 || toIndex === -1) return
-                const [moved] = updated.splice(fromIndex, 1)
-                updated.splice(toIndex, 0, moved)
-                onReorderChannels?.(updated.map((channel) => channel.id))
-              }}
               onContextMenu={(e) => {
                 if (!canManage) return
                 e.preventDefault()
