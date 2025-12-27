@@ -307,25 +307,27 @@ export default function VoicePanel({ channelId, socket, user, onRequireLogin }: 
           return (
             <div
               key={member.id}
-              className="flex items-center gap-3 rounded-md px-2 py-2 transition-shadow"
+              className="flex items-center justify-between gap-3 rounded-md px-2 py-2 transition-shadow"
               style={{
                 background: 'var(--panel)',
                 boxShadow: isSpeaking ? '0 0 0 2px rgba(34,197,94,0.9), 0 0 12px rgba(34,197,94,0.6)' : 'none',
               }}
             >
-              <div className="w-10 h-10 rounded-full overflow-hidden" style={{ background: 'var(--input-bg)' }}>
-                {member.avatar ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={member.avatar} alt={member.username} className="w-full h-full object-cover" />
-                ) : null}
-              </div>
-              <div className="min-w-0">
-                <div className="text-sm font-medium truncate">{member.displayName || member.username}</div>
-                <div className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
-                  {member.username}
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-full overflow-hidden" style={{ background: 'var(--input-bg)' }}>
+                  {member.avatar ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={member.avatar} alt={member.username} className="w-full h-full object-cover" />
+                  ) : null}
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm font-medium truncate">{member.displayName || member.username}</div>
+                  <div className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
+                    {member.username}
+                  </div>
                 </div>
               </div>
-              <div className="ml-auto flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0 justify-end">
                 {member.muted ? (
                   <span title="마이크 꺼짐" style={{ color: '#f87171' }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
