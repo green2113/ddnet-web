@@ -314,6 +314,7 @@ export default function SidebarChannels({
             <div
               className="fixed z-50 min-w-[180px] rounded-md p-2 text-sm"
               style={{ top: channelMenu.y, left: channelMenu.x, background: 'var(--header-bg)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+              onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
             >
               <button
