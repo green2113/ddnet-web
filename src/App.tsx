@@ -260,6 +260,13 @@ function App() {
               .then(fetchChannels)
               .catch(() => {})
           }}
+          onReorderChannels={(orderedIds) => {
+            if (!canManageChannels) return
+            axios
+              .patch(`${serverBase}/api/channels/order`, { orderedIds }, { withCredentials: true })
+              .then(fetchChannels)
+              .catch(() => {})
+          }}
           canManage={canManageChannels}
         />
         <main className="flex-1 flex flex-col min-w-0">
