@@ -236,6 +236,13 @@ function App() {
             setActiveChannelId(channelId)
             navigate(`/channels/${channelId}`)
           }}
+          onRenameChannel={(channelId, name) => {
+            if (!canManageChannels) return
+            axios
+              .patch(`${serverBase}/api/channels/${channelId}/name`, { name }, { withCredentials: true })
+              .then(fetchChannels)
+              .catch(() => {})
+          }}
           onCreateChannel={() => {
             if (!canManageChannels) return
             const name = window.prompt('채널 이름을 입력하세요')
@@ -250,6 +257,13 @@ function App() {
             if (!canManageChannels) return
             axios
               .patch(`${serverBase}/api/channels/${channelId}/hidden`, { hidden }, { withCredentials: true })
+              .then(fetchChannels)
+              .catch(() => {})
+          }}
+          onReorderChannels={(orderedIds) => {
+            if (!canManageChannels) return
+            axios
+              .patch(`${serverBase}/api/channels/order`, { orderedIds }, { withCredentials: true })
               .then(fetchChannels)
               .catch(() => {})
           }}
