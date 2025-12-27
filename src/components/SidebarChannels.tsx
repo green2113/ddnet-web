@@ -9,7 +9,7 @@ type Props = {
   onAddAdmin?: (id: string) => void
   onRemoveAdmin?: (id: string) => void
   onSelect?: (channelId: string) => void
-  onCreateChannel?: () => void
+  onCreateChannel?: (type: 'text' | 'voice') => void
   onDeleteChannel?: (channelId: string) => void
   onToggleChannelHidden?: (channelId: string, hidden: boolean) => void
   onRenameChannel?: (channelId: string, name: string) => void
@@ -127,12 +127,12 @@ export default function SidebarChannels({
           {canManage ? (
             <button
               type="button"
-              aria-label="Add channel"
+              aria-label="Add text channel"
               className="rounded-md p-1 cursor-pointer"
               style={{ color: 'var(--text-muted)' }}
               onClick={(e) => {
                 e.stopPropagation()
-                onCreateChannel?.()
+                onCreateChannel?.('text')
               }}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -218,6 +218,24 @@ export default function SidebarChannels({
         </div>
         <div className="mt-4 flex items-center justify-between text-[11px] uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
           <span>voice channels</span>
+          {canManage ? (
+            <button
+              type="button"
+              aria-label="Add voice channel"
+              className="rounded-md p-1 cursor-pointer"
+              style={{ color: 'var(--text-muted)' }}
+              onClick={(e) => {
+                e.stopPropagation()
+                onCreateChannel?.('voice')
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <path d="M12 5a3 3 0 0 0-3 3v4a3 3 0 1 0 6 0V8a3 3 0 0 0-3-3Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                <path d="M5 11a7 7 0 0 0 14 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                <path d="M12 18v3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              </svg>
+            </button>
+          ) : null}
         </div>
         <div className="flex-1 space-y-1">
           {voiceChannels.map((c) => (
