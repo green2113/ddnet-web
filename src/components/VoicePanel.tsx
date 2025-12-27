@@ -77,7 +77,7 @@ export default function VoicePanel({ channelId, socket, user, onRequireLogin }: 
         audio = document.createElement('audio')
         audio.id = audioId
         audio.autoplay = true
-        audio.playsInline = true
+        audio.setAttribute('playsinline', 'true')
         document.body.appendChild(audio)
       }
       const [stream] = event.streams
@@ -195,7 +195,7 @@ export default function VoicePanel({ channelId, socket, user, onRequireLogin }: 
             style={{ background: '#ef4444' }}
             onClick={leaveVoice}
           >
-            나기
+            나가기
           </button>
         ) : (
           <button
