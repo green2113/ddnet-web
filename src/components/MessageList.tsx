@@ -10,12 +10,13 @@ export type ChatMessage = {
 
 type Props = {
   messages: ChatMessage[]
+  adminIds?: string[]
   loading?: boolean
   error?: boolean
   onRetry?: () => void
 }
 
-export default function MessageList({ messages, loading = false, error = false, onRetry }: Props) {
+export default function MessageList({ messages, adminIds = [], loading = false, error = false, onRetry }: Props) {
   const formatTime = (ts: number) =>
     new Date(ts).toLocaleTimeString('ko-KR', {
       hour: '2-digit',
@@ -102,79 +103,84 @@ export default function MessageList({ messages, loading = false, error = false, 
               <span className="flex-1 h-px" style={{ background: 'var(--divider)' }} />
             </div>
             {g.items.map((m, idx) => {
-            const prev = idx > 0 ? g.items[idx - 1] : undefined
-            const isHead = !prev || prev.author.id !== m.author.id
-            let pressTimer: number | null = null
-            let touchX = 0
-            let touchY = 0
+              const prev = idx > 0 ? g.items[idx - 1] : undefined
+              const isHead = !prev || prev.author.id !== m.author.id
+              let pressTimer: number | null = null
+              let touchX = 0
+              let touchY = 0
               const startLongPress = (e: React.TouchEvent<HTMLDivElement>) => {
-              if (e.touches && e.touches.length > 0) {
-                touchX = e.touches[0].clientX
-                touchY = e.touches[0].clientY
+                if (e.touches && e.touches.length > 0) {
+                  touchX = e.touches[0].clientX
+                  touchY = e.touches[0].clientY
+                }
+                pressTimer = window.setTimeout(() => {
+                  const ev = new CustomEvent('open-msg-menu', { detail: { message: m, x: touchX, y: touchY } })
+                  window.dispatchEvent(ev)
+                }, 500)
               }
-              pressTimer = window.setTimeout(() => {
-                const ev = new CustomEvent('open-msg-menu', { detail: { message: m, x: touchX, y: touchY } })
-                window.dispatchEvent(ev)
-              }, 500)
-            }
-            const cancelLongPress = () => {
-              if (pressTimer) {
-                clearTimeout(pressTimer)
-                pressTimer = null
+              const cancelLongPress = () => {
+                if (pressTimer) {
+                  clearTimeout(pressTimer)
+                  pressTimer = null
+                }
               }
-            }
               return (
                 <div
                   key={m.id}
                   className={`row-hover group relative px-2 -mx-2 ${isHead ? 'mt-2' : ''}`}
                   onContextMenu={(e) => {
-                  e.preventDefault()
-                  const ev = new CustomEvent('open-msg-menu', { detail: { message: m, x: e.clientX, y: e.clientY } })
-                  window.dispatchEvent(ev)
+                    e.preventDefault()
+                    const ev = new CustomEvent('open-msg-menu', { detail: { message: m, x: e.clientX, y: e.clientY } })
+                    window.dispatchEvent(ev)
                   }}
                   onTouchStart={startLongPress}
                   onTouchEnd={cancelLongPress}
                   onTouchMove={cancelLongPress}
                   onTouchCancel={cancelLongPress}
                 >
-                {isHead && (
-                  <div
-                    className="absolute left-2 rounded-full overflow-hidden"
-                    style={{ width: '40px', height: '40px', top: '3px', background: 'var(--input-bg)' }}
-                  >
-                    {m.author.avatar ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={m.author.avatar} alt={m.author.username} className="w-full h-full object-cover no-select" />
-                    ) : null}
-                  </div>
-                )}
-                {!isHead && (
-                  <div
-                    className="absolute left-2 top-1 text-[10px] opacity-0 group-hover:opacity-100 cursor-default no-select"
-                    style={{ color: 'var(--text-muted)' }}
-                  >
-                    {formatTime(m.timestamp)}
-                  </div>
-                )}
-                <div className="min-w-0 pl-[52px]">
                   {isHead && (
-                    <div className="flex items-baseline gap-2 flex-wrap">
-                      <span className="font-medium">{m.author.displayName || m.author.username}</span>
-                      <span className="text-xs cursor-default" style={{ color: 'var(--text-muted)' }}>
-                        {formatTime(m.timestamp)}
-                      </span>
-                      <span className="text-[10px] uppercase cursor-default no-select" style={{ color: 'var(--text-muted)' }}>
-                        {m.source}
-                      </span>
+                    <div
+                      className="absolute left-2 rounded-full overflow-hidden"
+                      style={{ width: '40px', height: '40px', top: '3px', background: 'var(--input-bg)' }}
+                    >
+                      {m.author.avatar ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={m.author.avatar} alt={m.author.username} className="w-full h-full object-cover no-select" />
+                      ) : null}
                     </div>
                   )}
-                  <div className="whitespace-pre-wrap break-words">
-                    <span>{renderContent(m.content)}</span>
+                  {!isHead && (
+                    <div
+                      className="absolute left-2 top-1 text-[10px] opacity-0 group-hover:opacity-100 cursor-default no-select"
+                      style={{ color: 'var(--text-muted)' }}
+                    >
+                      {formatTime(m.timestamp)}
+                    </div>
+                  )}
+                  <div className="min-w-0 pl-[52px]">
+                    {isHead && (
+                      <div className="flex items-baseline gap-2 flex-wrap">
+                        <span className="font-medium">{m.author.displayName || m.author.username}</span>
+                        {adminIds.includes(m.author.id) ? (
+                          <span className="text-[11px] px-1.5 py-0.5 rounded uppercase" style={{ background: 'rgba(250,204,21,0.2)', color: '#facc15' }}>
+                            👑 관리자
+                          </span>
+                        ) : null}
+                        <span className="text-xs cursor-default" style={{ color: 'var(--text-muted)' }}>
+                          {formatTime(m.timestamp)}
+                        </span>
+                        <span className="text-[10px] uppercase cursor-default no-select" style={{ color: 'var(--text-muted)' }}>
+                          {m.source}
+                        </span>
+                      </div>
+                    )}
+                    <div className="whitespace-pre-wrap break-words">
+                      <span>{renderContent(m.content)}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )
-          })}
+              )
+            })}
         </div>
       ))}
       </div>
