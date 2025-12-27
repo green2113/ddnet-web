@@ -13,6 +13,8 @@ type VoiceMember = {
   username: string
   displayName?: string
   avatar?: string | null
+  muted?: boolean
+  deafened?: boolean
 }
 
 type VoicePanelProps = {
@@ -28,6 +30,9 @@ export default function VoicePanel({ channelId, socket, user, onRequireLogin }: 
   const [joined, setJoined] = useState(false)
   const [members, setMembers] = useState<VoiceMember[]>([])
   const [speakingIds, setSpeakingIds] = useState<string[]>([])
+  const [micMuted, setMicMuted] = useState(false)
+  const [headsetMuted, setHeadsetMuted] = useState(false)
+  const micBeforeDeafenRef = useRef(false)
   const localStreamRef = useRef<MediaStream | null>(null)
   const peersRef = useRef<Map<string, RTCPeerConnection>>(new Map())
   const speakingRef = useRef<Set<string>>(new Set())
@@ -150,6 +155,12 @@ export default function VoicePanel({ channelId, socket, user, onRequireLogin }: 
     }
   }
 
+  const updateOutputMute = (muted: boolean) => {
+    document.querySelectorAll<HTMLAudioElement>('audio[id^="voice-audio-"]').forEach((audio) => {
+      audio.muted = muted
+    })
+  }
+
   const joinVoice = async () => {
     if (!socket) return
     if (!user) {
@@ -160,6 +171,9 @@ export default function VoicePanel({ channelId, socket, user, onRequireLogin }: 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       localStreamRef.current = stream
+      stream.getAudioTracks().forEach((track) => {
+        track.enabled = !micMuted && !headsetMuted
+      })
       setJoined(true)
       socket.emit('voice:join', { channelId })
     } catch (error) {
@@ -237,6 +251,19 @@ export default function VoicePanel({ channelId, socket, user, onRequireLogin }: 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channelId, socket, user?.id])
 
+  useEffect(() => {
+    if (!joined || !socket) return
+    socket.emit('voice:status', { channelId, muted: micMuted, deafened: headsetMuted })
+  }, [channelId, headsetMuted, joined, micMuted, socket])
+
+  useEffect(() => {
+    updateOutputMute(headsetMuted)
+    const trackEnabled = !micMuted && !headsetMuted
+    localStreamRef.current?.getAudioTracks().forEach((track) => {
+      track.enabled = trackEnabled
+    })
+  }, [headsetMuted, micMuted])
+
   return (
     <div className="flex-1 flex flex-col p-6 gap-4">
       <div className="flex items-center justify-between">
@@ -288,10 +315,73 @@ export default function VoicePanel({ channelId, socket, user, onRequireLogin }: 
                   {member.username}
                 </div>
               </div>
+              <div className="ml-auto flex items-center gap-2">
+                {member.muted ? (
+                  <span title="마이크 꺼짐" style={{ color: '#f87171' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+                      <path d="M12 5a3 3 0 0 0-3 3v4a3 3 0 1 0 6 0V8a3 3 0 0 0-3-3Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                      <path d="M5 11a7 7 0 0 0 14 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                      <path d="M12 18v3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                      <path d="M4 4l16 16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                    </svg>
+                  </span>
+                ) : null}
+                {member.deafened ? (
+                  <span title="헤드셋 꺼짐" style={{ color: '#f87171' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+                      <path d="M4 12a8 8 0 0 1 16 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                      <path d="M4 12v6a2 2 0 0 0 2 2h2v-6H6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                      <path d="M20 12v6a2 2 0 0 1-2 2h-2v-6h2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                      <path d="M4 4l16 16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                    </svg>
+                  </span>
+                ) : null}
+              </div>
             </div>
           )
         })}
       </div>
+      {joined ? (
+        <div className="flex items-center gap-3 rounded-md px-3 py-2" style={{ background: 'var(--panel)' }}>
+          <button
+            type="button"
+            className="flex items-center gap-2 px-3 h-9 rounded-md cursor-pointer hover-surface"
+            style={{ color: micMuted ? '#f87171' : 'var(--text-primary)' }}
+            onClick={() => setMicMuted((prev) => !prev)}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path d="M12 5a3 3 0 0 0-3 3v4a3 3 0 1 0 6 0V8a3 3 0 0 0-3-3Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              <path d="M5 11a7 7 0 0 0 14 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              <path d="M12 18v3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              {micMuted ? <path d="M4 4l16 16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /> : null}
+            </svg>
+            <span className="text-sm">{micMuted ? '마이크 켜기' : '마이크 끄기'}</span>
+          </button>
+          <button
+            type="button"
+            className="flex items-center gap-2 px-3 h-9 rounded-md cursor-pointer hover-surface"
+            style={{ color: headsetMuted ? '#f87171' : 'var(--text-primary)' }}
+            onClick={() => {
+              if (headsetMuted) {
+                setHeadsetMuted(false)
+                setMicMuted(micBeforeDeafenRef.current)
+              } else {
+                micBeforeDeafenRef.current = micMuted
+                setHeadsetMuted(true)
+                setMicMuted(true)
+              }
+            }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path d="M4 12a8 8 0 0 1 16 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              <path d="M4 12v6a2 2 0 0 0 2 2h2v-6H6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              <path d="M20 12v6a2 2 0 0 1-2 2h-2v-6h2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              {headsetMuted ? <path d="M4 4l16 16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /> : null}
+            </svg>
+            <span className="text-sm">{headsetMuted ? '헤드셋 켜기' : '헤드셋 끄기'}</span>
+          </button>
+        </div>
+      ) : null}
     </div>
   )
 }
