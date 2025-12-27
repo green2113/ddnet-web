@@ -9,6 +9,7 @@ type Props = {
   onDeleteChannel?: (channelId: string) => void
   onToggleChannelHidden?: (channelId: string, hidden: boolean) => void
   onRenameChannel?: (channelId: string, name: string) => void
+  onReorderChannels?: (orderedIds: string[]) => void
   canManage?: boolean
 }
 
@@ -21,6 +22,7 @@ export default function SidebarChannels({
   onDeleteChannel,
   onToggleChannelHidden,
   onRenameChannel,
+  onReorderChannels,
   canManage = false,
 }: Props) {
   const [open, setOpen] = useState(false)
@@ -31,6 +33,7 @@ export default function SidebarChannels({
     channel: null,
   })
   const wrapRef = useRef<HTMLDivElement | null>(null)
+  const dragIdRef = useRef<string | null>(null)
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
       if (!wrapRef.current) return
@@ -58,6 +61,9 @@ export default function SidebarChannels({
           onClick={(e) => {
             e.stopPropagation()
             setOpen((v) => !v)
+            if (!open) {
+              setChannelMenu((prev) => ({ ...prev, visible: false }))
+            }
           }}
           className="w-full px-3 h-12 flex items-center justify-between cursor-pointer"
           style={{ color: 'var(--text-primary)', background: 'var(--header-bg)', borderBottom: '1px solid var(--border)', transition: 'background-color 150ms ease' }}
@@ -116,10 +122,47 @@ export default function SidebarChannels({
                 background: c.id === activeId ? 'color-mix(in oklch, var(--accent) 14%, transparent)' : 'transparent',
                 userSelect: 'none',
               }}
+              draggable={canManage}
               onClick={() => onSelect?.(c.id)}
+              onDoubleClick={() => {
+                if (!canManage) return
+                const name = window.prompt('채널 이름을 입력하세요', c.name)
+                if (!name) return
+                onRenameChannel?.(c.id, name)
+              }}
+              onDragStart={(event) => {
+                if (!canManage) return
+                dragIdRef.current = c.id
+                if (event.dataTransfer) {
+                  event.dataTransfer.setData('text/plain', c.id)
+                  event.dataTransfer.effectAllowed = 'move'
+                }
+              }}
+              onDragEnd={() => {
+                dragIdRef.current = null
+              }}
+              onDragOver={(e) => {
+                if (!canManage || !dragIdRef.current) return
+                e.preventDefault()
+              }}
+              onDrop={(e) => {
+                if (!canManage) return
+                e.preventDefault()
+                const draggedId = dragIdRef.current
+                dragIdRef.current = null
+                if (!draggedId || draggedId === c.id) return
+                const updated = [...channels]
+                const fromIndex = updated.findIndex((channel) => channel.id === draggedId)
+                const toIndex = updated.findIndex((channel) => channel.id === c.id)
+                if (fromIndex === -1 || toIndex === -1) return
+                const [moved] = updated.splice(fromIndex, 1)
+                updated.splice(toIndex, 0, moved)
+                onReorderChannels?.(updated.map((channel) => channel.id))
+              }}
               onContextMenu={(e) => {
                 if (!canManage) return
                 e.preventDefault()
+                setOpen(false)
                 setChannelMenu({ visible: true, x: e.clientX, y: e.clientY, channel: c })
               }}
             >
