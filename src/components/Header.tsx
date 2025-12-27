@@ -7,14 +7,25 @@ type Props = {
   user: { username: string } | null
   onLogin: () => void
   onLogout: () => void
+  onToggleChannels?: () => void
 }
 
-export default function Header({ title, isDark, onLight, onDark, user, onLogin, onLogout }: Props) {
+export default function Header({ title, isDark, onLight, onDark, user, onLogin, onLogout, onToggleChannels }: Props) {
   return (
     <header
       className="h-12 px-4 flex items-center gap-3"
       style={{ background: 'var(--header-bg)', borderBottom: '1px solid var(--border)' }}
     >
+      <button
+        type="button"
+        aria-label="채널 목록"
+        className="md:hidden p-2 -ml-2 rounded-md cursor-pointer hover-surface"
+        onClick={onToggleChannels}
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+          <path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+        </svg>
+      </button>
       <div className="font-semibold">{title}</div>
       <div className="ml-4 hidden md:flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>
         <span className="chip" style={{ background: 'var(--input-bg)' }}>
@@ -62,5 +73,3 @@ export default function Header({ title, isDark, onLight, onDark, user, onLogin, 
     </header>
   )
 }
-
-
