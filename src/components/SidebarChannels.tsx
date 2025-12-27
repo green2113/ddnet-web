@@ -44,7 +44,10 @@ export default function SidebarChannels({
   }, [])
 
   useEffect(() => {
-    const closeMenu = () => setChannelMenu((prev) => ({ ...prev, visible: false }))
+    const closeMenu = (event: MouseEvent) => {
+      if (event.button !== 0) return
+      setChannelMenu((prev) => ({ ...prev, visible: false }))
+    }
     window.addEventListener('click', closeMenu)
     return () => window.removeEventListener('click', closeMenu)
   }, [])
