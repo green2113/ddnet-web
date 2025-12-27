@@ -7,6 +7,7 @@ import SidebarChannels from './components/SidebarChannels'
 import Header from './components/Header'
 import MessageList from './components/MessageList'
 import Composer from './components/Composer'
+import VoicePanel from './components/VoicePanel'
 
 type User = {
   id: string
@@ -28,6 +29,7 @@ type Channel = {
   id: string
   name: string
   hidden?: boolean
+  type?: 'text' | 'voice'
 }
 
 function App() {
@@ -145,10 +147,11 @@ function App() {
 
   useEffect(() => {
     activeChannelRef.current = activeChannelId
-    if (activeChannelId) {
+    const active = channels.find((channel) => channel.id === activeChannelId)
+    if (activeChannelId && active?.type !== 'voice') {
       fetchHistory(activeChannelId)
     }
-  }, [activeChannelId])
+  }, [activeChannelId, channels])
 
   useEffect(() => {
     if (!activeChannelId) return
@@ -188,7 +191,7 @@ function App() {
       if (msg.channelId === activeChannelRef.current) {
         setMessages((prev) => {
           const next = [...prev, msg]
-          // 하단 정렬 유지: 새 메시지 후 스크롤 맨 아래
+          // 하단 정렬 유지: 새 메지 후 스크롤 맨 아래
           requestAnimationFrame(() => {
             const el = document.getElementById('messages-scroll')
             if (el) el.scrollTop = el.scrollHeight
@@ -218,7 +221,7 @@ function App() {
   }, [messages])
 
   const login = () => {
-    // 로그인 진입은 항상 프런트를 경유하지만, /login 부에서 VITE_API_BASE를 사용해 서버로 이동
+    // 로그인 진입은 항상 프런트를 경유하지만, /login 내부에서 VITE_API_BASE를 사용해 서버로 이동
     window.location.href = '/login'
   }
 
@@ -243,6 +246,7 @@ function App() {
   }
 
   const activeChannel = channels.find((channel) => channel.id === activeChannelId)
+  const isVoiceChannel = activeChannel?.type === 'voice'
   const canManageChannels = Boolean(user?.id && adminIds.includes(user.id))
 
   return (
@@ -299,7 +303,9 @@ function App() {
               if (!canManageChannels) return
               const name = window.prompt('채널 이름을 입력하세요')
               if (!name) return
-              axios.post(`${serverBase}/api/channels`, { name }, { withCredentials: true }).then(fetchChannels).catch(() => {})
+              const typeInput = window.prompt('채널 타입을 입력하세요 (text/voice)', 'text')
+              const type = typeInput === 'voice' ? 'voice' : 'text'
+              axios.post(`${serverBase}/api/channels`, { name, type }, { withCredentials: true }).then(fetchChannels).catch(() => {})
             }}
             onDeleteChannel={(channelId) => {
               if (!canManageChannels) return
@@ -324,7 +330,7 @@ function App() {
         </div>
         <main className="flex-1 flex flex-col min-w-0">
           <Header
-            title={`# ${activeChannel?.name || 'general'}`}
+            title={`${isVoiceChannel ? '🔊' : '#'} ${activeChannel?.name || 'general'}`}
             isDark={isDark}
             onLight={() => setIsDark(false)}
             onDark={() => setIsDark(true)}
@@ -333,8 +339,14 @@ function App() {
             onLogout={logout}
             onToggleChannels={() => setShowMobileChannels((prev) => !prev)}
           />
-          <MessageList messages={messages} adminIds={adminIds} loading={loadingMessages} error={loadError} onRetry={() => fetchHistory(activeChannelId)} />
-          <Composer value={input} onChange={setInput} onSend={sendMessage} />
+          {isVoiceChannel ? (
+            <VoicePanel channelId={activeChannelId} socket={socketRef.current} user={user} onRequireLogin={() => setShowAuthModal(true)} />
+          ) : (
+            <>
+              <MessageList messages={messages} adminIds={adminIds} loading={loadingMessages} error={loadError} onRetry={() => fetchHistory(activeChannelId)} />
+              <Composer value={input} onChange={setInput} onSend={sendMessage} />
+            </>
+          )}
           {menu.visible && menu.message && (
             <div
               className="fixed z-50 min-w-[180px] rounded-md p-2 text-sm"
