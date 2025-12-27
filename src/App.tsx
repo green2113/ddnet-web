@@ -44,6 +44,7 @@ function App() {
   const [isDark, setIsDark] = useState(true)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [menu, setMenu] = useState<{ visible: boolean; x: number; y: number; message: ChatMessage | null }>({ visible: false, x: 0, y: 0, message: null })
+  const [showMobileChannels, setShowMobileChannels] = useState(false)
   const { channelId: routeChannelId } = useParams()
   const navigate = useNavigate()
 
@@ -247,66 +248,80 @@ function App() {
   return (
     <div className={(isDark ? 'theme-dark ' : '') + 'app-shell flex'} style={{ background: 'var(--bg-app)', color: 'var(--text-primary)' }}>
       <SidebarGuilds />
-      <div className="flex-1 flex min-w-0">
-        <SidebarChannels
-          channels={channels}
-          activeId={activeChannelId}
-          onSelect={(channelId) => {
-            setActiveChannelId(channelId)
-            navigate(`/channels/${channelId}`)
-          }}
-          adminIds={adminIds}
-          onAddAdmin={(id) => {
-            if (!canManageChannels) return
-            axios
-              .post(`${serverBase}/api/admins`, { id }, { withCredentials: true })
-              .then((res) => {
-                if (Array.isArray(res.data)) setAdminIds(res.data)
-              })
-              .catch(() => {})
-          }}
-          onRemoveAdmin={(id) => {
-            if (!canManageChannels) return
-            axios
-              .delete(`${serverBase}/api/admins/${id}`, { withCredentials: true })
-              .then((res) => {
-                if (Array.isArray(res.data)) setAdminIds(res.data)
-              })
-              .catch(() => {})
-          }}
-          onRenameChannel={(channelId, name) => {
-            if (!canManageChannels) return
-            axios
-              .patch(`${serverBase}/api/channels/${channelId}/name`, { name }, { withCredentials: true })
-              .then(fetchChannels)
-              .catch(() => {})
-          }}
-          onCreateChannel={() => {
-            if (!canManageChannels) return
-            const name = window.prompt('채널 이름을 입력하세요')
-            if (!name) return
-            axios.post(`${serverBase}/api/channels`, { name }, { withCredentials: true }).then(fetchChannels).catch(() => {})
-          }}
-          onDeleteChannel={(channelId) => {
-            if (!canManageChannels) return
-            axios.delete(`${serverBase}/api/channels/${channelId}`, { withCredentials: true }).then(fetchChannels).catch(() => {})
-          }}
-          onToggleChannelHidden={(channelId, hidden) => {
-            if (!canManageChannels) return
-            axios
-              .patch(`${serverBase}/api/channels/${channelId}/hidden`, { hidden }, { withCredentials: true })
-              .then(fetchChannels)
-              .catch(() => {})
-          }}
-          onReorderChannels={(orderedIds) => {
-            if (!canManageChannels) return
-            axios
-              .patch(`${serverBase}/api/channels/order`, { orderedIds }, { withCredentials: true })
-              .then(fetchChannels)
-              .catch(() => {})
-          }}
-          canManage={canManageChannels}
-        />
+      <div className="flex-1 flex min-w-0 relative">
+        {showMobileChannels ? (
+          <div
+            className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+            onClick={() => setShowMobileChannels(false)}
+            aria-hidden
+          />
+        ) : null}
+        <div
+          className={`fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-200 lg:static lg:translate-x-0 lg:transform-none lg:z-auto ${
+            showMobileChannels ? 'translate-x-0' : '-translate-x-full'
+          }`}
+        >
+          <SidebarChannels
+            channels={channels}
+            activeId={activeChannelId}
+            onSelect={(channelId) => {
+              setActiveChannelId(channelId)
+              navigate(`/channels/${channelId}`)
+              setShowMobileChannels(false)
+            }}
+            adminIds={adminIds}
+            onAddAdmin={(id) => {
+              if (!canManageChannels) return
+              axios
+                .post(`${serverBase}/api/admins`, { id }, { withCredentials: true })
+                .then((res) => {
+                  if (Array.isArray(res.data)) setAdminIds(res.data)
+                })
+                .catch(() => {})
+            }}
+            onRemoveAdmin={(id) => {
+              if (!canManageChannels) return
+              axios
+                .delete(`${serverBase}/api/admins/${id}`, { withCredentials: true })
+                .then((res) => {
+                  if (Array.isArray(res.data)) setAdminIds(res.data)
+                })
+                .catch(() => {})
+            }}
+            onRenameChannel={(channelId, name) => {
+              if (!canManageChannels) return
+              axios
+                .patch(`${serverBase}/api/channels/${channelId}/name`, { name }, { withCredentials: true })
+                .then(fetchChannels)
+                .catch(() => {})
+            }}
+            onCreateChannel={() => {
+              if (!canManageChannels) return
+              const name = window.prompt('채널 이름을 입력하세요')
+              if (!name) return
+              axios.post(`${serverBase}/api/channels`, { name }, { withCredentials: true }).then(fetchChannels).catch(() => {})
+            }}
+            onDeleteChannel={(channelId) => {
+              if (!canManageChannels) return
+              axios.delete(`${serverBase}/api/channels/${channelId}`, { withCredentials: true }).then(fetchChannels).catch(() => {})
+            }}
+            onToggleChannelHidden={(channelId, hidden) => {
+              if (!canManageChannels) return
+              axios
+                .patch(`${serverBase}/api/channels/${channelId}/hidden`, { hidden }, { withCredentials: true })
+                .then(fetchChannels)
+                .catch(() => {})
+            }}
+            onReorderChannels={(orderedIds) => {
+              if (!canManageChannels) return
+              axios
+                .patch(`${serverBase}/api/channels/order`, { orderedIds }, { withCredentials: true })
+                .then(fetchChannels)
+                .catch(() => {})
+            }}
+            canManage={canManageChannels}
+          />
+        </div>
         <main className="flex-1 flex flex-col min-w-0">
           <Header
             title={`# ${activeChannel?.name || 'general'}`}
@@ -316,6 +331,7 @@ function App() {
             user={user}
             onLogin={login}
             onLogout={logout}
+            onToggleChannels={() => setShowMobileChannels((prev) => !prev)}
           />
           <MessageList messages={messages} loading={loadingMessages} error={loadError} onRetry={() => fetchHistory(activeChannelId)} />
           <Composer value={input} onChange={setInput} onSend={sendMessage} />
