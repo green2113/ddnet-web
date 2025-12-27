@@ -191,7 +191,7 @@ function App() {
       if (msg.channelId === activeChannelRef.current) {
         setMessages((prev) => {
           const next = [...prev, msg]
-          // 하단 정렬 유지: 새 메지 후 스크롤 맨 아래
+          // 하단 정렬 유지: 새 메시지 후 스크롤 맨 아래
           requestAnimationFrame(() => {
             const el = document.getElementById('messages-scroll')
             if (el) el.scrollTop = el.scrollHeight
@@ -299,12 +299,10 @@ function App() {
                 .then(fetchChannels)
                 .catch(() => {})
             }}
-            onCreateChannel={() => {
+            onCreateChannel={(type) => {
               if (!canManageChannels) return
               const name = window.prompt('채널 이름을 입력하세요')
               if (!name) return
-              const typeInput = window.prompt('채널 타입을 입력하세요 (text/voice)', 'text')
-              const type = typeInput === 'voice' ? 'voice' : 'text'
               axios.post(`${serverBase}/api/channels`, { name, type }, { withCredentials: true }).then(fetchChannels).catch(() => {})
             }}
             onDeleteChannel={(channelId) => {
