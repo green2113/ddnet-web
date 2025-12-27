@@ -128,7 +128,7 @@ export default function SidebarChannels({
             <button
               type="button"
               aria-label="Add text channel"
-              className="rounded-md p-1 cursor-pointer"
+              className="rounded-md p-1 cursor-pointer hover-surface"
               style={{ color: 'var(--text-muted)' }}
               onClick={(e) => {
                 e.stopPropagation()
@@ -222,7 +222,7 @@ export default function SidebarChannels({
             <button
               type="button"
               aria-label="Add voice channel"
-              className="rounded-md p-1 cursor-pointer"
+              className="rounded-md p-1 cursor-pointer hover-surface"
               style={{ color: 'var(--text-muted)' }}
               onClick={(e) => {
                 e.stopPropagation()
@@ -230,9 +230,7 @@ export default function SidebarChannels({
               }}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
-                <path d="M12 5a3 3 0 0 0-3 3v4a3 3 0 1 0 6 0V8a3 3 0 0 0-3-3Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                <path d="M5 11a7 7 0 0 0 14 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                <path d="M12 18v3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
               </svg>
             </button>
           ) : null}
@@ -292,7 +290,15 @@ export default function SidebarChannels({
                 setChannelMenu({ visible: true, x: e.clientX, y: e.clientY, channel: c })
               }}
             >
-              <span style={{ color: 'var(--text-muted)' }}>🔊</span>
+              <span style={{ color: 'var(--text-muted)' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <path d="M5 9v6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                  <path d="M9 8v8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                  <path d="M13 6v12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                  <path d="M17 8c1.5 1.5 1.5 6 0 7.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                  <path d="M19.5 6c2.5 3 2.5 9 0 12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                </svg>
+              </span>
               <span className="truncate">{c.name}</span>
               {c.hidden ? (
                 <span className="ml-auto text-[10px] uppercase" style={{ color: 'var(--text-muted)' }}>
