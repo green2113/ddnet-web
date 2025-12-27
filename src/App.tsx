@@ -31,12 +31,12 @@ type Channel = {
 }
 
 function App() {
-  const adminId = '776421522188664843'
   const [user, setUser] = useState<User | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [loadingMessages, setLoadingMessages] = useState(true)
   const [loadError, setLoadError] = useState(false)
   const [channels, setChannels] = useState<Channel[]>([])
+  const [adminIds, setAdminIds] = useState<string[]>([])
   const [activeChannelId, setActiveChannelId] = useState('')
   const [input, setInput] = useState('')
   const socketRef = useRef<Socket | null>(null)
@@ -99,6 +99,17 @@ function App() {
       .catch(() => {})
   }
 
+  const fetchAdmins = () => {
+    axios
+      .get(`${serverBase}/api/admins`, { withCredentials: true })
+      .then((res) => {
+        if (Array.isArray(res.data)) {
+          setAdminIds(res.data)
+        }
+      })
+      .catch(() => {})
+  }
+
   useEffect(() => {
     setLoadingMessages(true)
     axios
@@ -110,6 +121,14 @@ function App() {
 
     fetchChannels()
   }, [serverBase])
+
+  useEffect(() => {
+    if (!user) {
+      setAdminIds([])
+      return
+    }
+    fetchAdmins()
+  }, [user, serverBase])
 
   useEffect(() => {
     if (!channels.length) return
@@ -223,7 +242,7 @@ function App() {
   }
 
   const activeChannel = channels.find((channel) => channel.id === activeChannelId)
-  const canManageChannels = user?.id === adminId
+  const canManageChannels = Boolean(user?.id && adminIds.includes(user.id))
 
   return (
     <div className={(isDark ? 'theme-dark ' : '') + 'app-shell flex'} style={{ background: 'var(--bg-app)', color: 'var(--text-primary)' }}>
@@ -235,6 +254,25 @@ function App() {
           onSelect={(channelId) => {
             setActiveChannelId(channelId)
             navigate(`/channels/${channelId}`)
+          }}
+          adminIds={adminIds}
+          onAddAdmin={(id) => {
+            if (!canManageChannels) return
+            axios
+              .post(`${serverBase}/api/admins`, { id }, { withCredentials: true })
+              .then((res) => {
+                if (Array.isArray(res.data)) setAdminIds(res.data)
+              })
+              .catch(() => {})
+          }}
+          onRemoveAdmin={(id) => {
+            if (!canManageChannels) return
+            axios
+              .delete(`${serverBase}/api/admins/${id}`, { withCredentials: true })
+              .then((res) => {
+                if (Array.isArray(res.data)) setAdminIds(res.data)
+              })
+              .catch(() => {})
           }}
           onRenameChannel={(channelId, name) => {
             if (!canManageChannels) return
