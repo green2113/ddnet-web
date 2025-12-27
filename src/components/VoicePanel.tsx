@@ -109,6 +109,9 @@ export default function VoicePanel({ channelId, socket, user, onRequireLogin }: 
       socket.emit('voice:leave', { channelId })
     }
     peersRef.current.forEach((_, peerId) => cleanupPeer(peerId))
+    if (socket?.id) {
+      cleanupPeer(socket.id)
+    }
     localStreamRef.current?.getTracks().forEach((track) => track.stop())
     localStreamRef.current = null
     setJoined(false)
@@ -252,6 +255,13 @@ export default function VoicePanel({ channelId, socket, user, onRequireLogin }: 
   }, [channelId, socket, user?.id])
 
   useEffect(() => {
+    if (!joined || !socket?.id) return
+    const stream = localStreamRef.current
+    if (!stream) return
+    startSpeakingMonitor(socket.id, stream)
+  }, [joined, socket?.id])
+
+  useEffect(() => {
     if (!joined || !socket) return
     socket.emit('voice:status', { channelId, muted: micMuted, deafened: headsetMuted })
   }, [channelId, headsetMuted, joined, micMuted, socket])
@@ -291,13 +301,13 @@ export default function VoicePanel({ channelId, socket, user, onRequireLogin }: 
           </button>
         )}
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
         {members.map((member) => {
           const isSpeaking = speakingIds.includes(member.id)
           return (
             <div
               key={member.id}
-              className="flex items-center gap-3 rounded-md px-3 py-2 transition-shadow"
+              className="flex items-center gap-3 rounded-md px-2 py-2 transition-shadow"
               style={{
                 background: 'var(--panel)',
                 boxShadow: isSpeaking ? '0 0 0 2px rgba(34,197,94,0.9), 0 0 12px rgba(34,197,94,0.6)' : 'none',
