@@ -257,7 +257,8 @@ export default function VoicePanel({ channelId, socket, user, forceHeadsetMuted 
         track.enabled = !micMuted && !headsetMuted
       })
       setJoined(true)
-      socket.emit('voice:join', { channelId })
+      socket.emit('voice:join', { channelId, muted: micMuted, deafened: headsetMuted })
+      socket.emit('voice:status', { channelId, muted: micMuted, deafened: headsetMuted })
     } catch (error) {
       console.error('[voice] failed to get user media', error)
     }
