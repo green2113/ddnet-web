@@ -3,13 +3,13 @@ import { useEffect } from 'react'
 export default function Login() {
   useEffect(() => {
     // 원래 페이지 기억 (이미 다른 곳에서 저장했을 수 있음)
-    if (!localStorage.getItem('return_to')) {
-      localStorage.setItem('return_to', window.history.state?.usr?.from || '/')
-    }
+    const stored = localStorage.getItem('return_to')
+    const returnTo = stored || window.history.state?.usr?.from || '/'
+    localStorage.setItem('return_to', returnTo)
     const apiBase = (import.meta as any).env?.VITE_API_BASE as string | undefined
-    const authUrl = apiBase
-      ? `${apiBase.replace(/\/$/, '')}/auth/discord`
-      : '/auth/discord' // 환경변수 미설정 시에도 서버 절대경로가 프록시/도메인에서 처리되도록 상대 경로 유지
+    const authPath = apiBase ? `${apiBase.replace(/\/$/, '')}/auth/discord` : '/auth/discord'
+    const params = new URLSearchParams({ return_to: returnTo })
+    const authUrl = `${authPath}?${params.toString()}`
     
     window.location.href = authUrl
     
@@ -24,7 +24,10 @@ export default function Login() {
         <a
           href={(() => {
             const apiBase = (import.meta as any).env?.VITE_API_BASE as string | undefined
-            return apiBase ? `${apiBase.replace(/\/$/, '')}/auth/discord` : '/auth/discord'
+            const returnTo = localStorage.getItem('return_to') || '/'
+            const authPath = apiBase ? `${apiBase.replace(/\/$/, '')}/auth/discord` : '/auth/discord'
+            const params = new URLSearchParams({ return_to: returnTo })
+            return `${authPath}?${params.toString()}`
           })()}
           style={{ textDecoration: 'underline' }}
         >
@@ -35,5 +38,3 @@ export default function Login() {
     </div>
   )
 }
-
-
