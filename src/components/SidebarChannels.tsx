@@ -14,6 +14,7 @@ type Props = {
   serverName?: string
   adminIds?: string[]
   voiceMembersByChannel?: Record<string, VoiceMember[]>
+  unreadByChannel?: Record<string, boolean>
   onAddAdmin?: (id: string) => void
   onRemoveAdmin?: (id: string) => void
   onSelect?: (channelId: string) => void
@@ -31,6 +32,7 @@ export default function SidebarChannels({
   serverName = 'DDNet Server',
   adminIds = [],
   voiceMembersByChannel = {},
+  unreadByChannel = {},
   onAddAdmin,
   onRemoveAdmin,
   onSelect,
@@ -216,7 +218,14 @@ export default function SidebarChannels({
               }}
             >
               <span style={{ color: 'var(--text-muted)' }}>#</span>
-              <span className="truncate">{c.name}</span>
+              <span
+                className="truncate"
+                style={{
+                  color: c.id === activeId ? 'var(--text-primary)' : unreadByChannel[c.id] ? 'var(--text-primary)' : 'var(--text-muted)',
+                }}
+              >
+                {c.name}
+              </span>
               {c.hidden ? (
                 <span className="ml-auto text-[10px] uppercase" style={{ color: 'var(--text-muted)' }}>
                   숨김
@@ -310,7 +319,14 @@ export default function SidebarChannels({
                       <path d="M19.5 6c2.5 3 2.5 9 0 12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
                     </svg>
                   </span>
-                  <span className="truncate">{c.name}</span>
+                  <span
+                    className="truncate"
+                    style={{
+                      color: c.id === activeId ? 'var(--text-primary)' : unreadByChannel[c.id] ? 'var(--text-primary)' : 'var(--text-muted)',
+                    }}
+                  >
+                    {c.name}
+                  </span>
                   {members.length > 0 ? (
                     <span className="ml-auto text-[11px]" style={{ color: 'var(--text-muted)' }}>
                       {members.length}
