@@ -55,14 +55,14 @@ export default function SidebarChannels({
   const [showUserSettings, setShowUserSettings] = useState(false)
   const [settingsTab, setSettingsTab] = useState<'profile' | 'voice'>('profile')
   const [micSensitivity, setMicSensitivity] = useState(() => {
-    if (typeof window === 'undefined') return 60
+    if (typeof window === 'undefined') return -60
     const stored = window.localStorage.getItem('voice-mic-sensitivity')
     const parsed = stored ? Number(stored) : NaN
-    if (!Number.isFinite(parsed)) return 60
-    return Math.min(100, Math.max(0, parsed))
+    if (!Number.isFinite(parsed)) return -60
+    return Math.min(0, Math.max(-100, parsed))
   })
   const [isTestingMic, setIsTestingMic] = useState(false)
-  const [micLevel, setMicLevel] = useState(0)
+  const [micLevel, setMicLevel] = useState(-100)
   const [micTestError, setMicTestError] = useState('')
   const [adminInput, setAdminInput] = useState('')
   const [showHiddenChannels, setShowHiddenChannels] = useState(false)
@@ -105,6 +105,17 @@ export default function SidebarChannels({
     window.dispatchEvent(new CustomEvent('voice-mic-sensitivity', { detail: micSensitivity }))
   }, [micSensitivity])
 
+  const rmsToDb = (rms: number) => {
+    if (!Number.isFinite(rms) || rms <= 0) return -100
+    const db = 20 * Math.log10(rms)
+    return Math.min(0, Math.max(-100, Math.round(db)))
+  }
+
+  const dbToPercent = (db: number) => {
+    const clamped = Math.min(0, Math.max(-100, db))
+    return Math.round(((clamped + 100) / 100) * 100)
+  }
+
   useEffect(() => {
     const stopMicTest = () => {
       micTestStreamRef.current?.getTracks().forEach((track) => track.stop())
@@ -117,7 +128,7 @@ export default function SidebarChannels({
         micTestContextRef.current.close()
         micTestContextRef.current = null
       }
-      setMicLevel(0)
+      setMicLevel(-100)
     }
 
     if (!isTestingMic) {
@@ -148,8 +159,7 @@ export default function SidebarChannels({
           let sum = 0
           for (const value of data) sum += value * value
           const rms = Math.sqrt(sum / data.length)
-          const normalized = Math.min(100, Math.max(0, Math.round(rms * 280)))
-          setMicLevel(normalized)
+          setMicLevel(rmsToDb(rms))
           micTestAnimationRef.current = requestAnimationFrame(tick)
         }
         micTestAnimationRef.current = requestAnimationFrame(tick)
@@ -547,7 +557,9 @@ export default function SidebarChannels({
         user={user}
         micSensitivity={micSensitivity}
         onMicSensitivityChange={(value) => setMicSensitivity(value)}
-        micLevel={micLevel}
+        micLevelPercent={dbToPercent(micLevel)}
+        micLevelLabel={micLevel}
+        micSensitivityPercent={dbToPercent(micSensitivity)}
         isTestingMic={isTestingMic}
         onToggleMicTest={() => setIsTestingMic((prev) => !prev)}
         micTestError={micTestError}
