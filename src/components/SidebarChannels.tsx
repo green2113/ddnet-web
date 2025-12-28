@@ -24,6 +24,7 @@ export type SidebarChannelsProps = {
   voiceMembersByChannel?: Record<string, VoiceMember[]>
   unreadByChannel?: Record<string, boolean>
   user?: SidebarUser | null
+  onMicTestToggle?: (active: boolean) => void
   onAddAdmin?: (id: string) => void
   onRemoveAdmin?: (id: string) => void
   onSelect?: (channelId: string) => void
@@ -43,6 +44,7 @@ export default function SidebarChannels({
   voiceMembersByChannel = {},
   unreadByChannel = {},
   user = null,
+  onMicTestToggle,
   onAddAdmin,
   onRemoveAdmin,
   onSelect,
@@ -59,6 +61,8 @@ export default function SidebarChannels({
   const [settingsTab, setSettingsTab] = useState<'profile' | 'voice'>('profile')
   const [micSensitivity, setMicSensitivity] = useState(60)
   const [isTestingMic, setIsTestingMic] = useState(false)
+  const [micLevel, setMicLevel] = useState(0)
+  const [micTestError, setMicTestError] = useState('')
   const [adminInput, setAdminInput] = useState('')
   const [showHiddenChannels, setShowHiddenChannels] = useState(false)
   const [channelMenu, setChannelMenu] = useState<{ visible: boolean; x: number; y: number; channel: { id: string; name: string; hidden?: boolean } | null }>({
@@ -69,6 +73,9 @@ export default function SidebarChannels({
   })
   const wrapRef = useRef<HTMLDivElement | null>(null)
   const dragIdRef = useRef<string | null>(null)
+  const micTestStreamRef = useRef<MediaStream | null>(null)
+  const micTestContextRef = useRef<AudioContext | null>(null)
+  const micTestAnimationRef = useRef<number | null>(null)
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
       if (!wrapRef.current) return
@@ -86,6 +93,70 @@ export default function SidebarChannels({
     window.addEventListener('mousedown', closeMenu)
     return () => window.removeEventListener('mousedown', closeMenu)
   }, [])
+
+  useEffect(() => {
+    onMicTestToggle?.(isTestingMic)
+  }, [isTestingMic, onMicTestToggle])
+
+  useEffect(() => {
+    const stopMicTest = () => {
+      micTestStreamRef.current?.getTracks().forEach((track) => track.stop())
+      micTestStreamRef.current = null
+      if (micTestAnimationRef.current) {
+        cancelAnimationFrame(micTestAnimationRef.current)
+        micTestAnimationRef.current = null
+      }
+      if (micTestContextRef.current) {
+        micTestContextRef.current.close()
+        micTestContextRef.current = null
+      }
+      setMicLevel(0)
+    }
+
+    if (!isTestingMic) {
+      stopMicTest()
+      return
+    }
+
+    let cancelled = false
+    setMicTestError('')
+    navigator.mediaDevices
+      .getUserMedia({ audio: true })
+      .then((stream) => {
+        if (cancelled) {
+          stream.getTracks().forEach((track) => track.stop())
+          return
+        }
+        micTestStreamRef.current = stream
+        const ctx = new AudioContext()
+        micTestContextRef.current = ctx
+        const analyser = ctx.createAnalyser()
+        analyser.fftSize = 1024
+        const source = ctx.createMediaStreamSource(stream)
+        source.connect(analyser)
+        const data = new Float32Array(analyser.fftSize)
+
+        const tick = () => {
+          analyser.getFloatTimeDomainData(data)
+          let sum = 0
+          for (const value of data) sum += value * value
+          const rms = Math.sqrt(sum / data.length)
+          const normalized = Math.min(100, Math.max(0, Math.round(rms * 280)))
+          setMicLevel(normalized)
+          micTestAnimationRef.current = requestAnimationFrame(tick)
+        }
+        micTestAnimationRef.current = requestAnimationFrame(tick)
+      })
+      .catch(() => {
+        setMicTestError('마이크 접근 권한이 필요합니다.')
+        setIsTestingMic(false)
+      })
+
+    return () => {
+      cancelled = true
+      stopMicTest()
+    }
+  }, [isTestingMic])
 
   const hiddenChannelsCount = canManage ? channels.filter((channel) => channel.hidden).length : 0
   const visibleChannels = channels.filter((channel) => {
@@ -576,7 +647,10 @@ export default function SidebarChannels({
                       </div>
                       <button
                         className="h-8 w-8 rounded-full border border-white/20"
-                        onClick={() => setShowUserSettings(false)}
+                        onClick={() => {
+                          setShowUserSettings(false)
+                          setIsTestingMic(false)
+                        }}
                         aria-label="Close user settings"
                       >
                         ✕
@@ -616,6 +690,34 @@ export default function SidebarChannels({
                             />
                             <span className="text-sm w-12 text-right">{micSensitivity}%</span>
                           </div>
+                          <div className="mt-3">
+                            <div className="h-2 rounded-full overflow-hidden relative" style={{ background: '#2f3142' }}>
+                              <div
+                                className="h-full transition-all"
+                                style={{
+                                  width: `${micLevel}%`,
+                                  background: micLevel >= micSensitivity ? '#22c55e' : '#5865f2',
+                                }}
+                              />
+                              <div
+                                style={{
+                                  position: 'absolute',
+                                  left: `${micSensitivity}%`,
+                                  top: 0,
+                                  bottom: 0,
+                                  width: '2px',
+                                  background: 'rgba(255,255,255,0.6)',
+                                }}
+                              />
+                            </div>
+                            <div className="flex items-center justify-between text-[11px] opacity-70 mt-2">
+                              <span>현재 입력: {micLevel}%</span>
+                              <span>감지 기준: {micSensitivity}%</span>
+                            </div>
+                            <div className="text-[11px] mt-1" style={{ color: micLevel >= micSensitivity ? '#22c55e' : 'rgba(255,255,255,0.5)' }}>
+                              {micLevel >= micSensitivity ? '감지됨' : '조용함'}
+                            </div>
+                          </div>
                           <div className="text-xs opacity-70 mt-2">높을수록 작은 소리에도 마이크가 반응합니다.</div>
                         </div>
                         <div className="rounded-xl p-5" style={{ background: '#1f202b' }}>
@@ -632,6 +734,7 @@ export default function SidebarChannels({
                           {isTestingMic ? (
                             <div className="mt-3 text-xs opacity-70">마이크 테스트 중입니다. 말해보세요.</div>
                           ) : null}
+                          {micTestError ? <div className="mt-3 text-xs text-red-300">{micTestError}</div> : null}
                         </div>
                       </div>
                     )}
@@ -651,7 +754,14 @@ function Icon({ name }: { name: string }) {
     case 'settings':
       return (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-          <path fill="currentColor" fillRule="evenodd" d="M10.56 1.1c-.46.05-.7.53-.64.98.18 1.16-.19 2.2-.98 2.53-.8.33-1.79-.15-2.49-1.1-.27-.36-.78-.52-1.14-.24-.77.59-1.45 1.27-2.04 2.04-.28.36-.12.87.24 1.14.96.7 1.43 1.7 1.1 2.49-.33.8-1.37 1.16-2.53.98-.45-.07-.93.18-.99.64a11.1 11.1 0 0 0 0 2.88c.06.46.54.7.99.64 1.16-.18 2.2.19 2.53.98.33.8-.14 1.79-1.1 2.49-.36.27-.52.78-.24 1.14.59.77 1.27 1.45 2.04 2.04.36.28.87.12 1.14-.24.7-.95 1.7-1.43 2.49-1.1.8.33 1.16 1.37.98 2.53-.07.45.18.93.64.99a11.1 11.1 0 0 0 2.88 0c.46-.06.7-.54.64-.99-.18-1.16.19-2.2.98-2.53.8-.33 1.79.14 2.49 1.1.27.36.78.52 1.14.24.77-.59 1.45-1.27 2.04-2.04.28-.36.12.87-.24-1.14.96-.7 1.43-1.7 1.0-2.49.33-.8 1.37-1.16 2.53-.98.45.07.93-.18.99-.64a11.1 11.1 0 0 0 0-2.88c-.06-.46-.54-.7-.99-.64-1.16.18-2.2-.19-2.53-.98-.33-.814-1.79 1.1-2.49.36-.27.52-.78.24-1.14a11.07 11.07 0 0 0-2.04-2.04c-.36-.28.87-.12-1.14.24-.7.96-1.7 1.43-2.49 1.1-.8-.33-1.16-1.37-.98-2.53.07-.45.18-.93.64-.99a11.1 11.1 0 0 0-2.88 0ZM16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z" clipRule="evenodd"></path>
+          <circle cx="12" cy="12" r="3.5" stroke="currentColor" strokeWidth="1.6" />
+          <path
+            d="M19.4 15a1.7 1.7 0 0 0 .33 1.86l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.86-.33 1.7 1.7 0 0 0-1 1.53V21a2 2 0 1 1-4 0v-.11a1.7 1.7 0 0 0-1-1.53 1.7 1.7 0 0 0-1.86.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .33-1.86 1.7 1.7 0 0 0-1.53-1H3a2 2 0 1 1 0-4h.11a1.7 1.7 0 0 0 1.53-1 1.7 1.7 0 0 0-.33-1.86l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.86.33 1.7 1.7 0 0 0 1-1.53V3a2 2 0 1 1 4 0v.11a1.7 1.7 0 0 0 1 1.53 1.7 1.7 0 0 0 1.86-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.33 1.86 1.7 1.7 0 0 0 1.53 1H21a2 2 0 1 1 0 4h-.11a1.7 1.7 0 0 0-1.53 1Z"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
       )
     case 'bell':
