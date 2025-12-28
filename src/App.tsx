@@ -38,6 +38,7 @@ type VoiceMember = {
 }
 
 type VoiceMembersByChannel = Record<string, VoiceMember[]>
+type UnreadByChannel = Record<string, boolean>
 
 type Channel = {
   id: string
@@ -51,6 +52,7 @@ function App() {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [messageCache, setMessageCache] = useState<MessageCache>({})
   const [voiceMembersByChannel, setVoiceMembersByChannel] = useState<VoiceMembersByChannel>({})
+  const [unreadByChannel, setUnreadByChannel] = useState<UnreadByChannel>({})
   const [loadingMessages, setLoadingMessages] = useState(true)
   const [loadError, setLoadError] = useState(false)
   const [channels, setChannels] = useState<Channel[]>([])
@@ -189,6 +191,9 @@ function App() {
 
   useEffect(() => {
     activeChannelRef.current = activeChannelId
+    if (activeChannelId) {
+      setUnreadByChannel((prev) => ({ ...prev, [activeChannelId]: false }))
+    }
     const active = channels.find((channel) => channel.id === activeChannelId)
     if (activeChannelId && active?.type !== 'voice') {
       if (lastHistoryChannelIdRef.current !== activeChannelId) {
@@ -251,6 +256,9 @@ function App() {
             const el = document.getElementById('messages-scroll')
             if (el) el.scrollTop = el.scrollHeight
           })
+          setUnreadByChannel((prevUnread) => ({ ...prevUnread, [channelId]: false }))
+        } else {
+          setUnreadByChannel((prevUnread) => ({ ...prevUnread, [channelId]: true }))
         }
         return { ...prev, [channelId]: next }
       })
@@ -384,8 +392,10 @@ function App() {
             channels={channels}
             activeId={activeChannelId}
             voiceMembersByChannel={voiceMembersByChannel}
+            unreadByChannel={unreadByChannel}
             onSelect={(channelId) => {
               setActiveChannelId(channelId)
+              setUnreadByChannel((prev) => ({ ...prev, [channelId]: false }))
               navigate(`/channels/${channelId}`)
               setShowMobileChannels(false)
             }}
@@ -508,10 +518,10 @@ function App() {
                 {entryStep === 'choice' ? (
                   <>
                     <div className="px-5 py-4 text-base" style={{ color: 'var(--text-primary)' }}>
-                      어떻게 이용하시겠어요?
+                      What would you like to log in with?
                     </div>
                     <div className="px-5 pb-2 text-sm" style={{ color: 'var(--text-muted)' }}>
-                      비로그인으로도 채팅과 음성 통화를 사용할 수 있어요. 나중에 Discord 로그인으로 전환할 수도 있습니다.
+                      You can use chat and voice calls without logging in. You can switch to Discord login later.
                     </div>
                     <div className="px-5 py-3 flex justify-end gap-2" style={{ background: 'var(--panel)', borderTop: '1px solid var(--border)' }}>
                       <button
@@ -519,7 +529,7 @@ function App() {
                         style={{ background: 'rgba(127,127,127,0.2)', color: 'var(--text-primary)' }}
                         onClick={() => setEntryStep('guest')}
                       >
-                        비로그인으로 시작
+                        Without login
                       </button>
                       <button
                         className="px-3 h-9 rounded-md text-white cursor-pointer"
@@ -529,20 +539,20 @@ function App() {
                           login()
                         }}
                       >
-                        Discord로 로그인
+                        Login to Discord
                       </button>
                     </div>
                   </>
                 ) : (
                   <>
                     <div className="px-5 py-4 text-base" style={{ color: 'var(--text-primary)' }}>
-                      사용할 이름을 입력해 주세요
+                      Enter the name you wish to use
                     </div>
                     <div className="px-5 pb-4">
                       <input
                         value={guestName}
                         onChange={(event) => setGuestName(event.target.value)}
-                        placeholder="예: 게스트"
+                        placeholder="ex) guest"
                         className="w-full h-10 px-3 rounded-md"
                         style={{ background: 'var(--input-bg)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
                       />
@@ -553,7 +563,7 @@ function App() {
                         style={{ background: 'rgba(127,127,127,0.2)', color: 'var(--text-primary)' }}
                         onClick={() => setEntryStep('choice')}
                       >
-                        뒤로
+                        Back
                       </button>
                       <button
                         className="px-3 h-9 rounded-md text-white cursor-pointer disabled:opacity-50"
@@ -561,7 +571,7 @@ function App() {
                         onClick={createGuest}
                         disabled={!guestName.trim() || guestSubmitting}
                       >
-                        비로그인으로 시작
+                        Without login
                       </button>
                     </div>
                   </>
