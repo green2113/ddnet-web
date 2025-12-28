@@ -459,37 +459,46 @@ export default function SidebarChannels({
           })}
         </div>
       </div>
-      <div className="mt-auto border-t px-3 py-3" style={{ borderColor: 'var(--border)', background: 'var(--header-bg)' }}>
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center" style={{ background: 'var(--input-bg)' }}>
-            {user?.avatar ? (
-              <img src={user.avatar} alt={user.displayName || user.username} className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                {(user?.displayName || user?.username || 'G').slice(0, 1)}
-              </span>
-            )}
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-sm" style={{ color: 'var(--text-primary)' }}>
-              {user?.displayName || user?.username || '게스트'}
+      <div className="mt-auto px-3 pb-3">
+        <div
+          className="border rounded-xl px-3 py-3"
+          style={{
+            borderColor: 'var(--border)',
+            background: 'var(--header-bg)',
+            boxShadow: '0 8px 18px rgba(0,0,0,0.35)',
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center" style={{ background: 'var(--input-bg)' }}>
+              {user?.avatar ? (
+                <img src={user.avatar} alt={user.displayName || user.username} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                  {(user?.displayName || user?.username || 'G').slice(0, 1)}
+                </span>
+              )}
             </div>
-            <div className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
-              {user?.isGuest ? '게스트 모드' : '온라인'}
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm" style={{ color: 'var(--text-primary)' }}>
+                {user?.displayName || user?.username || '게스트'}
+              </div>
+              <div className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                {user?.isGuest ? '게스트 모드' : '온라인'}
+              </div>
             </div>
+            <button
+              type="button"
+              aria-label="사용자 설정"
+              className="h-9 w-9 rounded-md flex items-center justify-center hover-surface"
+              style={{ color: 'var(--text-primary)' }}
+              onClick={() => {
+                setSettingsTab('profile')
+                setShowUserSettings(true)
+              }}
+            >
+              <Icon name="settings" />
+            </button>
           </div>
-          <button
-            type="button"
-            aria-label="사용자 설정"
-            className="h-9 w-9 rounded-md flex items-center justify-center hover-surface"
-            style={{ color: 'var(--text-primary)' }}
-            onClick={() => {
-              setSettingsTab('profile')
-              setShowUserSettings(true)
-            }}
-          >
-            <Icon name="settings" />
-          </button>
         </div>
       </div>
       {channelMenu.visible && channelMenu.channel && canManage
