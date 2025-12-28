@@ -130,12 +130,12 @@ export default function Settings({
       {showUserSettings
         ? createPortal(
             <div
-              className="fixed inset-0 z-[80] flex items-center justify-center px-8 py-4"
+              className="fixed inset-0 z-[80] flex items-center justify-center px-8 py-5"
               style={{ background: 'rgba(0,0,0,0.65)' }}
               onMouseDown={onCloseUserSettings}
             >
               <div
-                className="w-full max-w-6xl max-h-[85vh] rounded-2xl overflow-hidden shadow-xl"
+                className="w-full h-full rounded-2xl overflow-hidden shadow-xl"
                 style={{ background: '#2b2c3c', color: 'white' }}
                 onMouseDown={(e) => e.stopPropagation()}
               >
@@ -232,8 +232,8 @@ export default function Settings({
                               <span>현재 입력: {micLevelLabel}dB</span>
                               <span>감지 기준: {micSensitivity}dB</span>
                             </div>
-                            <div className="text-[11px] mt-1" style={{ color: micLevelLabel >= micSensitivity ? '#22c55e' : 'rgba(255,255,255,0.5)' }}>
-                              {micLevelLabel >= micSensitivity ? '감지됨' : '조용함'}
+                            <div className="text-[11px] mt-1" style={{ color: micLevel >= micSensitivity ? '#22c55e' : 'rgba(255,255,255,0.5)' }}>
+                              {micLevel >= micSensitivity ? '감지됨' : '조용함'}
                             </div>
                           </div>
                           <div className="text-xs opacity-70 mt-2">높을수록 작은 소리에도 마이크가 반응합니다.</div>
