@@ -58,6 +58,7 @@ export default function SidebarChannels({
   const [showUserSettings, setShowUserSettings] = useState(false)
   const [settingsTab, setSettingsTab] = useState<'profile' | 'voice'>('profile')
   const [micSensitivity, setMicSensitivity] = useState(60)
+  const [isTestingMic, setIsTestingMic] = useState(false)
   const [adminInput, setAdminInput] = useState('')
   const [showHiddenChannels, setShowHiddenChannels] = useState(false)
   const [channelMenu, setChannelMenu] = useState<{ visible: boolean; x: number; y: number; channel: { id: string; name: string; hidden?: boolean } | null }>({
@@ -620,9 +621,17 @@ export default function SidebarChannels({
                         <div className="rounded-xl p-5" style={{ background: '#1f202b' }}>
                           <div className="text-sm font-semibold mb-2">입력 테스트</div>
                           <div className="text-xs opacity-70">마이크 설정을 테스트할 때 사용하세요.</div>
-                          <button className="mt-4 px-4 h-9 rounded-md" style={{ background: '#5865f2' }}>
-                            테스트 시작
+                          <button
+                            type="button"
+                            className="mt-4 px-4 h-9 rounded-md"
+                            style={{ background: isTestingMic ? '#4b5563' : '#5865f2' }}
+                            onClick={() => setIsTestingMic((prev) => !prev)}
+                          >
+                            {isTestingMic ? '테스트 중지' : '테스트 시작'}
                           </button>
+                          {isTestingMic ? (
+                            <div className="mt-3 text-xs opacity-70">마이크 테스트 중입니다. 말해보세요.</div>
+                          ) : null}
                         </div>
                       </div>
                     )}
