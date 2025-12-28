@@ -1,10 +1,9 @@
-
 type Props = {
   title: string
   isDark: boolean
   onLight: () => void
   onDark: () => void
-  user: { username: string } | null
+  user: { username: string; isGuest?: boolean } | null
   onLogin: () => void
   onLogout: () => void
   onToggleChannels?: () => void
@@ -59,7 +58,10 @@ export default function Header({ title, isDark, onLight, onDark, user, onLogin, 
         </button>
         {user ? (
           <>
-            <div className="text-sm" style={{ color: 'var(--text-muted)' }}>{user.username}</div>
+            <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
+              {user.username}
+              {user.isGuest ? ' (게스트)' : ''}
+            </div>
             <button onClick={onLogout} className="text-xs px-2 py-1 rounded hover:opacity-90 cursor-pointer" style={{ background: 'var(--input-bg)' }}>
               로그아웃
             </button>
