@@ -44,6 +44,7 @@ function App() {
   const [channels, setChannels] = useState<Channel[]>([])
   const [adminIds, setAdminIds] = useState<string[]>([])
   const [activeChannelId, setActiveChannelId] = useState('')
+  const [voiceChannelId, setVoiceChannelId] = useState('')
   const [input, setInput] = useState('')
   const socketRef = useRef<Socket | null>(null)
   const activeChannelRef = useRef('')
@@ -165,6 +166,13 @@ function App() {
       setActiveChannelId(channels[0].id)
     }
   }, [channels, activeChannelId, routeChannelId])
+
+  useEffect(() => {
+    const active = channels.find((channel) => channel.id === activeChannelId)
+    if (active?.type === 'voice') {
+      setVoiceChannelId(active.id)
+    }
+  }, [activeChannelId, channels])
 
   useEffect(() => {
     activeChannelRef.current = activeChannelId
@@ -408,17 +416,20 @@ function App() {
             onLogout={logout}
             onToggleChannels={() => setShowMobileChannels((prev) => !prev)}
           />
-          {isVoiceChannel ? (
-            <VoicePanel
-              channelId={activeChannelId}
-              socket={socketRef.current}
-              user={user}
-              onRequireLogin={() => {
-                setEntryStep('choice')
-                setShowEntryModal(true)
-              }}
-            />
-          ) : (
+          {voiceChannelId ? (
+            <div style={{ display: isVoiceChannel ? 'block' : 'none' }}>
+              <VoicePanel
+                channelId={voiceChannelId}
+                socket={socketRef.current}
+                user={user}
+                onRequireLogin={() => {
+                  setEntryStep('choice')
+                  setShowEntryModal(true)
+                }}
+              />
+            </div>
+          ) : null}
+          {isVoiceChannel ? null : (
             <>
               <MessageList messages={messages} adminIds={adminIds} loading={loadingMessages} error={loadError} onRetry={() => fetchHistory(activeChannelId)} />
               <Composer value={input} onChange={setInput} onSend={sendMessage} />
