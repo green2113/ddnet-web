@@ -8,6 +8,14 @@ type VoiceMember = {
   avatar?: string | null
 }
 
+type SidebarUser = {
+  id: string
+  username: string
+  displayName?: string
+  avatar?: string | null
+  isGuest?: boolean
+}
+
 export type SidebarChannelsProps = {
   channels: Array<{ id: string; name: string; hidden?: boolean; type?: 'text' | 'voice' }>
   activeId?: string
@@ -15,6 +23,7 @@ export type SidebarChannelsProps = {
   adminIds?: string[]
   voiceMembersByChannel?: Record<string, VoiceMember[]>
   unreadByChannel?: Record<string, boolean>
+  user?: SidebarUser | null
   onAddAdmin?: (id: string) => void
   onRemoveAdmin?: (id: string) => void
   onSelect?: (channelId: string) => void
@@ -33,6 +42,7 @@ export default function SidebarChannels({
   adminIds = [],
   voiceMembersByChannel = {},
   unreadByChannel = {},
+  user = null,
   onAddAdmin,
   onRemoveAdmin,
   onSelect,
@@ -45,6 +55,9 @@ export default function SidebarChannels({
 }: SidebarChannelsProps) {
   const [open, setOpen] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [showUserSettings, setShowUserSettings] = useState(false)
+  const [settingsTab, setSettingsTab] = useState<'profile' | 'voice'>('profile')
+  const [micSensitivity, setMicSensitivity] = useState(60)
   const [adminInput, setAdminInput] = useState('')
   const [showHiddenChannels, setShowHiddenChannels] = useState(false)
   const [channelMenu, setChannelMenu] = useState<{ visible: boolean; x: number; y: number; channel: { id: string; name: string; hidden?: boolean } | null }>({
@@ -132,7 +145,7 @@ export default function SidebarChannels({
         )}
       </div>
 
-      <div className="p-3">
+      <div className="p-3 flex-1 overflow-y-auto">
         <div className="flex items-center justify-between text-[11px] uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
           <span>text channels</span>
           {canManage ? (
@@ -357,6 +370,39 @@ export default function SidebarChannels({
           })}
         </div>
       </div>
+      <div className="mt-auto border-t px-3 py-3" style={{ borderColor: 'var(--border)', background: 'var(--header-bg)' }}>
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center" style={{ background: 'var(--input-bg)' }}>
+            {user?.avatar ? (
+              <img src={user.avatar} alt={user.displayName || user.username} className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                {(user?.displayName || user?.username || 'G').slice(0, 1)}
+              </span>
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm" style={{ color: 'var(--text-primary)' }}>
+              {user?.displayName || user?.username || '게스트'}
+            </div>
+            <div className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+              {user?.isGuest ? '게스트 모드' : '온라인'}
+            </div>
+          </div>
+          <button
+            type="button"
+            aria-label="사용자 설정"
+            className="h-9 w-9 rounded-md flex items-center justify-center hover-surface"
+            style={{ color: 'var(--text-primary)' }}
+            onClick={() => {
+              setSettingsTab('profile')
+              setShowUserSettings(true)
+            }}
+          >
+            <Icon name="settings" />
+          </button>
+        </div>
+      </div>
       {channelMenu.visible && channelMenu.channel && canManage
         ? createPortal(
             <div
@@ -474,6 +520,112 @@ export default function SidebarChannels({
                         </button>
                       </div>
                     ))}
+                  </div>
+                </div>
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
+      {showUserSettings
+        ? createPortal(
+            <div className="fixed inset-0 z-[80] flex items-center justify-center px-4" style={{ background: 'rgba(0,0,0,0.65)' }}>
+              <div className="w-full max-w-4xl rounded-2xl overflow-hidden shadow-xl" style={{ background: '#2b2c3c', color: 'white' }}>
+                <div className="flex">
+                  <div className="w-64 p-6" style={{ background: '#1e1f2b' }}>
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center" style={{ background: '#2f3142' }}>
+                        {user?.avatar ? (
+                          <img src={user.avatar} alt={user.displayName || user.username} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-lg font-semibold">
+                            {(user?.displayName || user?.username || 'G').slice(0, 1)}
+                          </span>
+                        )}
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold">{user?.displayName || user?.username || '게스트'}</div>
+                        <div className="text-xs opacity-70">{user?.isGuest ? '게스트 계정' : '내 계정'}</div>
+                      </div>
+                    </div>
+                    <div className="space-y-2 text-sm">
+                      <button
+                        type="button"
+                        className="w-full text-left px-3 py-2 rounded-md"
+                        style={{ background: settingsTab === 'profile' ? 'rgba(255,255,255,0.12)' : 'transparent' }}
+                        onClick={() => setSettingsTab('profile')}
+                      >
+                        내 계정
+                      </button>
+                      <button
+                        type="button"
+                        className="w-full text-left px-3 py-2 rounded-md"
+                        style={{ background: settingsTab === 'voice' ? 'rgba(255,255,255,0.12)' : 'transparent' }}
+                        onClick={() => setSettingsTab('voice')}
+                      >
+                        음성 및 비디오
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex-1 p-8">
+                    <div className="flex items-center justify-between mb-6">
+                      <div>
+                        <div className="text-lg font-semibold">{settingsTab === 'voice' ? '음성 설정' : '내 계정'}</div>
+                        <div className="text-sm opacity-70">{settingsTab === 'voice' ? '마이크 민감도와 음성 입력을 조정하세요.' : '프로필과 계정 정보를 확인하세요.'}</div>
+                      </div>
+                      <button
+                        className="h-8 w-8 rounded-full border border-white/20"
+                        onClick={() => setShowUserSettings(false)}
+                        aria-label="Close user settings"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    {settingsTab === 'profile' ? (
+                      <div className="rounded-xl p-6" style={{ background: '#1f202b' }}>
+                        <div className="flex items-center gap-5">
+                          <div className="w-20 h-20 rounded-full overflow-hidden flex items-center justify-center" style={{ background: '#2f3142' }}>
+                            {user?.avatar ? (
+                              <img src={user.avatar} alt={user.displayName || user.username} className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="text-2xl font-semibold">
+                                {(user?.displayName || user?.username || 'G').slice(0, 1)}
+                              </span>
+                            )}
+                          </div>
+                          <div>
+                            <div className="text-sm opacity-70">닉네임</div>
+                            <div className="text-lg font-semibold">{user?.displayName || user?.username || '게스트'}</div>
+                            <div className="text-xs opacity-60 mt-1">설정 화면에서 프로필 사진과 정보를 확인할 수 있습니다.</div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-6">
+                        <div>
+                          <div className="text-sm font-semibold mb-2">마이크 민감도</div>
+                          <div className="flex items-center gap-4">
+                            <input
+                              type="range"
+                              min={0}
+                              max={100}
+                              value={micSensitivity}
+                              onChange={(e) => setMicSensitivity(Number(e.target.value))}
+                              className="flex-1"
+                            />
+                            <span className="text-sm w-12 text-right">{micSensitivity}%</span>
+                          </div>
+                          <div className="text-xs opacity-70 mt-2">높을수록 작은 소리에도 마이크가 반응합니다.</div>
+                        </div>
+                        <div className="rounded-xl p-5" style={{ background: '#1f202b' }}>
+                          <div className="text-sm font-semibold mb-2">입력 테스트</div>
+                          <div className="text-xs opacity-70">마이크 설정을 테스트할 때 사용하세요.</div>
+                          <button className="mt-4 px-4 h-9 rounded-md" style={{ background: '#5865f2' }}>
+                            테스트 시작
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
