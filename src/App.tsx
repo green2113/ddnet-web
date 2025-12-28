@@ -402,6 +402,7 @@ function App() {
             activeId={activeChannelId}
             voiceMembersByChannel={voiceMembersByChannel}
             unreadByChannel={unreadByChannel}
+            user={user}
             onSelect={(channelId) => {
               activeChannelRef.current = channelId
               setActiveChannelId(channelId)
