@@ -247,7 +247,6 @@ export default function VoicePanel({ channelId, socket, user, onRequireLogin }: 
   useEffect(() => {
     if (!socket) return
     if (!user) return
-    joinVoice()
     return () => {
       leaveVoice()
     }
