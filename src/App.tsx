@@ -98,6 +98,13 @@ function App() {
     return api ? api.replace(/\/$/, '') : ''
   }, [])
 
+  const scrollMessagesToBottom = () => {
+    requestAnimationFrame(() => {
+      const el = document.getElementById('messages-scroll')
+      if (el) el.scrollTop = el.scrollHeight
+    })
+  }
+
   const fetchHistory = (channelId: string) => {
     if (!channelId) return
     setLoadingMessages(true)
@@ -108,6 +115,7 @@ function App() {
         if (Array.isArray(res.data)) {
           setMessages(res.data)
           setMessageCache((prev) => ({ ...prev, [channelId]: res.data }))
+          scrollMessagesToBottom()
         }
         setLoadingMessages(false)
       })
@@ -201,6 +209,7 @@ function App() {
         const cached = messageCache[activeChannelId]
         if (cached) {
           setMessages(cached)
+          scrollMessagesToBottom()
         } else {
           fetchHistory(activeChannelId)
         }
@@ -546,13 +555,13 @@ function App() {
                 ) : (
                   <>
                     <div className="px-5 py-4 text-base" style={{ color: 'var(--text-primary)' }}>
-                      Enter the name you wish to use
+                      Enter the name you wish to use.
                     </div>
                     <div className="px-5 pb-4">
                       <input
                         value={guestName}
                         onChange={(event) => setGuestName(event.target.value)}
-                        placeholder="ex) guest"
+                        placeholder="ex. guest"
                         className="w-full h-10 px-3 rounded-md"
                         style={{ background: 'var(--input-bg)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
                       />
