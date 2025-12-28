@@ -39,6 +39,10 @@ export default function VoicePanel({ channelId, socket, user, forceHeadsetMuted 
   const micBeforeForceRef = useRef(false)
   const headsetBeforeForceRef = useRef(false)
   const localStreamRef = useRef<MediaStream | null>(null)
+  const rawStreamRef = useRef<MediaStream | null>(null)
+  const micContextRef = useRef<AudioContext | null>(null)
+  const micGainRef = useRef<GainNode | null>(null)
+  const micDestinationRef = useRef<MediaStreamDestinationNode | null>(null)
   const peersRef = useRef<Map<string, RTCPeerConnection>>(new Map())
   const speakingRef = useRef<Set<string>>(new Set())
   const speakingThresholdRef = useRef<Map<string, number>>(new Map())
@@ -134,7 +138,13 @@ export default function VoicePanel({ channelId, socket, user, forceHeadsetMuted 
     if (socket?.id) {
       cleanupPeer(socket.id)
     }
+    rawStreamRef.current?.getTracks().forEach((track) => track.stop())
     localStreamRef.current?.getTracks().forEach((track) => track.stop())
+    micContextRef.current?.close()
+    micContextRef.current = null
+    micGainRef.current = null
+    micDestinationRef.current = null
+    rawStreamRef.current = null
     localStreamRef.current = null
     setJoined(false)
     setMembers([])
@@ -214,8 +224,18 @@ export default function VoicePanel({ channelId, socket, user, forceHeadsetMuted 
     if (joined) return
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      localStreamRef.current = stream
-      stream.getAudioTracks().forEach((track) => {
+      rawStreamRef.current = stream
+      const ctx = new AudioContext()
+      micContextRef.current = ctx
+      const source = ctx.createMediaStreamSource(stream)
+      const gain = ctx.createGain()
+      const destination = ctx.createMediaStreamDestination()
+      micGainRef.current = gain
+      micDestinationRef.current = destination
+      source.connect(gain)
+      gain.connect(destination)
+      localStreamRef.current = destination.stream
+      localStreamRef.current.getAudioTracks().forEach((track) => {
         track.enabled = !micMuted && !headsetMuted
       })
       setJoined(true)
@@ -296,17 +316,18 @@ export default function VoicePanel({ channelId, socket, user, forceHeadsetMuted 
 
   useEffect(() => {
     if (!joined || !socket?.id) return
-    const stream = localStreamRef.current
+    const stream = rawStreamRef.current
     if (!stream) return
     startSpeakingMonitor(socket.id, stream, micSensitivity)
   }, [joined, micSensitivity, socket?.id])
 
   useEffect(() => {
     if (!joined) return
-    const stream = localStreamRef.current
-    if (!stream) return
+    const stream = rawStreamRef.current
+    const outputStream = localStreamRef.current
+    if (!stream || !outputStream) return
     if (micMuted || headsetMuted) {
-      stream.getAudioTracks().forEach((track) => {
+      outputStream.getAudioTracks().forEach((track) => {
         track.enabled = false
       })
       return
@@ -323,7 +344,7 @@ export default function VoicePanel({ channelId, socket, user, forceHeadsetMuted 
       analyser.getFloatTimeDomainData(data)
       const normalized = normalizeLevel(data)
       const shouldTransmit = normalized >= micSensitivity && !micMuted && !headsetMuted
-      stream.getAudioTracks().forEach((track) => {
+      outputStream.getAudioTracks().forEach((track) => {
         track.enabled = shouldTransmit
       })
       const raf = requestAnimationFrame(tick)
@@ -490,7 +511,7 @@ export default function VoicePanel({ channelId, socket, user, forceHeadsetMuted 
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
               <path d="M4 12a8 8 0 0 1 16 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
               <path d="M4 12v6a2 2 0 0 0 2 2h2v-6H6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-              <path d="M20 12v6a2 2 0 0 1-2 2h-2v-6h2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              <path d="M20 12v6a2 2 0 1 1-2 2h-2v-6h2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
               {headsetMuted ? <path d="M4 4l16 16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /> : null}
             </svg>
             <span className="text-sm">{headsetMuted ? '헤드셋 켜기' : '헤드셋 끄기'}</span>
