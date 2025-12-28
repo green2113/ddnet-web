@@ -403,6 +403,7 @@ function App() {
             voiceMembersByChannel={voiceMembersByChannel}
             unreadByChannel={unreadByChannel}
             onSelect={(channelId) => {
+              activeChannelRef.current = channelId
               setActiveChannelId(channelId)
               setUnreadByChannel((prev) => ({ ...prev, [channelId]: false }))
               navigate(`/channels/${channelId}`)
