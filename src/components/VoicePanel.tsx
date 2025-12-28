@@ -21,18 +21,22 @@ type VoicePanelProps = {
   channelId: string
   socket: Socket | null
   user: User | null
+  forceHeadsetMuted?: boolean
   onRequireLogin?: () => void
 }
 
 const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }]
 
-export default function VoicePanel({ channelId, socket, user, onRequireLogin }: VoicePanelProps) {
+export default function VoicePanel({ channelId, socket, user, forceHeadsetMuted = false, onRequireLogin }: VoicePanelProps) {
   const [joined, setJoined] = useState(false)
   const [members, setMembers] = useState<VoiceMember[]>([])
   const [speakingIds, setSpeakingIds] = useState<string[]>([])
   const [micMuted, setMicMuted] = useState(false)
   const [headsetMuted, setHeadsetMuted] = useState(false)
   const micBeforeDeafenRef = useRef(false)
+  const forcedHeadsetRef = useRef(false)
+  const micBeforeForceRef = useRef(false)
+  const headsetBeforeForceRef = useRef(false)
   const localStreamRef = useRef<MediaStream | null>(null)
   const peersRef = useRef<Map<string, RTCPeerConnection>>(new Map())
   const speakingRef = useRef<Set<string>>(new Set())
@@ -272,6 +276,25 @@ export default function VoicePanel({ channelId, socket, user, onRequireLogin }: 
       track.enabled = trackEnabled
     })
   }, [headsetMuted, micMuted])
+
+  useEffect(() => {
+    if (!joined) return
+    if (forceHeadsetMuted) {
+      if (!forcedHeadsetRef.current) {
+        forcedHeadsetRef.current = true
+        micBeforeForceRef.current = micMuted
+        headsetBeforeForceRef.current = headsetMuted
+      }
+      setHeadsetMuted(true)
+      setMicMuted(true)
+      return
+    }
+    if (forcedHeadsetRef.current) {
+      forcedHeadsetRef.current = false
+      setHeadsetMuted(headsetBeforeForceRef.current)
+      setMicMuted(micBeforeForceRef.current)
+    }
+  }, [forceHeadsetMuted, joined, headsetMuted, micMuted])
 
   return (
     <div className="flex-1 flex flex-col p-6 gap-4">
