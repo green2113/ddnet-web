@@ -165,7 +165,7 @@ export default function MessageList({ messages, adminIds = [], loading = false, 
                         <span className="font-medium">{m.author.displayName || m.author.username}</span>
                         {isAdmin ? (
                           <span className="text-[11px] px-1.5 py-0.5 rounded uppercase" style={{ background: 'rgba(250,204,21,0.2)', color: '#facc15' }}>
-                            👑 관리자
+                            👑 Admin
                           </span>
                         ) : null}
                         <span className="text-xs cursor-default" style={{ color: 'var(--text-muted)' }}>
