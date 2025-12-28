@@ -4,6 +4,7 @@ import axios from 'axios'
 import { useNavigate, useParams } from 'react-router-dom'
 import SidebarGuilds from './components/SidebarGuilds'
 import SidebarChannels from './components/SidebarChannels'
+import SidebarProfileBar from './components/SidebarProfileBar'
 import Header from './components/Header'
 import MessageList from './components/MessageList'
 import Composer from './components/Composer'
@@ -72,8 +73,25 @@ function App() {
   const [guestSubmitting, setGuestSubmitting] = useState(false)
   const [menu, setMenu] = useState<{ visible: boolean; x: number; y: number; message: ChatMessage | null }>({ visible: false, x: 0, y: 0, message: null })
   const [showMobileChannels, setShowMobileChannels] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
+  const [showUserSettings, setShowUserSettings] = useState(false)
+  const [settingsTab, setSettingsTab] = useState<'profile' | 'voice'>('profile')
+  const [micSensitivity, setMicSensitivity] = useState(() => {
+    if (typeof window === 'undefined') return -60
+    const stored = window.localStorage.getItem('voice-mic-sensitivity')
+    const parsed = stored ? Number(stored) : NaN
+    if (!Number.isFinite(parsed)) return -60
+    return Math.min(0, Math.max(-100, parsed))
+  })
+  const [isTestingMic, setIsTestingMic] = useState(false)
+  const [micLevel, setMicLevel] = useState(-100)
+  const [micTestError, setMicTestError] = useState('')
+  const [adminInput, setAdminInput] = useState('')
   const { channelId: routeChannelId } = useParams()
   const navigate = useNavigate()
+  const micTestStreamRef = useRef<MediaStream | null>(null)
+  const micTestContextRef = useRef<AudioContext | null>(null)
+  const micTestAnimationRef = useRef<number | null>(null)
 
   const playNotificationSound = () => {
     const AudioCtx = window.AudioContext || (window as any).webkitAudioContext
@@ -91,6 +109,17 @@ function App() {
     osc.onended = () => {
       ctx.close()
     }
+  }
+
+  const rmsToDb = (rms: number) => {
+    if (!Number.isFinite(rms) || rms <= 0) return -100
+    const db = 20 * Math.log10(rms)
+    return Math.min(0, Math.max(-100, Math.round(db)))
+  }
+
+  const dbToPercent = (db: number) => {
+    const clamped = Math.min(0, Math.max(-100, db))
+    return Math.round(((clamped + 100) / 100) * 100)
   }
 
   const serverBase = useMemo(() => {
@@ -231,6 +260,71 @@ function App() {
       Notification.requestPermission()
     }
   }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem('voice-mic-sensitivity', String(micSensitivity))
+    window.dispatchEvent(new CustomEvent('voice-mic-sensitivity', { detail: micSensitivity }))
+  }, [micSensitivity])
+
+  useEffect(() => {
+    const stopMicTest = () => {
+      micTestStreamRef.current?.getTracks().forEach((track) => track.stop())
+      micTestStreamRef.current = null
+      if (micTestAnimationRef.current) {
+        cancelAnimationFrame(micTestAnimationRef.current)
+        micTestAnimationRef.current = null
+      }
+      if (micTestContextRef.current) {
+        micTestContextRef.current.close()
+        micTestContextRef.current = null
+      }
+      setMicLevel(-100)
+    }
+
+    if (!isTestingMic) {
+      stopMicTest()
+      return
+    }
+
+    let cancelled = false
+    setMicTestError('')
+    navigator.mediaDevices
+      .getUserMedia({ audio: true })
+      .then((stream) => {
+        if (cancelled) {
+          stream.getTracks().forEach((track) => track.stop())
+          return
+        }
+        micTestStreamRef.current = stream
+        const ctx = new AudioContext()
+        micTestContextRef.current = ctx
+        const analyser = ctx.createAnalyser()
+        analyser.fftSize = 1024
+        const source = ctx.createMediaStreamSource(stream)
+        source.connect(analyser)
+        const data = new Float32Array(analyser.fftSize)
+
+        const tick = () => {
+          analyser.getFloatTimeDomainData(data)
+          let sum = 0
+          for (const value of data) sum += value * value
+          const rms = Math.sqrt(sum / data.length)
+          setMicLevel(rmsToDb(rms))
+          micTestAnimationRef.current = requestAnimationFrame(tick)
+        }
+        micTestAnimationRef.current = requestAnimationFrame(tick)
+      })
+      .catch(() => {
+        setMicTestError('마이크 접근 권한이 필요합니다.')
+        setIsTestingMic(false)
+      })
+
+    return () => {
+      cancelled = true
+      stopMicTest()
+    }
+  }, [isTestingMic])
 
   useEffect(() => {
     const handler = (e: any) => {
@@ -383,34 +477,65 @@ function App() {
 
   return (
     <div className={(isDark ? 'theme-dark ' : '') + 'app-shell flex'} style={{ background: 'var(--bg-app)', color: 'var(--text-primary)' }}>
-      <SidebarGuilds />
-      <div className="flex-1 flex min-w-0 relative">
-        {showMobileChannels ? (
-          <div
-            className="fixed inset-0 z-40 bg-black/50 lg:hidden"
-            onClick={() => setShowMobileChannels(false)}
-            aria-hidden
-          />
-        ) : null}
-        <div
-          className={`fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-200 lg:static lg:translate-x-0 lg:transform-none lg:z-auto ${
-            showMobileChannels ? 'translate-x-0' : '-translate-x-full'
-          }`}
-        >
-          <SidebarChannels
-            channels={channels}
-            activeId={activeChannelId}
-            voiceMembersByChannel={voiceMembersByChannel}
-            unreadByChannel={unreadByChannel}
+      <div className="hidden md:flex flex-col w-[320px] h-full">
+        <div className="flex flex-1 min-h-0">
+          <SidebarGuilds />
+          <div className="w-64 min-h-0">
+            <SidebarChannels
+              channels={channels}
+              activeId={activeChannelId}
+              voiceMembersByChannel={voiceMembersByChannel}
+              unreadByChannel={unreadByChannel}
+              onSelect={(channelId) => {
+                activeChannelRef.current = channelId
+                setActiveChannelId(channelId)
+                setUnreadByChannel((prev) => ({ ...prev, [channelId]: false }))
+                navigate(`/channels/${channelId}`)
+                setShowMobileChannels(false)
+              }}
+              onOpenServerSettings={() => setShowSettings(true)}
+              onRenameChannel={(channelId, name) => {
+                if (!canManageChannels) return
+                axios
+                  .patch(`${serverBase}/api/channels/${channelId}/name`, { name }, { withCredentials: true })
+                  .then(fetchChannels)
+                  .catch(() => {})
+              }}
+              onCreateChannel={(type) => {
+                if (!canManageChannels) return
+                const name = window.prompt('채널 이름을 입력하세요')
+                if (!name) return
+                axios.post(`${serverBase}/api/channels`, { name, type }, { withCredentials: true }).then(fetchChannels).catch(() => {})
+              }}
+              onDeleteChannel={(channelId) => {
+                if (!canManageChannels) return
+                axios.delete(`${serverBase}/api/channels/${channelId}`, { withCredentials: true }).then(fetchChannels).catch(() => {})
+              }}
+              onToggleChannelHidden={(channelId, hidden) => {
+                if (!canManageChannels) return
+                axios
+                  .patch(`${serverBase}/api/channels/${channelId}/hidden`, { hidden }, { withCredentials: true })
+                  .then(fetchChannels)
+                  .catch(() => {})
+              }}
+              onReorderChannels={(orderedIds) => {
+                if (!canManageChannels) return
+                axios
+                  .patch(`${serverBase}/api/channels/order`, { orderedIds }, { withCredentials: true })
+                  .then(fetchChannels)
+                  .catch(() => {})
+              }}
+              canManage={canManageChannels}
+            />
+          </div>
+        </div>
+        <div className="px-3 pb-3">
+          <SidebarProfileBar
             user={user}
-            onSelect={(channelId) => {
-              activeChannelRef.current = channelId
-              setActiveChannelId(channelId)
-              setUnreadByChannel((prev) => ({ ...prev, [channelId]: false }))
-              navigate(`/channels/${channelId}`)
-              setShowMobileChannels(false)
-            }}
+            canManage={canManageChannels}
             adminIds={adminIds}
+            adminInput={adminInput}
+            onAdminInputChange={setAdminInput}
             onAddAdmin={(id) => {
               if (!canManageChannels) return
               axios
@@ -429,39 +554,142 @@ function App() {
                 })
                 .catch(() => {})
             }}
-            onRenameChannel={(channelId, name) => {
-              if (!canManageChannels) return
-              axios
-                .patch(`${serverBase}/api/channels/${channelId}/name`, { name }, { withCredentials: true })
-                .then(fetchChannels)
-                .catch(() => {})
+            showSettings={showSettings}
+            showUserSettings={showUserSettings}
+            settingsTab={settingsTab}
+            onSetTab={setSettingsTab}
+            onCloseSettings={() => setShowSettings(false)}
+            onCloseUserSettings={() => {
+              setShowUserSettings(false)
+              setIsTestingMic(false)
             }}
-            onCreateChannel={(type) => {
-              if (!canManageChannels) return
-              const name = window.prompt('채널 이름을 입력하세요')
-              if (!name) return
-              axios.post(`${serverBase}/api/channels`, { name, type }, { withCredentials: true }).then(fetchChannels).catch(() => {})
+            onOpenUserSettings={(tab) => {
+              setSettingsTab(tab)
+              setShowUserSettings(true)
             }}
-            onDeleteChannel={(channelId) => {
-              if (!canManageChannels) return
-              axios.delete(`${serverBase}/api/channels/${channelId}`, { withCredentials: true }).then(fetchChannels).catch(() => {})
-            }}
-            onToggleChannelHidden={(channelId, hidden) => {
-              if (!canManageChannels) return
-              axios
-                .patch(`${serverBase}/api/channels/${channelId}/hidden`, { hidden }, { withCredentials: true })
-                .then(fetchChannels)
-                .catch(() => {})
-            }}
-            onReorderChannels={(orderedIds) => {
-              if (!canManageChannels) return
-              axios
-                .patch(`${serverBase}/api/channels/order`, { orderedIds }, { withCredentials: true })
-                .then(fetchChannels)
-                .catch(() => {})
-            }}
-            canManage={canManageChannels}
+            micSensitivity={micSensitivity}
+            onMicSensitivityChange={setMicSensitivity}
+            micLevelPercent={dbToPercent(micLevel)}
+            micLevelLabel={micLevel}
+            micSensitivityPercent={dbToPercent(micSensitivity)}
+            isTestingMic={isTestingMic}
+            onToggleMicTest={() => setIsTestingMic((prev) => !prev)}
+            micTestError={micTestError}
           />
+        </div>
+      </div>
+      <div className="flex-1 flex min-w-0 relative">
+        {showMobileChannels ? (
+          <div
+            className="fixed inset-0 z-40 bg-black/50 md:hidden"
+            onClick={() => setShowMobileChannels(false)}
+            aria-hidden
+          />
+        ) : null}
+        <div
+          className={`fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-200 md:hidden ${
+            showMobileChannels ? 'translate-x-0' : '-translate-x-full'
+          }`}
+        >
+          <div className="flex h-full flex-col">
+            <div className="flex-1 min-h-0">
+              <SidebarChannels
+                channels={channels}
+                activeId={activeChannelId}
+                voiceMembersByChannel={voiceMembersByChannel}
+                unreadByChannel={unreadByChannel}
+                onSelect={(channelId) => {
+                  activeChannelRef.current = channelId
+                  setActiveChannelId(channelId)
+                  setUnreadByChannel((prev) => ({ ...prev, [channelId]: false }))
+                  navigate(`/channels/${channelId}`)
+                  setShowMobileChannels(false)
+                }}
+                onOpenServerSettings={() => setShowSettings(true)}
+                onRenameChannel={(channelId, name) => {
+                  if (!canManageChannels) return
+                  axios
+                    .patch(`${serverBase}/api/channels/${channelId}/name`, { name }, { withCredentials: true })
+                    .then(fetchChannels)
+                    .catch(() => {})
+                }}
+                onCreateChannel={(type) => {
+                  if (!canManageChannels) return
+                  const name = window.prompt('채널 이름을 입력하세요')
+                  if (!name) return
+                  axios.post(`${serverBase}/api/channels`, { name, type }, { withCredentials: true }).then(fetchChannels).catch(() => {})
+                }}
+                onDeleteChannel={(channelId) => {
+                  if (!canManageChannels) return
+                  axios.delete(`${serverBase}/api/channels/${channelId}`, { withCredentials: true }).then(fetchChannels).catch(() => {})
+                }}
+                onToggleChannelHidden={(channelId, hidden) => {
+                  if (!canManageChannels) return
+                  axios
+                    .patch(`${serverBase}/api/channels/${channelId}/hidden`, { hidden }, { withCredentials: true })
+                    .then(fetchChannels)
+                    .catch(() => {})
+                }}
+                onReorderChannels={(orderedIds) => {
+                  if (!canManageChannels) return
+                  axios
+                    .patch(`${serverBase}/api/channels/order`, { orderedIds }, { withCredentials: true })
+                    .then(fetchChannels)
+                    .catch(() => {})
+                }}
+                canManage={canManageChannels}
+              />
+            </div>
+            <div className="px-3 pb-3">
+              <SidebarProfileBar
+                user={user}
+                canManage={canManageChannels}
+                adminIds={adminIds}
+                adminInput={adminInput}
+                onAdminInputChange={setAdminInput}
+                onAddAdmin={(id) => {
+                  if (!canManageChannels) return
+                  axios
+                    .post(`${serverBase}/api/admins`, { id }, { withCredentials: true })
+                    .then((res) => {
+                      if (Array.isArray(res.data)) setAdminIds(res.data)
+                    })
+                    .catch(() => {})
+                }}
+                onRemoveAdmin={(id) => {
+                  if (!canManageChannels) return
+                  axios
+                    .delete(`${serverBase}/api/admins/${id}`, { withCredentials: true })
+                    .then((res) => {
+                      if (Array.isArray(res.data)) setAdminIds(res.data)
+                    })
+                    .catch(() => {})
+                }}
+                showSettings={showSettings}
+                showUserSettings={showUserSettings}
+                settingsTab={settingsTab}
+                onSetTab={setSettingsTab}
+                onCloseSettings={() => setShowSettings(false)}
+                onCloseUserSettings={() => {
+                  setShowUserSettings(false)
+                  setIsTestingMic(false)
+                }}
+                onOpenUserSettings={(tab) => {
+                  setSettingsTab(tab)
+                  setShowUserSettings(true)
+                }}
+                micSensitivity={micSensitivity}
+                onMicSensitivityChange={setMicSensitivity}
+                micLevelPercent={dbToPercent(micLevel)}
+                micLevelLabel={micLevel}
+                micSensitivityPercent={dbToPercent(micSensitivity)}
+                isTestingMic={isTestingMic}
+                onToggleMicTest={() => setIsTestingMic((prev) => !prev)}
+                micTestError={micTestError}
+                renderSettings={false}
+              />
+            </div>
+          </div>
         </div>
         <main className="flex-1 flex flex-col min-w-0">
           <Header
