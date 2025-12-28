@@ -232,11 +232,11 @@ export default function Settings({
                               <span>현재 입력: {micLevelLabel}dB</span>
                               <span>감지 기준: {micSensitivity}dB</span>
                             </div>
-                            <div className="text-[11px] mt-1" style={{ color: micLevel >= micSensitivity ? '#22c55e' : 'rgba(255,255,255,0.5)' }}>
-                              {micLevel >= micSensitivity ? '감지됨' : '조용함'}
+                            <div className="text-[11px] mt-1" style={{ color: micLevelLabel >= micSensitivity ? '#22c55e' : 'rgba(255,255,255,0.5)' }}>
+                              {micLevelLabel >= micSensitivity ? '감지됨' : '조용함'}
                             </div>
                           </div>
-                          <div className="text-xs opacity-70 mt-2">높을수록 작은 소리에도 마이크가 반응합니다.</div>
+                          <div className="text-xs opacity-70 mt-2">높을수록 작은 소리에 마이크가 반응합니다.</div>
                         </div>
                         <div className="rounded-xl p-5" style={{ background: '#1f202b' }}>
                           <div className="text-sm font-semibold mb-2">입력 테스트</div>
