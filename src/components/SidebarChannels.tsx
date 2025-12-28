@@ -1,11 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
+type VoiceMember = {
+  id: string
+  username: string
+  displayName?: string
+  avatar?: string | null
+}
+
 type Props = {
   channels: Array<{ id: string; name: string; hidden?: boolean; type?: 'text' | 'voice' }>
   activeId?: string
   serverName?: string
   adminIds?: string[]
+  voiceMembersByChannel?: Record<string, VoiceMember[]>
   onAddAdmin?: (id: string) => void
   onRemoveAdmin?: (id: string) => void
   onSelect?: (channelId: string) => void
@@ -22,6 +30,7 @@ export default function SidebarChannels({
   activeId,
   serverName = 'DDNet Server',
   adminIds = [],
+  voiceMembersByChannel = {},
   onAddAdmin,
   onRemoveAdmin,
   onSelect,
@@ -236,77 +245,100 @@ export default function SidebarChannels({
           ) : null}
         </div>
         <div className="flex-1 space-y-1">
-          {voiceChannels.map((c) => (
-            <div
-              key={c.id}
-              className="px-2 py-1 rounded cursor-pointer flex items-center gap-2 hover:opacity-90"
-              style={{
-                color: 'var(--text-primary)',
-                background: c.id === activeId ? 'color-mix(in oklch, var(--accent) 14%, transparent)' : 'transparent',
-                opacity: c.hidden ? 0.6 : 1,
-                userSelect: 'none',
-              }}
-              draggable={canManage}
-              onClick={() => onSelect?.(c.id)}
-              onDoubleClick={() => {
-                if (!canManage) return
-                const name = window.prompt('채널 이름을 입력하세요', c.name)
-                if (!name) return
-                onRenameChannel?.(c.id, name)
-              }}
-              onDragStart={(event) => {
-                if (!canManage) return
-                dragIdRef.current = c.id
-                if (event.dataTransfer) {
-                  event.dataTransfer.setData('text/plain', c.id)
-                  event.dataTransfer.effectAllowed = 'move'
-                }
-              }}
-              onDragEnd={() => {
-                dragIdRef.current = null
-              }}
-              onDragOver={(e) => {
-                if (!canManage || !dragIdRef.current) return
-                e.preventDefault()
-              }}
-              onDrop={(e) => {
-                if (!canManage) return
-                e.preventDefault()
-                const draggedId = dragIdRef.current
-                dragIdRef.current = null
-                if (!draggedId || draggedId === c.id) return
-                const updated = [...channels]
-                const fromIndex = updated.findIndex((channel) => channel.id === draggedId)
-                const toIndex = updated.findIndex((channel) => channel.id === c.id)
-                if (fromIndex === -1 || toIndex === -1) return
-                const [moved] = updated.splice(fromIndex, 1)
-                updated.splice(toIndex, 0, moved)
-                onReorderChannels?.(updated.map((channel) => channel.id))
-              }}
-              onContextMenu={(e) => {
-                if (!canManage) return
-                e.preventDefault()
-                setOpen(false)
-                setChannelMenu({ visible: true, x: e.clientX, y: e.clientY, channel: c })
-              }}
-            >
-              <span style={{ color: 'var(--text-muted)' }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-                  <path d="M5 9v6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                  <path d="M9 8v8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                  <path d="M13 6v12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                  <path d="M17 8c1.5 1.5 1.5 6 0 7.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                  <path d="M19.5 6c2.5 3 2.5 9 0 12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                </svg>
-              </span>
-              <span className="truncate">{c.name}</span>
-              {c.hidden ? (
-                <span className="ml-auto text-[10px] uppercase" style={{ color: 'var(--text-muted)' }}>
-                  숨김
-                </span>
-              ) : null}
-            </div>
-          ))}
+          {voiceChannels.map((c) => {
+            const members = voiceMembersByChannel[c.id] || []
+            return (
+              <div key={c.id} className="space-y-1">
+                <div
+                  className="px-2 py-1 rounded cursor-pointer flex items-center gap-2 hover:opacity-90"
+                  style={{
+                    color: 'var(--text-primary)',
+                    background: c.id === activeId ? 'color-mix(in oklch, var(--accent) 14%, transparent)' : 'transparent',
+                    opacity: c.hidden ? 0.6 : 1,
+                    userSelect: 'none',
+                  }}
+                  draggable={canManage}
+                  onClick={() => onSelect?.(c.id)}
+                  onDoubleClick={() => {
+                    if (!canManage) return
+                    const name = window.prompt('채널 이름을 입력하세요', c.name)
+                    if (!name) return
+                    onRenameChannel?.(c.id, name)
+                  }}
+                  onDragStart={(event) => {
+                    if (!canManage) return
+                    dragIdRef.current = c.id
+                    if (event.dataTransfer) {
+                      event.dataTransfer.setData('text/plain', c.id)
+                      event.dataTransfer.effectAllowed = 'move'
+                    }
+                  }}
+                  onDragEnd={() => {
+                    dragIdRef.current = null
+                  }}
+                  onDragOver={(e) => {
+                    if (!canManage || !dragIdRef.current) return
+                    e.preventDefault()
+                  }}
+                  onDrop={(e) => {
+                    if (!canManage) return
+                    e.preventDefault()
+                    const draggedId = dragIdRef.current
+                    dragIdRef.current = null
+                    if (!draggedId || draggedId === c.id) return
+                    const updated = [...channels]
+                    const fromIndex = updated.findIndex((channel) => channel.id === draggedId)
+                    const toIndex = updated.findIndex((channel) => channel.id === c.id)
+                    if (fromIndex === -1 || toIndex === -1) return
+                    const [moved] = updated.splice(fromIndex, 1)
+                    updated.splice(toIndex, 0, moved)
+                    onReorderChannels?.(updated.map((channel) => channel.id))
+                  }}
+                  onContextMenu={(e) => {
+                    if (!canManage) return
+                    e.preventDefault()
+                    setOpen(false)
+                    setChannelMenu({ visible: true, x: e.clientX, y: e.clientY, channel: c })
+                  }}
+                >
+                  <span style={{ color: 'var(--text-muted)' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+                      <path d="M5 9v6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                      <path d="M9 8v8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                      <path d="M13 6v12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                      <path d="M17 8c1.5 1.5 1.5 6 0 7.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                      <path d="M19.5 6c2.5 3 2.5 9 0 12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                    </svg>
+                  </span>
+                  <span className="truncate">{c.name}</span>
+                  {members.length > 0 ? (
+                    <span className="ml-auto text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                      {members.length}
+                    </span>
+                  ) : null}
+                  {c.hidden ? (
+                    <span className="ml-2 text-[10px] uppercase" style={{ color: 'var(--text-muted)' }}>
+                      숨김
+                    </span>
+                  ) : null}
+                </div>
+                {members.length > 0 ? (
+                  <div className="pl-6 space-y-1">
+                    {members.map((member) => (
+                      <div key={member.id} className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-muted)' }}>
+                        <div className="w-5 h-5 rounded-full overflow-hidden" style={{ background: 'var(--input-bg)' }}>
+                          {member.avatar ? (
+                            <img src={member.avatar} alt={member.username} className="w-full h-full object-cover" />
+                          ) : null}
+                        </div>
+                        <span className="truncate">{member.displayName || member.username}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            )
+          })}
         </div>
       </div>
       {channelMenu.visible && channelMenu.channel && canManage
