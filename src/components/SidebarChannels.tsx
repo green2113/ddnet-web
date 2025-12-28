@@ -59,7 +59,13 @@ export default function SidebarChannels({
   const [showSettings, setShowSettings] = useState(false)
   const [showUserSettings, setShowUserSettings] = useState(false)
   const [settingsTab, setSettingsTab] = useState<'profile' | 'voice'>('profile')
-  const [micSensitivity, setMicSensitivity] = useState(60)
+  const [micSensitivity, setMicSensitivity] = useState(() => {
+    if (typeof window === 'undefined') return 60
+    const stored = window.localStorage.getItem('voice-mic-sensitivity')
+    const parsed = stored ? Number(stored) : NaN
+    if (!Number.isFinite(parsed)) return 60
+    return Math.min(100, Math.max(0, parsed))
+  })
   const [isTestingMic, setIsTestingMic] = useState(false)
   const [micLevel, setMicLevel] = useState(0)
   const [micTestError, setMicTestError] = useState('')
@@ -97,6 +103,12 @@ export default function SidebarChannels({
   useEffect(() => {
     onMicTestToggle?.(isTestingMic)
   }, [isTestingMic, onMicTestToggle])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem('voice-mic-sensitivity', String(micSensitivity))
+    window.dispatchEvent(new CustomEvent('voice-mic-sensitivity', { detail: micSensitivity }))
+  }, [micSensitivity])
 
   useEffect(() => {
     const stopMicTest = () => {
@@ -523,8 +535,12 @@ export default function SidebarChannels({
         : null}
       {showSettings && canManage
         ? createPortal(
-            <div className="fixed inset-0 z-[70] flex" style={{ background: 'rgba(0,0,0,0.65)' }}>
-              <div className="w-[280px] bg-[#1e1f2b] p-6 text-sm text-white">
+            <div
+              className="fixed inset-0 z-[70] flex"
+              style={{ background: 'rgba(0,0,0,0.65)' }}
+              onMouseDown={() => setShowSettings(false)}
+            >
+              <div className="w-[280px] bg-[#1e1f2b] p-6 text-sm text-white" onMouseDown={(e) => e.stopPropagation()}>
                 <div className="text-xs uppercase opacity-60 mb-3">DD Server</div>
                 <button className="w-full text-left px-3 py-2 rounded-md" style={{ background: 'rgba(255,255,255,0.08)' }}>
                   서버 프로필
@@ -534,7 +550,7 @@ export default function SidebarChannels({
                   관리자
                 </button>
               </div>
-              <div className="flex-1 bg-[#2b2c3c] p-8 text-white overflow-y-auto">
+              <div className="flex-1 bg-[#2b2c3c] p-8 text-white overflow-y-auto" onMouseDown={(e) => e.stopPropagation()}>
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <div className="text-lg font-semibold">관리자</div>
@@ -601,9 +617,20 @@ export default function SidebarChannels({
         : null}
       {showUserSettings
         ? createPortal(
-            <div className="fixed inset-0 z-[80] flex items-center justify-center px-4" style={{ background: 'rgba(0,0,0,0.65)' }}>
-              <div className="w-full max-w-4xl rounded-2xl overflow-hidden shadow-xl" style={{ background: '#2b2c3c', color: 'white' }}>
-                <div className="flex">
+            <div
+              className="fixed inset-0 z-[80] flex items-center justify-center p-4"
+              style={{ background: 'rgba(0,0,0,0.65)' }}
+              onMouseDown={() => {
+                setShowUserSettings(false)
+                setIsTestingMic(false)
+              }}
+            >
+              <div
+                className="w-full h-full rounded-2xl overflow-hidden shadow-xl"
+                style={{ background: '#2b2c3c', color: 'white' }}
+                onMouseDown={(e) => e.stopPropagation()}
+              >
+                <div className="flex h-full">
                   <div className="w-64 p-6" style={{ background: '#1e1f2b' }}>
                     <div className="flex items-center gap-3 mb-6">
                       <div className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center" style={{ background: '#2f3142' }}>
@@ -639,7 +666,7 @@ export default function SidebarChannels({
                       </button>
                     </div>
                   </div>
-                  <div className="flex-1 p-8">
+                  <div className="flex-1 p-8 overflow-y-auto">
                     <div className="flex items-center justify-between mb-6">
                       <div>
                         <div className="text-lg font-semibold">{settingsTab === 'voice' ? '음성 설정' : '내 계정'}</div>
