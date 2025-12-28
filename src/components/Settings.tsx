@@ -126,12 +126,12 @@ export default function Settings({
       {showUserSettings
         ? createPortal(
             <div
-              className="fixed inset-0 z-[80] flex items-center justify-center p-4"
+              className="fixed inset-0 z-[80] flex items-center justify-center px-8 py-4"
               style={{ background: 'rgba(0,0,0,0.65)' }}
               onMouseDown={onCloseUserSettings}
             >
               <div
-                className="w-full h-full rounded-2xl overflow-hidden shadow-xl"
+                className="w-full max-w-6xl max-h-[85vh] rounded-2xl overflow-hidden shadow-xl"
                 style={{ background: '#2b2c3c', color: 'white' }}
                 onMouseDown={(e) => e.stopPropagation()}
               >
