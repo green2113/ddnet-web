@@ -571,7 +571,7 @@ function App() {
                         onClick={createGuest}
                         disabled={!guestName.trim() || guestSubmitting}
                       >
-                        Without login
+                        Confirm
                       </button>
                     </div>
                   </>
