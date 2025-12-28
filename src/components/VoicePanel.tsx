@@ -427,7 +427,7 @@ export default function VoicePanel({ channelId, socket, user, forceHeadsetMuted 
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
         {members.map((member) => {
-          const isSpeaking = speakingIds.includes(member.id)
+          const isSpeaking = speakingIds.includes(member.id) && !member.muted && !member.deafened
           return (
             <div
               key={member.id}
@@ -491,7 +491,7 @@ export default function VoicePanel({ channelId, socket, user, forceHeadsetMuted 
               <path d="M12 18v3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
               {micMuted ? <path d="M4 4l16 16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /> : null}
             </svg>
-            <span className="text-sm">{micMuted ? '마이크 켜기' : '마이크 끄기'}</span>
+            <span className="text-sm">{micMuted ? '마이크 켜' : '마이크 끄기'}</span>
           </button>
           <button
             type="button"
