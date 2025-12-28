@@ -28,6 +28,17 @@ type ChatMessage = {
 
 type MessageCache = Record<string, ChatMessage[]>
 
+type VoiceMember = {
+  id: string
+  username: string
+  displayName?: string
+  avatar?: string | null
+  muted?: boolean
+  deafened?: boolean
+}
+
+type VoiceMembersByChannel = Record<string, VoiceMember[]>
+
 type Channel = {
   id: string
   name: string
@@ -39,6 +50,7 @@ function App() {
   const [user, setUser] = useState<User | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [messageCache, setMessageCache] = useState<MessageCache>({})
+  const [voiceMembersByChannel, setVoiceMembersByChannel] = useState<VoiceMembersByChannel>({})
   const [loadingMessages, setLoadingMessages] = useState(true)
   const [loadError, setLoadError] = useState(false)
   const [channels, setChannels] = useState<Channel[]>([])
@@ -49,6 +61,7 @@ function App() {
   const socketRef = useRef<Socket | null>(null)
   const activeChannelRef = useRef('')
   const lastHistoryChannelIdRef = useRef('')
+  const watchedVoiceRef = useRef<Set<string>>(new Set())
   const [isDark, setIsDark] = useState(true)
   const [authReady, setAuthReady] = useState(false)
   const [showEntryModal, setShowEntryModal] = useState(false)
@@ -262,10 +275,33 @@ function App() {
         return next
       })
     })
+    socket.on('voice:members', (payload: { channelId: string; members: VoiceMember[] }) => {
+      if (!payload?.channelId) return
+      setVoiceMembersByChannel((prev) => ({ ...prev, [payload.channelId]: payload.members || [] }))
+    })
     return () => {
       socket.disconnect()
     }
   }, [serverBase, user])
+
+  useEffect(() => {
+    const socket = socketRef.current
+    if (!socket) return
+    const voiceIds = channels.filter((channel) => channel.type === 'voice').map((channel) => channel.id)
+    const watched = watchedVoiceRef.current
+    voiceIds.forEach((channelId) => {
+      if (!watched.has(channelId)) {
+        watched.add(channelId)
+        socket.emit('voice:watch', { channelId })
+      }
+    })
+    Array.from(watched).forEach((channelId) => {
+      if (!voiceIds.includes(channelId)) {
+        watched.delete(channelId)
+        socket.emit('voice:unwatch', { channelId })
+      }
+    })
+  }, [channels])
 
   // 메시지 변경 시 항상 스크롤을 맨 아래로 유지 (하단 정렬)
   useEffect(() => {
@@ -347,6 +383,7 @@ function App() {
           <SidebarChannels
             channels={channels}
             activeId={activeChannelId}
+            voiceMembersByChannel={voiceMembersByChannel}
             onSelect={(channelId) => {
               setActiveChannelId(channelId)
               navigate(`/channels/${channelId}`)
