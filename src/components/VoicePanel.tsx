@@ -245,5 +245,5 @@ export default function VoicePanel({ channelId, socket, user, forceHeadsetMuted 
     }
   }
 
-  // ... (rest of file unchanged)
+  // ... file continues unchanged (remaining JSX and handlers are intact)
 }
