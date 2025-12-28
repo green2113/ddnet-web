@@ -14,6 +14,7 @@ type User = {
   username: string
   displayName?: string
   avatar?: string | null
+  isGuest?: boolean
 }
 
 type ChatMessage = {
@@ -44,7 +45,11 @@ function App() {
   const socketRef = useRef<Socket | null>(null)
   const activeChannelRef = useRef('')
   const [isDark, setIsDark] = useState(true)
-  const [showAuthModal, setShowAuthModal] = useState(false)
+  const [authReady, setAuthReady] = useState(false)
+  const [showEntryModal, setShowEntryModal] = useState(false)
+  const [entryStep, setEntryStep] = useState<'choice' | 'guest'>('choice')
+  const [guestName, setGuestName] = useState(() => localStorage.getItem('guest_name') || '')
+  const [guestSubmitting, setGuestSubmitting] = useState(false)
   const [menu, setMenu] = useState<{ visible: boolean; x: number; y: number; message: ChatMessage | null }>({ visible: false, x: 0, y: 0, message: null })
   const [showMobileChannels, setShowMobileChannels] = useState(false)
   const { channelId: routeChannelId } = useParams()
@@ -121,6 +126,9 @@ function App() {
       .catch(() => {
         setUser(null)
       })
+      .finally(() => {
+        setAuthReady(true)
+      })
 
     fetchChannels()
   }, [serverBase])
@@ -132,6 +140,14 @@ function App() {
     }
     fetchAdmins()
   }, [user, serverBase])
+
+  useEffect(() => {
+    if (!authReady) return
+    if (!user) {
+      setEntryStep('choice')
+      setShowEntryModal(true)
+    }
+  }, [authReady, user])
 
   useEffect(() => {
     if (!channels.length) return
@@ -222,19 +238,23 @@ function App() {
 
   const login = () => {
     // 로그인 진입은 항상 프런트를 경유하지만, /login 내부에서 VITE_API_BASE를 사용해 서버로 이동
+    localStorage.setItem('return_to', window.location.pathname + window.location.search)
     window.location.href = '/login'
   }
 
   const logout = async () => {
     await axios.post(`${serverBase}/auth/logout`, {}, { withCredentials: true })
     setUser(null)
+    setEntryStep('choice')
+    setShowEntryModal(true)
   }
 
   const sendMessage = () => {
     if (!input.trim()) return
     if (!activeChannelId) return
     if (!user) {
-      setShowAuthModal(true)
+      setEntryStep('choice')
+      setShowEntryModal(true)
       return
     }
     socketRef.current?.emit('chat:send', {
@@ -248,6 +268,28 @@ function App() {
   const activeChannel = channels.find((channel) => channel.id === activeChannelId)
   const isVoiceChannel = activeChannel?.type === 'voice'
   const canManageChannels = Boolean(user?.id && adminIds.includes(user.id))
+
+  const createGuest = () => {
+    const name = guestName.trim()
+    if (!name || guestSubmitting) return
+    setGuestSubmitting(true)
+    axios
+      .post(
+        `${serverBase}/auth/guest`,
+        { name },
+        { withCredentials: true },
+      )
+      .then((res) => {
+        if (res.data) {
+          setUser(res.data)
+          localStorage.setItem('guest_name', res.data.displayName || name)
+          setShowEntryModal(false)
+        }
+      })
+      .finally(() => {
+        setGuestSubmitting(false)
+      })
+  }
 
   return (
     <div className={(isDark ? 'theme-dark ' : '') + 'app-shell flex'} style={{ background: 'var(--bg-app)', color: 'var(--text-primary)' }}>
@@ -338,7 +380,15 @@ function App() {
             onToggleChannels={() => setShowMobileChannels((prev) => !prev)}
           />
           {isVoiceChannel ? (
-            <VoicePanel channelId={activeChannelId} socket={socketRef.current} user={user} onRequireLogin={() => setShowAuthModal(true)} />
+            <VoicePanel
+              channelId={activeChannelId}
+              socket={socketRef.current}
+              user={user}
+              onRequireLogin={() => {
+                setEntryStep('choice')
+                setShowEntryModal(true)
+              }}
+            />
           ) : (
             <>
               <MessageList messages={messages} adminIds={adminIds} loading={loadingMessages} error={loadError} onRetry={() => fetchHistory(activeChannelId)} />
@@ -375,29 +425,70 @@ function App() {
               )}
             </div>
           )}
-          {showAuthModal && (
+          {showEntryModal && (
             <div className="fixed inset-0 grid place-items-center" style={{ background: 'rgba(0,0,0,0.4)' }}>
               <div className="w-[520px] max-w-[90vw] rounded-lg" style={{ background: 'var(--header-bg)', border: '1px solid var(--border)' }}>
-                <div className="px-5 py-4 text-base" style={{ color: 'var(--text-primary)' }}>
-                  해당 기능은 로그인이 필요한 기능입니다. 로그인 후 이용해주세요.
-                </div>
-                <div className="px-5 py-3 flex justify-end gap-2" style={{ background: 'var(--panel)', borderTop: '1px solid var(--border)' }}>
-                  <button className="px-3 h-9 rounded-md cursor-pointer" style={{ background: 'rgba(127,127,127,0.2)', color: 'var(--text-primary)' }} onClick={() => setShowAuthModal(false)}>
-                    취소
-                  </button>
-                  <button
-                    className="px-3 h-9 rounded-md text-white cursor-pointer"
-                    style={{ background: '#5865f2' }}
-                    onClick={() => {
-                      setShowAuthModal(false)
-                      // 원래 페이지 기억
-                      localStorage.setItem('return_to', window.location.pathname + window.location.search)
-                      login()
-                    }}
-                  >
-                    확인
-                  </button>
-                </div>
+                {entryStep === 'choice' ? (
+                  <>
+                    <div className="px-5 py-4 text-base" style={{ color: 'var(--text-primary)' }}>
+                      어떻게 이용하시겠어요?
+                    </div>
+                    <div className="px-5 pb-2 text-sm" style={{ color: 'var(--text-muted)' }}>
+                      비로그인으로도 채팅과 음성 통화를 사용할 수 있어요. 나중에 Discord 로그인으로 전환할 수도 있습니다.
+                    </div>
+                    <div className="px-5 py-3 flex justify-end gap-2" style={{ background: 'var(--panel)', borderTop: '1px solid var(--border)' }}>
+                      <button
+                        className="px-3 h-9 rounded-md cursor-pointer"
+                        style={{ background: 'rgba(127,127,127,0.2)', color: 'var(--text-primary)' }}
+                        onClick={() => setEntryStep('guest')}
+                      >
+                        비로그인으로 시작
+                      </button>
+                      <button
+                        className="px-3 h-9 rounded-md text-white cursor-pointer"
+                        style={{ background: '#5865f2' }}
+                        onClick={() => {
+                          setShowEntryModal(false)
+                          login()
+                        }}
+                      >
+                        Discord로 로그인
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="px-5 py-4 text-base" style={{ color: 'var(--text-primary)' }}>
+                      사용할 이름을 입력해 주세요
+                    </div>
+                    <div className="px-5 pb-4">
+                      <input
+                        value={guestName}
+                        onChange={(event) => setGuestName(event.target.value)}
+                        placeholder="예: 게스트"
+                        className="w-full h-10 px-3 rounded-md"
+                        style={{ background: 'var(--input-bg)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
+                      />
+                    </div>
+                    <div className="px-5 py-3 flex justify-between gap-2" style={{ background: 'var(--panel)', borderTop: '1px solid var(--border)' }}>
+                      <button
+                        className="px-3 h-9 rounded-md cursor-pointer"
+                        style={{ background: 'rgba(127,127,127,0.2)', color: 'var(--text-primary)' }}
+                        onClick={() => setEntryStep('choice')}
+                      >
+                        뒤로
+                      </button>
+                      <button
+                        className="px-3 h-9 rounded-md text-white cursor-pointer disabled:opacity-50"
+                        style={{ background: '#16a34a' }}
+                        onClick={createGuest}
+                        disabled={!guestName.trim() || guestSubmitting}
+                      >
+                        비로그인으로 시작
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           )}
