@@ -8,7 +8,7 @@ type VoiceMember = {
   avatar?: string | null
 }
 
-type Props = {
+export type SidebarChannelsProps = {
   channels: Array<{ id: string; name: string; hidden?: boolean; type?: 'text' | 'voice' }>
   activeId?: string
   serverName?: string
@@ -42,7 +42,7 @@ export default function SidebarChannels({
   onRenameChannel,
   onReorderChannels,
   canManage = false,
-}: Props) {
+}: SidebarChannelsProps) {
   const [open, setOpen] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [adminInput, setAdminInput] = useState('')
