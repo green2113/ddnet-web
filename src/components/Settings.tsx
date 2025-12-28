@@ -236,7 +236,7 @@ export default function Settings({
                               {micLevelLabel >= micSensitivity ? '감지됨' : '조용함'}
                             </div>
                           </div>
-                          <div className="text-xs opacity-70 mt-2">높을수록 작은 소리에 마이크가 반응합니다.</div>
+                          <div className="text-xs opacity-70 mt-2">높을수록 작은 소리에도 마이크가 반응합니다.</div>
                         </div>
                         <div className="rounded-xl p-5" style={{ background: '#1f202b' }}>
                           <div className="text-sm font-semibold mb-2">입력 테스트</div>
