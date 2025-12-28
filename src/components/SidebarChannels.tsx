@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import Settings, { type SettingsUser } from './Settings'
 
 type VoiceMember = {
   id: string
@@ -9,19 +8,12 @@ type VoiceMember = {
   avatar?: string | null
 }
 
-type SidebarUser = SettingsUser
-
 export type SidebarChannelsProps = {
   channels: Array<{ id: string; name: string; hidden?: boolean; type?: 'text' | 'voice' }>
   activeId?: string
   serverName?: string
-  adminIds?: string[]
   voiceMembersByChannel?: Record<string, VoiceMember[]>
   unreadByChannel?: Record<string, boolean>
-  user?: SidebarUser | null
-  onMicTestToggle?: (active: boolean) => void
-  onAddAdmin?: (id: string) => void
-  onRemoveAdmin?: (id: string) => void
   onSelect?: (channelId: string) => void
   onCreateChannel?: (type: 'text' | 'voice') => void
   onDeleteChannel?: (channelId: string) => void
@@ -29,19 +21,15 @@ export type SidebarChannelsProps = {
   onRenameChannel?: (channelId: string, name: string) => void
   onReorderChannels?: (orderedIds: string[]) => void
   canManage?: boolean
+  onOpenServerSettings?: () => void
 }
 
 export default function SidebarChannels({
   channels,
   activeId,
   serverName = 'DDNet Server',
-  adminIds = [],
   voiceMembersByChannel = {},
   unreadByChannel = {},
-  user = null,
-  onMicTestToggle,
-  onAddAdmin,
-  onRemoveAdmin,
   onSelect,
   onCreateChannel,
   onDeleteChannel,
@@ -49,22 +37,9 @@ export default function SidebarChannels({
   onRenameChannel,
   onReorderChannels,
   canManage = false,
+  onOpenServerSettings,
 }: SidebarChannelsProps) {
   const [open, setOpen] = useState(false)
-  const [showSettings, setShowSettings] = useState(false)
-  const [showUserSettings, setShowUserSettings] = useState(false)
-  const [settingsTab, setSettingsTab] = useState<'profile' | 'voice'>('profile')
-  const [micSensitivity, setMicSensitivity] = useState(() => {
-    if (typeof window === 'undefined') return -60
-    const stored = window.localStorage.getItem('voice-mic-sensitivity')
-    const parsed = stored ? Number(stored) : NaN
-    if (!Number.isFinite(parsed)) return -60
-    return Math.min(0, Math.max(-100, parsed))
-  })
-  const [isTestingMic, setIsTestingMic] = useState(false)
-  const [micLevel, setMicLevel] = useState(-100)
-  const [micTestError, setMicTestError] = useState('')
-  const [adminInput, setAdminInput] = useState('')
   const [showHiddenChannels, setShowHiddenChannels] = useState(false)
   const [channelMenu, setChannelMenu] = useState<{ visible: boolean; x: number; y: number; channel: { id: string; name: string; hidden?: boolean } | null }>({
     visible: false,
@@ -74,9 +49,6 @@ export default function SidebarChannels({
   })
   const wrapRef = useRef<HTMLDivElement | null>(null)
   const dragIdRef = useRef<string | null>(null)
-  const micTestStreamRef = useRef<MediaStream | null>(null)
-  const micTestContextRef = useRef<AudioContext | null>(null)
-  const micTestAnimationRef = useRef<number | null>(null)
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
       if (!wrapRef.current) return
@@ -94,86 +66,6 @@ export default function SidebarChannels({
     window.addEventListener('mousedown', closeMenu)
     return () => window.removeEventListener('mousedown', closeMenu)
   }, [])
-
-  useEffect(() => {
-    onMicTestToggle?.(isTestingMic)
-  }, [isTestingMic, onMicTestToggle])
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    window.localStorage.setItem('voice-mic-sensitivity', String(micSensitivity))
-    window.dispatchEvent(new CustomEvent('voice-mic-sensitivity', { detail: micSensitivity }))
-  }, [micSensitivity])
-
-  const rmsToDb = (rms: number) => {
-    if (!Number.isFinite(rms) || rms <= 0) return -100
-    const db = 20 * Math.log10(rms)
-    return Math.min(0, Math.max(-100, Math.round(db)))
-  }
-
-  const dbToPercent = (db: number) => {
-    const clamped = Math.min(0, Math.max(-100, db))
-    return Math.round(((clamped + 100) / 100) * 100)
-  }
-
-  useEffect(() => {
-    const stopMicTest = () => {
-      micTestStreamRef.current?.getTracks().forEach((track) => track.stop())
-      micTestStreamRef.current = null
-      if (micTestAnimationRef.current) {
-        cancelAnimationFrame(micTestAnimationRef.current)
-        micTestAnimationRef.current = null
-      }
-      if (micTestContextRef.current) {
-        micTestContextRef.current.close()
-        micTestContextRef.current = null
-      }
-      setMicLevel(-100)
-    }
-
-    if (!isTestingMic) {
-      stopMicTest()
-      return
-    }
-
-    let cancelled = false
-    setMicTestError('')
-    navigator.mediaDevices
-      .getUserMedia({ audio: true })
-      .then((stream) => {
-        if (cancelled) {
-          stream.getTracks().forEach((track) => track.stop())
-          return
-        }
-        micTestStreamRef.current = stream
-        const ctx = new AudioContext()
-        micTestContextRef.current = ctx
-        const analyser = ctx.createAnalyser()
-        analyser.fftSize = 1024
-        const source = ctx.createMediaStreamSource(stream)
-        source.connect(analyser)
-        const data = new Float32Array(analyser.fftSize)
-
-        const tick = () => {
-          analyser.getFloatTimeDomainData(data)
-          let sum = 0
-          for (const value of data) sum += value * value
-          const rms = Math.sqrt(sum / data.length)
-          setMicLevel(rmsToDb(rms))
-          micTestAnimationRef.current = requestAnimationFrame(tick)
-        }
-        micTestAnimationRef.current = requestAnimationFrame(tick)
-      })
-      .catch(() => {
-        setMicTestError('마이크 접근 권한이 필요합니다.')
-        setIsTestingMic(false)
-      })
-
-    return () => {
-      cancelled = true
-      stopMicTest()
-    }
-  }, [isTestingMic])
 
   const hiddenChannelsCount = canManage ? channels.filter((channel) => channel.hidden).length : 0
   const visibleChannels = channels.filter((channel) => {
@@ -219,7 +111,7 @@ export default function SidebarChannels({
                   label="서버 설정"
                   bold
                   onClick={() => {
-                    setShowSettings(true)
+                    onOpenServerSettings?.()
                     setOpen(false)
                   }}
                 />
@@ -459,48 +351,6 @@ export default function SidebarChannels({
           })}
         </div>
       </div>
-      <div className="mt-auto px-3 pb-3">
-        <div
-          className="border rounded-xl px-3 py-3"
-          style={{
-            borderColor: 'var(--border)',
-            background: 'var(--header-bg)',
-            boxShadow: '0 8px 18px rgba(0,0,0,0.35)',
-          }}
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center" style={{ background: 'var(--input-bg)' }}>
-              {user?.avatar ? (
-                <img src={user.avatar} alt={user.displayName || user.username} className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                  {(user?.displayName || user?.username || 'G').slice(0, 1)}
-                </span>
-              )}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-sm" style={{ color: 'var(--text-primary)' }}>
-                {user?.displayName || user?.username || '게스트'}
-              </div>
-              <div className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
-                {user?.isGuest ? '게스트 모드' : '온라인'}
-              </div>
-            </div>
-            <button
-              type="button"
-              aria-label="사용자 설정"
-              className="h-9 w-9 rounded-md flex items-center justify-center hover-surface"
-              style={{ color: 'var(--text-primary)' }}
-              onClick={() => {
-                setSettingsTab('profile')
-                setShowUserSettings(true)
-              }}
-            >
-              <Icon name="settings" />
-            </button>
-          </div>
-        </div>
-      </div>
       {channelMenu.visible && channelMenu.channel && canManage
         ? createPortal(
             <div
@@ -547,32 +397,6 @@ export default function SidebarChannels({
             document.body
           )
         : null}
-      <Settings
-        showSettings={showSettings}
-        showUserSettings={showUserSettings}
-        canManage={canManage}
-        settingsTab={settingsTab}
-        onSetTab={setSettingsTab}
-        onCloseSettings={() => setShowSettings(false)}
-        onCloseUserSettings={() => {
-          setShowUserSettings(false)
-          setIsTestingMic(false)
-        }}
-        adminInput={adminInput}
-        onAdminInputChange={setAdminInput}
-        onAddAdmin={onAddAdmin}
-        onRemoveAdmin={onRemoveAdmin}
-        adminIds={adminIds}
-        user={user}
-        micSensitivity={micSensitivity}
-        onMicSensitivityChange={(value) => setMicSensitivity(value)}
-        micLevelPercent={dbToPercent(micLevel)}
-        micLevelLabel={micLevel}
-        micSensitivityPercent={dbToPercent(micSensitivity)}
-        isTestingMic={isTestingMic}
-        onToggleMicTest={() => setIsTestingMic((prev) => !prev)}
-        micTestError={micTestError}
-      />
     </aside>
   )
 }
