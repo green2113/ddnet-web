@@ -33,7 +33,7 @@ export default function VoicePanel({ channelId, socket, user, forceHeadsetMuted 
   const [speakingIds, setSpeakingIds] = useState<string[]>([])
   const [micMuted, setMicMuted] = useState(false)
   const [headsetMuted, setHeadsetMuted] = useState(false)
-  const [micSensitivity, setMicSensitivity] = useState(60)
+  const [micSensitivity, setMicSensitivity] = useState(-60)
   const micBeforeDeafenRef = useRef(false)
   const forcedHeadsetRef = useRef(false)
   const micBeforeForceRef = useRef(false)
@@ -54,13 +54,15 @@ export default function VoicePanel({ channelId, socket, user, forceHeadsetMuted 
       }
     >
   >(new Map())
-  const DEFAULT_SPEAKING_THRESHOLD = 30
+  const DEFAULT_SPEAKING_THRESHOLD = -60
 
   const normalizeLevel = (data: Float32Array) => {
     let sum = 0
     for (const value of data) sum += value * value
     const rms = Math.sqrt(sum / data.length)
-    return Math.min(100, Math.max(0, Math.round(rms * 280)))
+    if (!Number.isFinite(rms) || rms <= 0) return -100
+    const db = 20 * Math.log10(rms)
+    return Math.min(0, Math.max(-100, Math.round(db)))
   }
 
   const cleanupPeer = (peerId: string) => {
@@ -142,11 +144,11 @@ export default function VoicePanel({ channelId, socket, user, forceHeadsetMuted 
     if (typeof window === 'undefined') return
     const stored = window.localStorage.getItem('voice-mic-sensitivity')
     const parsed = stored ? Number(stored) : NaN
-    setMicSensitivity(Number.isFinite(parsed) ? Math.min(100, Math.max(0, parsed)) : 60)
+    setMicSensitivity(Number.isFinite(parsed) ? Math.min(0, Math.max(-100, parsed)) : -60)
     const handleSensitivityUpdate = (event: Event) => {
       const detail = (event as CustomEvent<number>).detail
       if (!Number.isFinite(detail)) return
-      setMicSensitivity(Math.min(100, Math.max(0, detail)))
+      setMicSensitivity(Math.min(0, Math.max(-100, detail)))
     }
     window.addEventListener('voice-mic-sensitivity', handleSensitivityUpdate)
     return () => window.removeEventListener('voice-mic-sensitivity', handleSensitivityUpdate)
