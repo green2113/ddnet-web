@@ -44,6 +44,7 @@ function App() {
   const [input, setInput] = useState('')
   const socketRef = useRef<Socket | null>(null)
   const activeChannelRef = useRef('')
+  const lastHistoryChannelIdRef = useRef('')
   const [isDark, setIsDark] = useState(true)
   const [authReady, setAuthReady] = useState(false)
   const [showEntryModal, setShowEntryModal] = useState(false)
@@ -165,7 +166,12 @@ function App() {
     activeChannelRef.current = activeChannelId
     const active = channels.find((channel) => channel.id === activeChannelId)
     if (activeChannelId && active?.type !== 'voice') {
-      fetchHistory(activeChannelId)
+      if (lastHistoryChannelIdRef.current !== activeChannelId) {
+        lastHistoryChannelIdRef.current = activeChannelId
+        fetchHistory(activeChannelId)
+      }
+    } else if (active?.type === 'voice') {
+      lastHistoryChannelIdRef.current = ''
     }
   }, [activeChannelId, channels])
 
