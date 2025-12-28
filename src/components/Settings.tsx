@@ -24,7 +24,9 @@ type SettingsProps = {
   user: SettingsUser | null
   micSensitivity: number
   onMicSensitivityChange: (value: number) => void
-  micLevel: number
+  micLevelPercent: number
+  micLevelLabel: number
+  micSensitivityPercent: number
   isTestingMic: boolean
   onToggleMicTest: () => void
   micTestError: string
@@ -46,7 +48,9 @@ export default function Settings({
   user,
   micSensitivity,
   onMicSensitivityChange,
-  micLevel,
+  micLevelPercent,
+  micLevelLabel,
+  micSensitivityPercent,
   isTestingMic,
   onToggleMicTest,
   micTestError,
@@ -201,22 +205,22 @@ export default function Settings({
                         <div>
                           <div className="text-sm font-semibold mb-2">마이크 민감도</div>
                           <div className="flex items-center gap-4">
-                            <input type="range" min={0} max={100} value={micSensitivity} onChange={(e) => onMicSensitivityChange(Number(e.target.value))} className="flex-1" />
-                            <span className="text-sm w-12 text-right">{micSensitivity}%</span>
+                            <input type="range" min={-100} max={0} step={1} value={micSensitivity} onChange={(e) => onMicSensitivityChange(Number(e.target.value))} className="flex-1" />
+                            <span className="text-sm w-16 text-right">{micSensitivity}dB</span>
                           </div>
                           <div className="mt-3">
                             <div className="h-2 rounded-full overflow-hidden relative" style={{ background: '#2f3142' }}>
                               <div
                                 className="h-full transition-all"
                                 style={{
-                                  width: `${micLevel}%`,
-                                  background: micLevel >= micSensitivity ? '#22c55e' : '#5865f2',
+                                  width: `${micLevelPercent}%`,
+                                  background: micLevelLabel >= micSensitivity ? '#22c55e' : '#5865f2',
                                 }}
                               />
                               <div
                                 style={{
                                   position: 'absolute',
-                                  left: `${micSensitivity}%`,
+                                  left: `${micSensitivityPercent}%`,
                                   top: 0,
                                   bottom: 0,
                                   width: '2px',
@@ -225,11 +229,11 @@ export default function Settings({
                               />
                             </div>
                             <div className="flex items-center justify-between text-[11px] opacity-70 mt-2">
-                              <span>현재 입력: {micLevel}%</span>
-                              <span>감지 기준: {micSensitivity}%</span>
+                              <span>현재 입력: {micLevelLabel}dB</span>
+                              <span>감지 기준: {micSensitivity}dB</span>
                             </div>
-                            <div className="text-[11px] mt-1" style={{ color: micLevel >= micSensitivity ? '#22c55e' : 'rgba(255,255,255,0.5)' }}>
-                              {micLevel >= micSensitivity ? '감지됨' : '조용함'}
+                            <div className="text-[11px] mt-1" style={{ color: micLevelLabel >= micSensitivity ? '#22c55e' : 'rgba(255,255,255,0.5)' }}>
+                              {micLevelLabel >= micSensitivity ? '감지됨' : '조용함'}
                             </div>
                           </div>
                           <div className="text-xs opacity-70 mt-2">높을수록 작은 소리에도 마이크가 반응합니다.</div>
