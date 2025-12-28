@@ -31,8 +31,16 @@ export default function VoicePanel({ channelId, socket, user, forceHeadsetMuted 
   const [joined, setJoined] = useState(false)
   const [members, setMembers] = useState<VoiceMember[]>([])
   const [speakingIds, setSpeakingIds] = useState<string[]>([])
-  const [micMuted, setMicMuted] = useState(false)
-  const [headsetMuted, setHeadsetMuted] = useState(false)
+  const [micMuted, setMicMuted] = useState(() => {
+    if (typeof window === 'undefined') return false
+    const storedMic = window.localStorage.getItem('voice-mic-muted') === 'true'
+    const storedHeadset = window.localStorage.getItem('voice-headset-muted') === 'true'
+    return storedMic || storedHeadset
+  })
+  const [headsetMuted, setHeadsetMuted] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return window.localStorage.getItem('voice-headset-muted') === 'true'
+  })
   const [micSensitivity, setMicSensitivity] = useState(-60)
   const micBeforeDeafenRef = useRef(false)
   const forcedHeadsetRef = useRef(false)
@@ -163,6 +171,16 @@ export default function VoicePanel({ channelId, socket, user, forceHeadsetMuted 
     window.addEventListener('voice-mic-sensitivity', handleSensitivityUpdate)
     return () => window.removeEventListener('voice-mic-sensitivity', handleSensitivityUpdate)
   }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem('voice-mic-muted', String(micMuted))
+  }, [micMuted])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem('voice-headset-muted', String(headsetMuted))
+  }, [headsetMuted])
 
   useEffect(() => {
     if (!socket?.id) return
@@ -483,7 +501,14 @@ export default function VoicePanel({ channelId, socket, user, forceHeadsetMuted 
             type="button"
             className="flex items-center gap-2 px-3 h-9 rounded-md cursor-pointer hover-surface"
             style={{ color: micMuted ? '#f87171' : 'var(--text-primary)' }}
-            onClick={() => setMicMuted((prev) => !prev)}
+            onClick={() => {
+              if (micMuted) {
+                if (headsetMuted) setHeadsetMuted(false)
+                setMicMuted(false)
+              } else {
+                setMicMuted(true)
+              }
+            }}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
               <path d="M12 5a3 3 0 0 0-3 3v4a3 3 0 1 0 6 0V8a3 3 0 0 0-3-3Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
