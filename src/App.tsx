@@ -26,6 +26,8 @@ type ChatMessage = {
   source: 'ddnet' | 'discord' | 'web'
 }
 
+type MessageCache = Record<string, ChatMessage[]>
+
 type Channel = {
   id: string
   name: string
@@ -36,6 +38,7 @@ type Channel = {
 function App() {
   const [user, setUser] = useState<User | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [messageCache, setMessageCache] = useState<MessageCache>({})
   const [loadingMessages, setLoadingMessages] = useState(true)
   const [loadError, setLoadError] = useState(false)
   const [channels, setChannels] = useState<Channel[]>([])
@@ -88,6 +91,7 @@ function App() {
       .then((res) => {
         if (Array.isArray(res.data)) {
           setMessages(res.data)
+          setMessageCache((prev) => ({ ...prev, [channelId]: res.data }))
         }
         setLoadingMessages(false)
       })
@@ -168,12 +172,17 @@ function App() {
     if (activeChannelId && active?.type !== 'voice') {
       if (lastHistoryChannelIdRef.current !== activeChannelId) {
         lastHistoryChannelIdRef.current = activeChannelId
-        fetchHistory(activeChannelId)
+        const cached = messageCache[activeChannelId]
+        if (cached) {
+          setMessages(cached)
+        } else {
+          fetchHistory(activeChannelId)
+        }
       }
     } else if (active?.type === 'voice') {
       lastHistoryChannelIdRef.current = ''
     }
-  }, [activeChannelId, channels])
+  }, [activeChannelId, channels, messageCache])
 
   useEffect(() => {
     if (!activeChannelId) return
@@ -210,17 +219,20 @@ function App() {
       fetchChannels()
     })
     socket.on('chat:message', (msg: ChatMessage) => {
-      if (msg.channelId === activeChannelRef.current) {
-        setMessages((prev) => {
-          const next = [...prev, msg]
-          // 하단 정렬 유지: 새 메시지 후 스크롤 맨 아래
+      const channelId = msg.channelId
+      if (!channelId) return
+      setMessageCache((prev) => {
+        const existing = prev[channelId] || []
+        const next = [...existing, msg]
+        if (channelId === activeChannelRef.current) {
+          setMessages(next)
           requestAnimationFrame(() => {
             const el = document.getElementById('messages-scroll')
             if (el) el.scrollTop = el.scrollHeight
           })
-          return next
-        })
-      }
+        }
+        return { ...prev, [channelId]: next }
+      })
       const isOwn = user && msg.author?.id === user.id
       const hasFocus = document.visibilityState === 'visible'
       if (!isOwn && !hasFocus && 'Notification' in window && Notification.permission === 'granted') {
@@ -229,7 +241,18 @@ function App() {
       }
     })
     socket.on('chat:delete', (id: string) => {
-      setMessages((prev) => prev.filter((m) => m.id !== id))
+      if (!id) return
+      setMessageCache((prev) => {
+        const next: MessageCache = {}
+        Object.entries(prev).forEach(([channelId, list]) => {
+          next[channelId] = list.filter((m) => m.id !== id)
+        })
+        const activeList = activeChannelRef.current ? next[activeChannelRef.current] : null
+        if (activeList) {
+          setMessages(activeList)
+        }
+        return next
+      })
     })
     return () => {
       socket.disconnect()
