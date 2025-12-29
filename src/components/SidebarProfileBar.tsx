@@ -17,6 +17,8 @@ type SidebarProfileBarProps = {
   onOpenUserSettings: (tab: 'profile' | 'voice') => void
   micSensitivity: number
   onMicSensitivityChange: (value: number) => void
+  noiseSuppressionEnabled: boolean
+  onToggleNoiseSuppression: (value: boolean) => void
   micLevelPercent: number
   micLevelLabel: number
   micSensitivityPercent: number
@@ -43,6 +45,8 @@ export default function SidebarProfileBar({
   onOpenUserSettings,
   micSensitivity,
   onMicSensitivityChange,
+  noiseSuppressionEnabled,
+  onToggleNoiseSuppression,
   micLevelPercent,
   micLevelLabel,
   micSensitivityPercent,
@@ -107,6 +111,8 @@ export default function SidebarProfileBar({
           user={user}
           micSensitivity={micSensitivity}
           onMicSensitivityChange={onMicSensitivityChange}
+          noiseSuppressionEnabled={noiseSuppressionEnabled}
+          onToggleNoiseSuppression={onToggleNoiseSuppression}
           micLevelPercent={micLevelPercent}
           micLevelLabel={micLevelLabel}
           micSensitivityPercent={micSensitivityPercent}
