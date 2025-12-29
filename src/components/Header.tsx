@@ -7,9 +7,23 @@ type Props = {
   onLogin: () => void
   onLogout: () => void
   onToggleChannels?: () => void
+  t: {
+    header: {
+      channelListAria: string
+      channel: string
+      members: string
+      light: string
+      dark: string
+      lightTheme: string
+      darkTheme: string
+      guestSuffix: string
+      logout: string
+      loginDiscord: string
+    }
+  }
 }
 
-export default function Header({ title, isDark, onLight, onDark, user, onLogin, onLogout, onToggleChannels }: Props) {
+export default function Header({ title, isDark, onLight, onDark, user, onLogin, onLogout, onToggleChannels, t }: Props) {
   return (
     <header
       className="h-12 px-4 flex items-center gap-3"
@@ -17,7 +31,7 @@ export default function Header({ title, isDark, onLight, onDark, user, onLogin, 
     >
       <button
         type="button"
-        aria-label="채널 목록"
+        aria-label={t.header.channelListAria}
         className="md:hidden p-2 -ml-2 rounded-md cursor-pointer hover-surface"
         onClick={onToggleChannels}
       >
@@ -31,19 +45,19 @@ export default function Header({ title, isDark, onLight, onDark, user, onLogin, 
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M21 10H3m7-7v18m4-18v18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
           </svg>
-          채널</span>
+          {t.header.channel}</span>
         <span className="chip" style={{ background: 'var(--input-bg)' }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M4 6h16M4 12h10M4 18h16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
           </svg>
-          멤버</span>
+          {t.header.members}</span>
       </div>
       <div className="ml-auto flex items-center gap-2">
         <button
-          aria-label={isDark ? '라이트' : '다크'}
+          aria-label={isDark ? t.header.light : t.header.dark}
           onClick={() => (isDark ? onLight() : onDark())}
           className="p-2 rounded-md cursor-pointer hover-surface"
-          title={isDark ? '라이트 테마' : '다크 테마'}
+          title={isDark ? t.header.lightTheme : t.header.darkTheme}
         >
           {isDark ? (
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -60,15 +74,15 @@ export default function Header({ title, isDark, onLight, onDark, user, onLogin, 
           <>
             <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
               {user.username}
-              {user.isGuest ? ' (게스트)' : ''}
+              {user.isGuest ? t.header.guestSuffix : ''}
             </div>
             <button onClick={onLogout} className="text-xs px-2 py-1 rounded hover:opacity-90 cursor-pointer" style={{ background: 'var(--input-bg)' }}>
-              로그아웃
+              {t.header.logout}
             </button>
           </>
         ) : (
           <button onClick={onLogin} className="text-xs px-2 py-2 text-white rounded hover:brightness-110 cursor-pointer" style={{ background: 'var(--accent)' }}>
-            Discord로 로그인
+            {t.header.loginDiscord}
           </button>
         )}
       </div>
