@@ -1,18 +1,10 @@
-import Settings, { type SettingsUser } from './Settings'
+import UserSettings, { type UserSettingsUser } from './UserSettings'
 
 type SidebarProfileBarProps = {
-  user: SettingsUser | null
-  canManage: boolean
-  adminIds: string[]
-  adminInput: string
-  onAdminInputChange: (value: string) => void
-  onAddAdmin?: (id: string) => void
-  onRemoveAdmin?: (id: string) => void
-  showSettings: boolean
+  user: UserSettingsUser | null
   showUserSettings: boolean
   settingsTab: 'profile' | 'voice'
   onSetTab: (tab: 'profile' | 'voice') => void
-  onCloseSettings: () => void
   onCloseUserSettings: () => void
   onOpenUserSettings: (tab: 'profile' | 'voice') => void
   micSensitivity: number
@@ -30,17 +22,9 @@ type SidebarProfileBarProps = {
 
 export default function SidebarProfileBar({
   user,
-  canManage,
-  adminIds,
-  adminInput,
-  onAdminInputChange,
-  onAddAdmin,
-  onRemoveAdmin,
-  showSettings,
   showUserSettings,
   settingsTab,
   onSetTab,
-  onCloseSettings,
   onCloseUserSettings,
   onOpenUserSettings,
   micSensitivity,
@@ -95,19 +79,11 @@ export default function SidebarProfileBar({
         </div>
       </div>
       {renderSettings ? (
-        <Settings
-          showSettings={showSettings}
+        <UserSettings
           showUserSettings={showUserSettings}
-          canManage={canManage}
           settingsTab={settingsTab}
           onSetTab={onSetTab}
-          onCloseSettings={onCloseSettings}
           onCloseUserSettings={onCloseUserSettings}
-          adminInput={adminInput}
-          onAdminInputChange={onAdminInputChange}
-          onAddAdmin={onAddAdmin}
-          onRemoveAdmin={onRemoveAdmin}
-          adminIds={adminIds}
           user={user}
           micSensitivity={micSensitivity}
           onMicSensitivityChange={onMicSensitivityChange}
