@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { formatText, type UiText } from '../i18n'
 
 type VoiceMember = {
   id: string
@@ -14,6 +15,7 @@ export type SidebarChannelsProps = {
   serverName?: string
   voiceMembersByChannel?: Record<string, VoiceMember[]>
   unreadByChannel?: Record<string, boolean>
+  t: UiText
   onSelect?: (channelId: string) => void
   onCreateChannel?: (type: 'text' | 'voice') => void
   onDeleteChannel?: (channelId: string) => void
@@ -27,9 +29,10 @@ export type SidebarChannelsProps = {
 export default function SidebarChannels({
   channels,
   activeId,
-  serverName = 'DDNet Server',
+  serverName,
   voiceMembersByChannel = {},
   unreadByChannel = {},
+  t,
   onSelect,
   onCreateChannel,
   onDeleteChannel,
@@ -75,8 +78,9 @@ export default function SidebarChannels({
   const textChannels = visibleChannels.filter((channel) => channel.type !== 'voice')
   const voiceChannels = visibleChannels.filter((channel) => channel.type === 'voice')
 
+  const resolvedServerName = serverName || t.sidebarChannels.serverName
   return (
-    <aside className="w-64 flex flex-col p-0 h-full" style={{ background: 'var(--sidebar-bg)', borderRight: '1px solid var(--border)' }}>
+    <aside className="w-full flex flex-col p-0 flex-1 min-h-0">
       {/* 서버 헤더 */}
       <div ref={wrapRef} className="relative select-none">
         <button
@@ -93,7 +97,7 @@ export default function SidebarChannels({
           onMouseEnter={(e) => ((e.currentTarget.style.background as any) = 'var(--hover-bg)')}
           onMouseLeave={(e) => ((e.currentTarget.style.background as any) = 'var(--header-bg)')}
         >
-          <span className="truncate font-medium">{serverName}</span>
+          <span className="truncate font-medium">{resolvedServerName}</span>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 120ms ease' }}>
             <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
@@ -108,7 +112,7 @@ export default function SidebarChannels({
               <>
                 <MenuItem
                   icon="settings"
-                  label="서버 설정"
+                  label={t.sidebarChannels.serverSettings}
                   bold
                   onClick={() => {
                     onOpenServerSettings?.()
@@ -121,18 +125,18 @@ export default function SidebarChannels({
                 />
               </>
             ) : null}
-            <MenuItem icon="bell" label="알림 설정" bold />
+            <MenuItem icon="bell" label={t.sidebarChannels.notifications} bold />
           </div>
         )}
       </div>
 
       <div className="p-3 flex-1 overflow-y-auto">
         <div className="flex items-center justify-between text-[11px] uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
-          <span>text channels</span>
+          <span>{t.sidebarChannels.textChannels}</span>
           {canManage ? (
             <button
               type="button"
-              aria-label="Add text channel"
+              aria-label={t.sidebarChannels.addTextChannel}
               className="rounded-md p-1 cursor-pointer hover-surface"
               style={{ color: 'var(--text-muted)' }}
               onClick={(e) => {
@@ -153,7 +157,9 @@ export default function SidebarChannels({
             style={{ color: 'var(--text-muted)' }}
             onClick={() => setShowHiddenChannels((prev) => !prev)}
           >
-            {showHiddenChannels ? '숨겨진 채널 숨기기' : `숨겨진 채널 보기 (${hiddenChannelsCount})`}
+            {showHiddenChannels
+              ? t.sidebarChannels.hideHidden
+              : formatText(t.sidebarChannels.showHidden, { count: hiddenChannelsCount })}
           </button>
         ) : null}
         <div className="flex-1 space-y-1">
@@ -171,7 +177,7 @@ export default function SidebarChannels({
               onClick={() => onSelect?.(c.id)}
               onDoubleClick={() => {
                 if (!canManage) return
-                const name = window.prompt('채널 이름을 입력하세요', c.name)
+                const name = window.prompt(t.sidebarChannels.channelNamePrompt, c.name)
                 if (!name) return
                 onRenameChannel?.(c.id, name)
               }}
@@ -222,18 +228,18 @@ export default function SidebarChannels({
               </span>
               {c.hidden ? (
                 <span className="ml-auto text-[10px] uppercase" style={{ color: 'var(--text-muted)' }}>
-                  숨김
+                  {t.sidebarChannels.hidden}
                 </span>
               ) : null}
             </div>
           ))}
         </div>
         <div className="mt-4 flex items-center justify-between text-[11px] uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
-          <span>voice channels</span>
+          <span>{t.sidebarChannels.voiceChannels}</span>
           {canManage ? (
             <button
               type="button"
-              aria-label="Add voice channel"
+              aria-label={t.sidebarChannels.addVoiceChannel}
               className="rounded-md p-1 cursor-pointer hover-surface"
               style={{ color: 'var(--text-muted)' }}
               onClick={(e) => {
@@ -264,7 +270,7 @@ export default function SidebarChannels({
                   onClick={() => onSelect?.(c.id)}
                   onDoubleClick={() => {
                     if (!canManage) return
-                    const name = window.prompt('채널 이름을 입력하세요', c.name)
+                    const name = window.prompt(t.sidebarChannels.channelNamePrompt, c.name)
                     if (!name) return
                     onRenameChannel?.(c.id, name)
                   }}
@@ -328,7 +334,7 @@ export default function SidebarChannels({
                   ) : null}
                   {c.hidden ? (
                     <span className="ml-2 text-[10px] uppercase" style={{ color: 'var(--text-muted)' }}>
-                      숨김
+                      {t.sidebarChannels.hidden}
                     </span>
                   ) : null}
                 </div>
@@ -362,13 +368,13 @@ export default function SidebarChannels({
               <button
                 className="w-full text-left px-3 py-2 hover-surface cursor-pointer"
                 onClick={() => {
-                  const name = window.prompt('채널 이름을 입력하세요', channelMenu.channel!.name)
+                  const name = window.prompt(t.sidebarChannels.channelNamePrompt, channelMenu.channel!.name)
                   if (!name) return
                   onRenameChannel?.(channelMenu.channel!.id, name)
                   setChannelMenu({ visible: false, x: 0, y: 0, channel: null })
                 }}
               >
-                채널 이름
+                {t.sidebarChannels.channelName}
               </button>
               <button
                 className="w-full text-left px-3 py-2 hover-surface cursor-pointer"
@@ -381,7 +387,7 @@ export default function SidebarChannels({
                   setChannelMenu({ visible: false, x: 0, y: 0, channel: null })
                 }}
               >
-                {channelMenu.channel.hidden ? '채널 표시' : '채널 숨기기'}
+                {channelMenu.channel.hidden ? t.sidebarChannels.channelShow : t.sidebarChannels.channelHide}
               </button>
               <button
                 className="w-full text-left px-3 py-2 hover-surface cursor-pointer"
@@ -391,7 +397,7 @@ export default function SidebarChannels({
                   setChannelMenu({ visible: false, x: 0, y: 0, channel: null })
                 }}
               >
-                채널 삭제
+                {t.sidebarChannels.channelDelete}
               </button>
             </div>,
             document.body
