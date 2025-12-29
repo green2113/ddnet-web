@@ -5,9 +5,16 @@ type Props = {
   onChange: (v: string) => void
   onSend: () => void
   disabled?: boolean
+  t: {
+    composer: {
+      placeholderLogin: string
+      placeholderMessage: string
+      send: string
+    }
+  }
 }
 
-export default function Composer({ value, onChange, onSend, disabled = false }: Props) {
+export default function Composer({ value, onChange, onSend, disabled = false, t }: Props) {
   const isEnabled = !disabled && value.trim().length > 0
   const taRef = useRef<HTMLTextAreaElement | null>(null)
 
@@ -32,7 +39,7 @@ export default function Composer({ value, onChange, onSend, disabled = false }: 
                 if (isEnabled) onSend()
               }
             }}
-            placeholder={disabled ? '로그인을 해주세요.' : '메시지 보내기'}
+            placeholder={disabled ? t.composer.placeholderLogin : t.composer.placeholderMessage}
             disabled={disabled}
             className={`flex-1 bg-transparent outline-none resize-none leading-6 ${disabled ? 'cursor-not-allowed' : ''}`}
             rows={1}
@@ -42,7 +49,7 @@ export default function Composer({ value, onChange, onSend, disabled = false }: 
           <div className="flex items-center gap-1 ml-2">
             <button
               type="button"
-              aria-label="보내기"
+              aria-label={t.composer.send}
               disabled={!isEnabled}
               onClick={() => isEnabled && onSend()}
               className={`p-2 rounded-md transition-colors ${isEnabled ? 'cursor-pointer' : 'cursor-not-allowed'}`}
@@ -62,5 +69,3 @@ export default function Composer({ value, onChange, onSend, disabled = false }: 
     </div>
   )
 }
-
-
