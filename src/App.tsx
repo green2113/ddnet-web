@@ -491,7 +491,7 @@ function App() {
       <div className="hidden md:flex flex-col w-[320px] h-full">
         <div className="flex flex-1 min-h-0">
           <SidebarGuilds />
-          <div className="w-64 min-h-0">
+          <div className="w-64 min-h-0" style={{ background: 'var(--sidebar-bg)', borderRight: '1px solid var(--border)' }}>
             <SidebarChannels
               channels={channels}
               activeId={activeChannelId}
@@ -540,7 +540,7 @@ function App() {
             />
           </div>
         </div>
-        <div className="px-3 pb-3">
+        <div className="px-3 pb-3" style={{ background: 'var(--sidebar-bg)', borderRight: '1px solid var(--border)' }}>
           <SidebarProfileBar
             user={user}
             canManage={canManageChannels}
@@ -605,7 +605,7 @@ function App() {
           }`}
         >
           <div className="flex h-full flex-col">
-            <div className="flex-1 min-h-0">
+            <div className="flex-1 min-h-0" style={{ background: 'var(--sidebar-bg)', borderRight: '1px solid var(--border)' }}>
               <SidebarChannels
                 channels={channels}
                 activeId={activeChannelId}
@@ -653,7 +653,7 @@ function App() {
                 canManage={canManageChannels}
               />
             </div>
-            <div className="px-3 pb-3">
+            <div className="px-3 pb-3" style={{ background: 'var(--sidebar-bg)', borderRight: '1px solid var(--border)' }}>
               <SidebarProfileBar
                 user={user}
                 canManage={canManageChannels}
