@@ -76,7 +76,13 @@ function App() {
   const [showMobileChannels, setShowMobileChannels] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showUserSettings, setShowUserSettings] = useState(false)
-  const [settingsTab, setSettingsTab] = useState<'profile' | 'voice'>('profile')
+  const [settingsTab, setSettingsTab] = useState<'profile' | 'voice' | 'language'>('profile')
+  const [language, setLanguage] = useState<'ko' | 'en' | 'zh-Hans' | 'zh-Hant'>(() => {
+    if (typeof window === 'undefined') return 'ko'
+    const stored = window.localStorage.getItem('ui-language')
+    if (stored === 'en' || stored === 'zh-Hans' || stored === 'zh-Hant' || stored === 'ko') return stored
+    return 'ko'
+  })
   const [micSensitivity, setMicSensitivity] = useState(() => {
     if (typeof window === 'undefined') return -60
     const stored = window.localStorage.getItem('voice-mic-sensitivity')
@@ -278,6 +284,11 @@ function App() {
     if (typeof window === 'undefined') return
     window.localStorage.setItem('voice-noise-suppression', String(noiseSuppressionEnabled))
   }, [noiseSuppressionEnabled])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem('ui-language', language)
+  }, [language])
 
   useEffect(() => {
     const stopMicTest = () => {
@@ -555,6 +566,8 @@ function App() {
               setSettingsTab(tab)
               setShowUserSettings(true)
             }}
+            language={language}
+            onLanguageChange={setLanguage}
             micSensitivity={micSensitivity}
             onMicSensitivityChange={setMicSensitivity}
             noiseSuppressionEnabled={noiseSuppressionEnabled}
@@ -644,6 +657,8 @@ function App() {
                   setSettingsTab(tab)
                   setShowUserSettings(true)
                 }}
+                language={language}
+                onLanguageChange={setLanguage}
                 micSensitivity={micSensitivity}
                 onMicSensitivityChange={setMicSensitivity}
                 noiseSuppressionEnabled={noiseSuppressionEnabled}
