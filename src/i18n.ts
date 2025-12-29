@@ -261,10 +261,10 @@ const translations: TranslationMap = {
       guestAccount: 'Guest account',
       myAccount: 'My account',
       languageOptions: {
-        ko: 'Korean',
+        ko: '한국어',
         en: 'English',
-        'zh-Hans': 'Chinese (Simplified)',
-        'zh-Hant': 'Chinese (Traditional)',
+        'zh-Hans': '中文(简体)',
+        'zh-Hant': '中文(繁體)',
       },
     },
     login: {
@@ -666,10 +666,10 @@ const translations: TranslationMap = {
       guestAccount: '訪客帳號',
       myAccount: '我的帳號',
       languageOptions: {
-        ko: '韓語',
-        en: '英語',
-        'zh-Hans': '中文（简体）',
-        'zh-Hant': '中文（繁體）',
+        ko: '한국어',
+        en: 'English',
+        'zh-Hans': '中文(简体)',
+        'zh-Hant': '中文(繁體)',
       },
     },
     login: {
