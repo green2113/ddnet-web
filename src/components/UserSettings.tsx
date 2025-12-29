@@ -1,5 +1,5 @@
 import { createPortal } from 'react-dom'
-import { getTranslations, type Language } from '../i18n'
+import type { UiText } from '../i18n'
 
 export type UserSettingsUser = {
   id: string
@@ -15,8 +15,9 @@ type UserSettingsProps = {
   onSetTab: (tab: 'profile' | 'voice' | 'language') => void
   onCloseUserSettings: () => void
   user: UserSettingsUser | null
-  language: Language
-  onLanguageChange: (value: Language) => void
+  t: UiText
+  language: 'ko' | 'en' | 'zh-Hans' | 'zh-Hant'
+  onLanguageChange: (value: 'ko' | 'en' | 'zh-Hans' | 'zh-Hant') => void
   micSensitivity: number
   onMicSensitivityChange: (value: number) => void
   noiseSuppressionEnabled: boolean
@@ -35,6 +36,7 @@ export default function UserSettings({
   onSetTab,
   onCloseUserSettings,
   user,
+  t,
   language,
   onLanguageChange,
   micSensitivity,
@@ -50,8 +52,7 @@ export default function UserSettings({
 }: UserSettingsProps) {
   if (!showUserSettings) return null
 
-  const t = getTranslations(language).userSettings
-  const displayName = user?.displayName || user?.username || t.guest
+  const displayName = user?.displayName || user?.username || t.userSettings.guest
 
   return createPortal(
     <div
@@ -76,7 +77,7 @@ export default function UserSettings({
               </div>
               <div>
                 <div className="text-sm font-semibold">{displayName}</div>
-                <div className="text-xs opacity-70">{user?.isGuest ? t.guestAccount : t.myAccount}</div>
+                <div className="text-xs opacity-70">{user?.isGuest ? t.userSettings.guestAccount : t.userSettings.myAccount}</div>
               </div>
             </div>
             <div className="space-y-2 text-sm">
@@ -86,7 +87,7 @@ export default function UserSettings({
                 style={{ background: settingsTab === 'profile' ? 'rgba(255,255,255,0.12)' : 'transparent' }}
                 onClick={() => onSetTab('profile')}
               >
-                {t.account}
+                {t.userSettings.account}
               </button>
               <button
                 type="button"
@@ -94,7 +95,7 @@ export default function UserSettings({
                 style={{ background: settingsTab === 'voice' ? 'rgba(255,255,255,0.12)' : 'transparent' }}
                 onClick={() => onSetTab('voice')}
               >
-                {t.voiceVideo}
+                {t.userSettings.voiceVideo}
               </button>
               <button
                 type="button"
@@ -102,7 +103,7 @@ export default function UserSettings({
                 style={{ background: settingsTab === 'language' ? 'rgba(255,255,255,0.12)' : 'transparent' }}
                 onClick={() => onSetTab('language')}
               >
-                {t.language}
+                {t.userSettings.language}
               </button>
             </div>
           </div>
@@ -110,13 +111,21 @@ export default function UserSettings({
             <div className="flex items-center justify-between mb-6">
               <div>
                 <div className="text-lg font-semibold">
-                  {settingsTab === 'voice' ? t.titleVoice : settingsTab === 'language' ? t.titleLanguage : t.titleAccount}
+                  {settingsTab === 'voice'
+                    ? t.userSettings.titleVoice
+                    : settingsTab === 'language'
+                      ? t.userSettings.titleLanguage
+                      : t.userSettings.titleAccount}
                 </div>
                 <div className="text-sm opacity-70">
-                  {settingsTab === 'voice' ? t.subtitleVoice : settingsTab === 'language' ? t.subtitleLanguage : t.subtitleAccount}
+                  {settingsTab === 'voice'
+                    ? t.userSettings.subtitleVoice
+                    : settingsTab === 'language'
+                      ? t.userSettings.subtitleLanguage
+                      : t.userSettings.subtitleAccount}
                 </div>
               </div>
-              <button className="h-8 w-8 rounded-full border border-white/20" onClick={onCloseUserSettings} aria-label={t.close}>
+              <button className="h-8 w-8 rounded-full border border-white/20" onClick={onCloseUserSettings} aria-label={t.userSettings.close}>
                 ✕
               </button>
             </div>
@@ -131,16 +140,16 @@ export default function UserSettings({
                     )}
                   </div>
                   <div>
-                    <div className="text-sm opacity-70">{t.nickname}</div>
+                    <div className="text-sm opacity-70">{t.userSettings.nickname}</div>
                     <div className="text-lg font-semibold">{displayName}</div>
-                    <div className="text-xs opacity-60 mt-1">{t.profileHint}</div>
+                    <div className="text-xs opacity-60 mt-1">{t.userSettings.profileHint}</div>
                   </div>
                 </div>
               </div>
             ) : settingsTab === 'voice' ? (
               <div className="space-y-6">
                 <div>
-                  <div className="text-sm font-semibold mb-2">{t.micSensitivity}</div>
+                  <div className="text-sm font-semibold mb-2">{t.userSettings.micSensitivity}</div>
                   <div className="flex items-center gap-4">
                     <input type="range" min={-100} max={0} step={1} value={micSensitivity} onChange={(e) => onMicSensitivityChange(Number(e.target.value))} className="flex-1" />
                     <span className="text-sm w-16 text-right">{micSensitivity}dB</span>
@@ -167,23 +176,23 @@ export default function UserSettings({
                     </div>
                     <div className="flex items-center justify-between text-[11px] opacity-70 mt-2">
                       <span>
-                        {t.currentInput}: {micLevelLabel}dB
+                        {t.userSettings.currentInput}: {micLevelLabel}dB
                       </span>
                       <span>
-                        {t.detectThreshold}: {micSensitivity}dB
+                        {t.userSettings.detectThreshold}: {micSensitivity}dB
                       </span>
                     </div>
                     <div className="text-[11px] mt-1" style={{ color: micLevelLabel >= micSensitivity ? '#22c55e' : 'rgba(255,255,255,0.5)' }}>
-                      {micLevelLabel >= micSensitivity ? t.detected : t.quiet}
+                      {micLevelLabel >= micSensitivity ? t.userSettings.detected : t.userSettings.quiet}
                     </div>
                   </div>
-                  <div className="text-xs opacity-70 mt-2">{t.sensitivityHint}</div>
+                  <div className="text-xs opacity-70 mt-2">{t.userSettings.sensitivityHint}</div>
                 </div>
                 <div className="rounded-xl p-5" style={{ background: '#1f202b' }}>
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <div className="text-sm font-semibold">{t.noiseSuppression}</div>
-                      <div className="text-xs opacity-70 mt-1">{t.noiseSuppressionHint}</div>
+                      <div className="text-sm font-semibold">{t.userSettings.noiseSuppression}</div>
+                      <div className="text-xs opacity-70 mt-1">{t.userSettings.noiseSuppressionHint}</div>
                     </div>
                     <button
                       type="button"
@@ -191,18 +200,18 @@ export default function UserSettings({
                       style={{ background: noiseSuppressionEnabled ? '#22c55e' : '#4b5563' }}
                       onClick={() => onToggleNoiseSuppression(!noiseSuppressionEnabled)}
                     >
-                      {noiseSuppressionEnabled ? t.on : t.off}
+                      {noiseSuppressionEnabled ? t.userSettings.on : t.userSettings.off}
                     </button>
                   </div>
-                  <div className="text-[11px] opacity-70 mt-3">{t.rejoinHint}</div>
+                  <div className="text-[11px] opacity-70 mt-3">{t.userSettings.rejoinHint}</div>
                 </div>
                 <div className="rounded-xl p-5" style={{ background: '#1f202b' }}>
-                  <div className="text-sm font-semibold mb-2">{t.inputTest}</div>
-                  <div className="text-xs opacity-70">{t.inputTestHint}</div>
+                  <div className="text-sm font-semibold mb-2">{t.userSettings.inputTest}</div>
+                  <div className="text-xs opacity-70">{t.userSettings.inputTestHint}</div>
                   <button type="button" className="mt-4 px-4 h-9 rounded-md" style={{ background: isTestingMic ? '#4b5563' : '#5865f2' }} onClick={onToggleMicTest}>
-                    {isTestingMic ? t.stopTest : t.startTest}
+                    {isTestingMic ? t.userSettings.stopTest : t.userSettings.startTest}
                   </button>
-                  {isTestingMic ? <div className="mt-3 text-xs opacity-70">{t.testingHint}</div> : null}
+                  {isTestingMic ? <div className="mt-3 text-xs opacity-70">{t.userSettings.testingHint}</div> : null}
                   {micTestError ? <div className="mt-3 text-xs text-red-300">{micTestError}</div> : null}
                 </div>
               </div>
@@ -219,7 +228,7 @@ export default function UserSettings({
                     }}
                     onClick={() => onLanguageChange(option)}
                   >
-                    <span className="text-sm">{t.languageOptions[option]}</span>
+                    <span className="text-sm">{t.userSettings.languageOptions[option]}</span>
                     {language === option ? <span className="text-xs opacity-70">✓</span> : null}
                   </button>
                 ))}
