@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Socket } from 'socket.io-client'
+import { formatText, type UiText } from '../i18n'
 
 type User = {
   id: string
@@ -22,12 +23,22 @@ type VoicePanelProps = {
   socket: Socket | null
   user: User | null
   forceHeadsetMuted?: boolean
+  noiseSuppressionEnabled: boolean
+  t: UiText
   onRequireLogin?: () => void
 }
 
 const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }]
 
-export default function VoicePanel({ channelId, socket, user, forceHeadsetMuted = false, onRequireLogin }: VoicePanelProps) {
+export default function VoicePanel({
+  channelId,
+  socket,
+  user,
+  forceHeadsetMuted = false,
+  noiseSuppressionEnabled,
+  t,
+  onRequireLogin,
+}: VoicePanelProps) {
   const [joined, setJoined] = useState(false)
   const [members, setMembers] = useState<VoiceMember[]>([])
   const [speakingIds, setSpeakingIds] = useState<string[]>([])
@@ -241,7 +252,7 @@ export default function VoicePanel({ channelId, socket, user, forceHeadsetMuted 
     }
     if (joined) return
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: { noiseSuppression: noiseSuppressionEnabled } })
       rawStreamRef.current = stream
       const ctx = new AudioContext()
       micContextRef.current = ctx
@@ -421,9 +432,9 @@ export default function VoicePanel({ channelId, socket, user, forceHeadsetMuted 
     <div className="flex-1 flex flex-col p-6 gap-4">
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-lg font-semibold">음성 채널</div>
+          <div className="text-lg font-semibold">{t.voice.title}</div>
           <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
-            현재 {members.length}명 참여 중
+            {formatText(t.voice.membersCount, { count: members.length })}
           </div>
         </div>
         {joined ? (
@@ -432,7 +443,7 @@ export default function VoicePanel({ channelId, socket, user, forceHeadsetMuted 
             style={{ background: '#ef4444' }}
             onClick={leaveVoice}
           >
-            나가기
+            {t.voice.leave}
           </button>
         ) : (
           <button
@@ -440,7 +451,7 @@ export default function VoicePanel({ channelId, socket, user, forceHeadsetMuted 
             style={{ background: '#5865f2' }}
             onClick={joinVoice}
           >
-            입장하기
+            {t.voice.join}
           </button>
         )}
       </div>
@@ -472,7 +483,7 @@ export default function VoicePanel({ channelId, socket, user, forceHeadsetMuted 
               </div>
               <div className="flex items-center gap-2 shrink-0 justify-end">
                 {member.muted ? (
-                  <span title="마이크 꺼짐" style={{ color: '#f87171' }}>
+                  <span title={t.voice.micMuted} style={{ color: '#f87171' }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
                       <path d="M12 5a3 3 0 0 0-3 3v4a3 3 0 1 0 6 0V8a3 3 0 0 0-3-3Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
                       <path d="M5 11a7 7 0 0 0 14 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
@@ -482,7 +493,7 @@ export default function VoicePanel({ channelId, socket, user, forceHeadsetMuted 
                   </span>
                 ) : null}
                 {member.deafened ? (
-                  <span title="헤드셋 꺼짐" style={{ color: '#f87171' }}>
+                  <span title={t.voice.headsetMuted} style={{ color: '#f87171' }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
                       <path d="M4 12a8 8 0 0 1 16 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
                       <path d="M4 12v6a2 2 0 0 0 2 2h2v-6H6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
@@ -517,7 +528,7 @@ export default function VoicePanel({ channelId, socket, user, forceHeadsetMuted 
               <path d="M12 18v3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
               {micMuted ? <path d="M4 4l16 16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /> : null}
             </svg>
-            <span className="text-sm">{micMuted ? '마이크 켜기' : '마이크 끄기'}</span>
+            <span className="text-sm">{micMuted ? t.voice.micOn : t.voice.micOff}</span>
           </button>
           <button
             type="button"
@@ -540,7 +551,7 @@ export default function VoicePanel({ channelId, socket, user, forceHeadsetMuted 
               <path d="M20 12v6a2 2 0 1 1-2 2h-2v-6h2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
               {headsetMuted ? <path d="M4 4l16 16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /> : null}
             </svg>
-            <span className="text-sm">{headsetMuted ? '헤드셋 켜기' : '헤드셋 끄기'}</span>
+            <span className="text-sm">{headsetMuted ? t.voice.headsetOn : t.voice.headsetOff}</span>
           </button>
         </div>
       ) : null}

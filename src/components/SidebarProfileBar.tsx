@@ -1,22 +1,20 @@
-import Settings, { type SettingsUser } from './Settings'
+import UserSettings, { type UserSettingsUser } from './UserSettings'
+import type { UiText } from '../i18n'
 
 type SidebarProfileBarProps = {
-  user: SettingsUser | null
-  canManage: boolean
-  adminIds: string[]
-  adminInput: string
-  onAdminInputChange: (value: string) => void
-  onAddAdmin?: (id: string) => void
-  onRemoveAdmin?: (id: string) => void
-  showSettings: boolean
+  user: UserSettingsUser | null
   showUserSettings: boolean
-  settingsTab: 'profile' | 'voice'
-  onSetTab: (tab: 'profile' | 'voice') => void
-  onCloseSettings: () => void
+  settingsTab: 'profile' | 'voice' | 'language'
+  onSetTab: (tab: 'profile' | 'voice' | 'language') => void
   onCloseUserSettings: () => void
-  onOpenUserSettings: (tab: 'profile' | 'voice') => void
+  onOpenUserSettings: (tab: 'profile' | 'voice' | 'language') => void
+  t: UiText
+  language: 'ko' | 'en' | 'zh-Hans' | 'zh-Hant'
+  onLanguageChange: (value: 'ko' | 'en' | 'zh-Hans' | 'zh-Hant') => void
   micSensitivity: number
   onMicSensitivityChange: (value: number) => void
+  noiseSuppressionEnabled: boolean
+  onToggleNoiseSuppression: (value: boolean) => void
   micLevelPercent: number
   micLevelLabel: number
   micSensitivityPercent: number
@@ -28,21 +26,18 @@ type SidebarProfileBarProps = {
 
 export default function SidebarProfileBar({
   user,
-  canManage,
-  adminIds,
-  adminInput,
-  onAdminInputChange,
-  onAddAdmin,
-  onRemoveAdmin,
-  showSettings,
   showUserSettings,
   settingsTab,
   onSetTab,
-  onCloseSettings,
   onCloseUserSettings,
   onOpenUserSettings,
+  t,
+  language,
+  onLanguageChange,
   micSensitivity,
   onMicSensitivityChange,
+  noiseSuppressionEnabled,
+  onToggleNoiseSuppression,
   micLevelPercent,
   micLevelLabel,
   micSensitivityPercent,
@@ -73,15 +68,15 @@ export default function SidebarProfileBar({
           </div>
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm" style={{ color: 'var(--text-primary)' }}>
-              {user?.displayName || user?.username || '게스트'}
+              {user?.displayName || user?.username || t.userSettings.guest}
             </div>
             <div className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
-              {user?.isGuest ? '게스트 모드' : '온라인'}
+              {user?.isGuest ? t.userSettings.guestMode : t.userSettings.online}
             </div>
           </div>
           <button
             type="button"
-            aria-label="사용자 설정"
+            aria-label={t.userSettings.open}
             className="h-9 w-9 rounded-md flex items-center justify-center hover-surface"
             style={{ color: 'var(--text-primary)' }}
             onClick={() => onOpenUserSettings('profile')}
@@ -91,22 +86,19 @@ export default function SidebarProfileBar({
         </div>
       </div>
       {renderSettings ? (
-        <Settings
-          showSettings={showSettings}
+        <UserSettings
           showUserSettings={showUserSettings}
-          canManage={canManage}
           settingsTab={settingsTab}
           onSetTab={onSetTab}
-          onCloseSettings={onCloseSettings}
           onCloseUserSettings={onCloseUserSettings}
-          adminInput={adminInput}
-          onAdminInputChange={onAdminInputChange}
-          onAddAdmin={onAddAdmin}
-          onRemoveAdmin={onRemoveAdmin}
-          adminIds={adminIds}
           user={user}
+          t={t}
+          language={language}
+          onLanguageChange={onLanguageChange}
           micSensitivity={micSensitivity}
           onMicSensitivityChange={onMicSensitivityChange}
+          noiseSuppressionEnabled={noiseSuppressionEnabled}
+          onToggleNoiseSuppression={onToggleNoiseSuppression}
           micLevelPercent={micLevelPercent}
           micLevelLabel={micLevelLabel}
           micSensitivityPercent={micSensitivityPercent}

@@ -1,6 +1,9 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
+import { getStoredLanguage, getTranslations } from '../i18n'
 
 export default function Login() {
+  const t = useMemo(() => getTranslations(getStoredLanguage()), [])
+
   useEffect(() => {
     // 원래 페이지 기억 (이미 다른 곳에서 저장했을 수 있음)
     const stored = localStorage.getItem('return_to')
@@ -18,9 +21,9 @@ export default function Login() {
   return (
     <div className="h-full grid place-items-center" style={{ background: 'var(--bg-app)', color: 'var(--text-primary)' }}>
       <div className="text-center">
-        디스코드 로그인으로 리다이렉트 중입니다.
+        {t.login.redirecting}
         <br />
-        만약 이동이 되지 않는다면{' '}
+        {t.login.fallback}{' '}
         <a
           href={(() => {
             const apiBase = (import.meta as any).env?.VITE_API_BASE as string | undefined
@@ -31,9 +34,9 @@ export default function Login() {
           })()}
           style={{ textDecoration: 'underline' }}
         >
-          이 글씨를 클릭
+          {t.login.clickHere}
         </a>
-        해 주세요.
+        {t.login.pleaseDo}
       </div>
     </div>
   )

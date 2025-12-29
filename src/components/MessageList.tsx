@@ -14,12 +14,22 @@ type Props = {
   loading?: boolean
   error?: boolean
   onRetry?: () => void
+  t: {
+    locale: string
+    messageList: {
+      loadError: string
+      retry: string
+      loading: string
+      empty: string
+      adminTag: string
+    }
+  }
 }
 
-export default function MessageList({ messages, adminIds = [], loading = false, error = false, onRetry }: Props) {
+export default function MessageList({ messages, adminIds = [], loading = false, error = false, onRetry, t }: Props) {
   const adminIdSet = new Set(adminIds)
   const formatTime = (ts: number) =>
-    new Date(ts).toLocaleTimeString('ko-KR', {
+    new Date(ts).toLocaleTimeString(t.locale, {
       hour: '2-digit',
       minute: '2-digit',
       hour12: true,
@@ -45,7 +55,7 @@ export default function MessageList({ messages, adminIds = [], loading = false, 
   for (const m of messages) {
     const d = new Date(m.timestamp)
     const dateKey = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`
-    const dateLabel = d.toLocaleDateString()
+    const dateLabel = d.toLocaleDateString(t.locale)
     if (!current || current.dateKey !== dateKey) {
       current = { dateKey, dateLabel, items: [] as typeof messages }
       groups.push(current)
@@ -58,21 +68,21 @@ export default function MessageList({ messages, adminIds = [], loading = false, 
       <div className="min-h-full flex flex-col justify-end">
         {error ? (
           <div className="text-center text-sm mt-16" style={{ color: 'var(--text-muted)' }}>
-            메시지를 불러오지 못했습니다.
+            {t.messageList.loadError}
             <button
               type="button"
               className="ml-3 px-3 h-8 rounded-md cursor-pointer"
               style={{ background: 'rgba(127,127,127,0.2)', color: 'var(--text-primary)' }}
               onClick={() => onRetry && onRetry()}
             >
-              다시 시도
+              {t.messageList.retry}
             </button>
           </div>
         ) : loading ? (
           <div className="px-2 -mx-2">
             <div className="flex items-center gap-3 text-[11px] no-select my-2" style={{ color: 'var(--text-muted)' }}>
               <span className="flex-1 h-px" style={{ background: 'var(--divider)' }} />
-              <span>메시지를 불러오는 중…</span>
+              <span>{t.messageList.loading}</span>
               <span className="flex-1 h-px" style={{ background: 'var(--divider)' }} />
             </div>
             {[0,1,2,3,4].map((i) => (
@@ -92,7 +102,7 @@ export default function MessageList({ messages, adminIds = [], loading = false, 
         ) : (
           messages.length === 0 && (
             <div className="text-center text-sm mt-16" style={{ color: 'var(--text-muted)' }}>
-              아직 메시지가 없습니다. 첫 메시지를 보내보세요!
+              {t.messageList.empty}
             </div>
           )
         )}
@@ -165,7 +175,7 @@ export default function MessageList({ messages, adminIds = [], loading = false, 
                         <span className="font-medium">{m.author.displayName || m.author.username}</span>
                         {isAdmin ? (
                           <span className="text-[11px] px-1.5 py-0.5 rounded uppercase" style={{ background: 'rgba(250,204,21,0.2)', color: '#facc15' }}>
-                            👑 Admin
+                            {t.messageList.adminTag}
                           </span>
                         ) : null}
                         <span className="text-xs cursor-default" style={{ color: 'var(--text-muted)' }}>
