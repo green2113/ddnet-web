@@ -1,4 +1,3 @@
-
 type Props = {
   accent?: string
   t: {
