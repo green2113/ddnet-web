@@ -1,4 +1,5 @@
 import UserSettings, { type UserSettingsUser } from './UserSettings'
+import type { Language } from '../i18n'
 
 type SidebarProfileBarProps = {
   user: UserSettingsUser | null
@@ -7,8 +8,8 @@ type SidebarProfileBarProps = {
   onSetTab: (tab: 'profile' | 'voice' | 'language') => void
   onCloseUserSettings: () => void
   onOpenUserSettings: (tab: 'profile' | 'voice' | 'language') => void
-  language: 'ko' | 'en' | 'zh-Hans' | 'zh-Hant'
-  onLanguageChange: (value: 'ko' | 'en' | 'zh-Hans' | 'zh-Hant') => void
+  language: Language
+  onLanguageChange: (value: Language) => void
   micSensitivity: number
   onMicSensitivityChange: (value: number) => void
   noiseSuppressionEnabled: boolean
