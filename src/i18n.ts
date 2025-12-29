@@ -531,10 +531,10 @@ const translations: TranslationMap = {
       guestAccount: '访客账户',
       myAccount: '我的账户',
       languageOptions: {
-        ko: '韩语',
-        en: '英语',
-        'zh-Hans': '中文（简体）',
-        'zh-Hant': '中文（繁體）',
+        ko: '한국어',
+        en: 'English',
+        'zh-Hans': '中文(简体)',
+        'zh-Hant': '中文(繁體)',
       },
     },
     login: {
