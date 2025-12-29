@@ -83,27 +83,41 @@ export default function UserSettings({
             <div className="space-y-2 text-sm">
               <button
                 type="button"
-                className="w-full text-left px-3 py-2 rounded-md"
+                className="w-full text-left px-3 py-2 rounded-md flex items-center gap-2"
                 style={{ background: settingsTab === 'profile' ? 'rgba(255,255,255,0.12)' : 'transparent' }}
                 onClick={() => onSetTab('profile')}
               >
-                {t.userSettings.account}
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                  <path d="M4 20a8 8 0 0 1 16 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                </svg>
+                <span>{t.userSettings.account}</span>
               </button>
               <button
                 type="button"
-                className="w-full text-left px-3 py-2 rounded-md"
+                className="w-full text-left px-3 py-2 rounded-md flex items-center gap-2"
                 style={{ background: settingsTab === 'voice' ? 'rgba(255,255,255,0.12)' : 'transparent' }}
                 onClick={() => onSetTab('voice')}
               >
-                {t.userSettings.voiceVideo}
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <path d="M12 15a3 3 0 0 0 3-3V7a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                  <path d="M6 11a6 6 0 0 0 12 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                  <path d="M12 17v3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                </svg>
+                <span>{t.userSettings.voiceVideo}</span>
               </button>
               <button
                 type="button"
-                className="w-full text-left px-3 py-2 rounded-md"
+                className="w-full text-left px-3 py-2 rounded-md flex items-center gap-2"
                 style={{ background: settingsTab === 'language' ? 'rgba(255,255,255,0.12)' : 'transparent' }}
                 onClick={() => onSetTab('language')}
               >
-                {t.userSettings.language}
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
+                  <path d="M3 12h18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                  <path d="M12 3a14 14 0 0 0 0 18a14 14 0 0 0 0-18Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                </svg>
+                <span>{t.userSettings.language}</span>
               </button>
             </div>
           </div>
