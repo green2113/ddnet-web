@@ -3,10 +3,12 @@ import UserSettings, { type UserSettingsUser } from './UserSettings'
 type SidebarProfileBarProps = {
   user: UserSettingsUser | null
   showUserSettings: boolean
-  settingsTab: 'profile' | 'voice'
-  onSetTab: (tab: 'profile' | 'voice') => void
+  settingsTab: 'profile' | 'voice' | 'language'
+  onSetTab: (tab: 'profile' | 'voice' | 'language') => void
   onCloseUserSettings: () => void
-  onOpenUserSettings: (tab: 'profile' | 'voice') => void
+  onOpenUserSettings: (tab: 'profile' | 'voice' | 'language') => void
+  language: 'ko' | 'en' | 'zh-Hans' | 'zh-Hant'
+  onLanguageChange: (value: 'ko' | 'en' | 'zh-Hans' | 'zh-Hant') => void
   micSensitivity: number
   onMicSensitivityChange: (value: number) => void
   noiseSuppressionEnabled: boolean
@@ -27,6 +29,8 @@ export default function SidebarProfileBar({
   onSetTab,
   onCloseUserSettings,
   onOpenUserSettings,
+  language,
+  onLanguageChange,
   micSensitivity,
   onMicSensitivityChange,
   noiseSuppressionEnabled,
@@ -85,6 +89,8 @@ export default function SidebarProfileBar({
           onSetTab={onSetTab}
           onCloseUserSettings={onCloseUserSettings}
           user={user}
+          language={language}
+          onLanguageChange={onLanguageChange}
           micSensitivity={micSensitivity}
           onMicSensitivityChange={onMicSensitivityChange}
           noiseSuppressionEnabled={noiseSuppressionEnabled}
