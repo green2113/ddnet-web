@@ -1,4 +1,3 @@
-
 type Props = {
   accent?: string
 }
@@ -6,7 +5,7 @@ type Props = {
 export default function SidebarGuilds({ accent = 'var(--accent)' }: Props) {
   return (
     <aside
-      className="w-16 hidden md:flex flex-col items-center py-3 gap-3"
+      className="w-16 hidden md:flex flex-col items-center py-3 gap-3 h-full"
       style={{ background: 'var(--rail-bg)', borderRight: '1px solid var(--border)' }}
     >
       <div
@@ -26,5 +25,3 @@ export default function SidebarGuilds({ accent = 'var(--accent)' }: Props) {
     </aside>
   )
 }
-
-
