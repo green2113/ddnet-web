@@ -10,6 +10,7 @@ import Header from './components/Header'
 import MessageList from './components/MessageList'
 import Composer from './components/Composer'
 import VoicePanel from './components/VoicePanel'
+import { getTranslations, type Language } from './i18n'
 
 type User = {
   id: string
@@ -77,7 +78,7 @@ function App() {
   const [showSettings, setShowSettings] = useState(false)
   const [showUserSettings, setShowUserSettings] = useState(false)
   const [settingsTab, setSettingsTab] = useState<'profile' | 'voice' | 'language'>('profile')
-  const [language, setLanguage] = useState<'ko' | 'en' | 'zh-Hans' | 'zh-Hant'>(() => {
+  const [language, setLanguage] = useState<Language>(() => {
     if (typeof window === 'undefined') return 'ko'
     const stored = window.localStorage.getItem('ui-language')
     if (stored === 'en' || stored === 'zh-Hans' || stored === 'zh-Hant' || stored === 'ko') return stored
@@ -498,6 +499,8 @@ function App() {
       })
   }
 
+  const t = getTranslations(language)
+
   return (
     <div className={(isDark ? 'theme-dark ' : '') + 'app-shell flex'} style={{ background: 'var(--bg-app)', color: 'var(--text-primary)' }}>
       <div className="hidden md:flex flex-col w-[320px] h-full">
@@ -741,10 +744,10 @@ function App() {
                 {entryStep === 'choice' ? (
                   <>
                     <div className="px-5 py-4 text-base" style={{ color: 'var(--text-primary)' }}>
-                      What would you like to log in with?
+                      {t.app.entryTitle}
                     </div>
                     <div className="px-5 pb-2 text-sm" style={{ color: 'var(--text-muted)' }}>
-                      You can use chat and voice calls without logging in. You can switch to Discord login later.
+                      {t.app.entrySubtitle}
                     </div>
                     <div className="px-5 py-3 flex justify-end gap-2" style={{ background: 'var(--panel)', borderTop: '1px solid var(--border)' }}>
                       <button
@@ -752,7 +755,7 @@ function App() {
                         style={{ background: 'rgba(127,127,127,0.2)', color: 'var(--text-primary)' }}
                         onClick={() => setEntryStep('guest')}
                       >
-                        Without login
+                        {t.app.entryGuestButton}
                       </button>
                       <button
                         className="px-3 h-9 rounded-md text-white cursor-pointer"
@@ -762,20 +765,20 @@ function App() {
                           login()
                         }}
                       >
-                        Login to Discord
+                        {t.app.entryLoginButton}
                       </button>
                     </div>
                   </>
                 ) : (
                   <>
                     <div className="px-5 py-4 text-base" style={{ color: 'var(--text-primary)' }}>
-                      Enter the name you wish to use.
+                      {t.app.guestTitle}
                     </div>
                     <div className="px-5 pb-4">
                       <input
                         value={guestName}
                         onChange={(event) => setGuestName(event.target.value)}
-                        placeholder="ex. guest"
+                        placeholder={t.app.guestPlaceholder}
                         className="w-full h-10 px-3 rounded-md"
                         style={{ background: 'var(--input-bg)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
                       />
@@ -786,7 +789,7 @@ function App() {
                         style={{ background: 'rgba(127,127,127,0.2)', color: 'var(--text-primary)' }}
                         onClick={() => setEntryStep('choice')}
                       >
-                        Back
+                        {t.app.guestBack}
                       </button>
                       <button
                         className="px-3 h-9 rounded-md text-white cursor-pointer disabled:opacity-50"
@@ -794,7 +797,7 @@ function App() {
                         onClick={createGuest}
                         disabled={!guestName.trim() || guestSubmitting}
                       >
-                        Confirm
+                        {t.app.guestConfirm}
                       </button>
                     </div>
                   </>
