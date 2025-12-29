@@ -637,13 +637,13 @@ const translations: TranslationMap = {
       titleVoice: '語音設定',
       titleLanguage: '語言設定',
       subtitleAccount: '檢視你的個人檔案與帳號資訊。',
-      subtitleVoice: '調整麥克風敏感度與語音輸入。',
+      subtitleVoice: '調整麥克風敏感度與語輸入。',
       subtitleLanguage: '選擇要顯示的語言。',
       nickname: '暱稱',
       profileHint: '你可以在設定中查看頭像與個人資訊。',
       guestMode: '訪客模式',
       online: '線上',
-      micSensitivity: '麥克風敏感度',
+      micSensitivity: '克風敏感度',
       currentInput: '目前輸入',
       detectThreshold: '偵測門檻',
       detected: '已偵測',
@@ -682,10 +682,10 @@ const translations: TranslationMap = {
 }
 
 export const getStoredLanguage = (): Language => {
-  if (typeof window === 'undefined') return 'ko'
+  if (typeof window === 'undefined') return 'en'
   const stored = window.localStorage.getItem('ui-language')
   if (stored === 'en' || stored === 'zh-Hans' || stored === 'zh-Hant' || stored === 'ko') return stored
-  return 'ko'
+  return 'en'
 }
 
 export const getTranslations = (language: Language): UiText => translations[language] ?? translations.ko
