@@ -22,12 +22,20 @@ type VoicePanelProps = {
   socket: Socket | null
   user: User | null
   forceHeadsetMuted?: boolean
+  noiseSuppressionEnabled: boolean
   onRequireLogin?: () => void
 }
 
 const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }]
 
-export default function VoicePanel({ channelId, socket, user, forceHeadsetMuted = false, onRequireLogin }: VoicePanelProps) {
+export default function VoicePanel({
+  channelId,
+  socket,
+  user,
+  forceHeadsetMuted = false,
+  noiseSuppressionEnabled,
+  onRequireLogin,
+}: VoicePanelProps) {
   const [joined, setJoined] = useState(false)
   const [members, setMembers] = useState<VoiceMember[]>([])
   const [speakingIds, setSpeakingIds] = useState<string[]>([])
@@ -241,7 +249,7 @@ export default function VoicePanel({ channelId, socket, user, forceHeadsetMuted 
     }
     if (joined) return
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: { noiseSuppression: noiseSuppressionEnabled } })
       rawStreamRef.current = stream
       const ctx = new AudioContext()
       micContextRef.current = ctx
