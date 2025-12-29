@@ -69,3 +69,4 @@ export default function Composer({ value, onChange, onSend, disabled = false, t 
     </div>
   )
 }
+

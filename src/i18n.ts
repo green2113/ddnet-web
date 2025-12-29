@@ -586,7 +586,7 @@ const translations: TranslationMap = {
     sidebarChannels: {
       serverName: 'DDNet Server',
       serverSettings: '伺服器設定',
-      notifications: '通設定',
+      notifications: '通知設定',
       textChannels: '文字頻道',
       voiceChannels: '語音頻道',
       showHidden: '顯示隱藏頻道（{count}）',

@@ -10,7 +10,7 @@ import Header from './components/Header'
 import MessageList from './components/MessageList'
 import Composer from './components/Composer'
 import VoicePanel from './components/VoicePanel'
-import { getTranslations, type Language } from './i18n'
+import { getStoredLanguage, getTranslations, type Language } from './i18n'
 
 type User = {
   id: string
@@ -78,12 +78,7 @@ function App() {
   const [showSettings, setShowSettings] = useState(false)
   const [showUserSettings, setShowUserSettings] = useState(false)
   const [settingsTab, setSettingsTab] = useState<'profile' | 'voice' | 'language'>('profile')
-  const [language, setLanguage] = useState<Language>(() => {
-    if (typeof window === 'undefined') return 'ko'
-    const stored = window.localStorage.getItem('ui-language')
-    if (stored === 'en' || stored === 'zh-Hans' || stored === 'zh-Hant' || stored === 'ko') return stored
-    return 'ko'
-  })
+  const [language, setLanguage] = useState<Language>(() => getStoredLanguage())
   const [micSensitivity, setMicSensitivity] = useState(() => {
     if (typeof window === 'undefined') return -60
     const stored = window.localStorage.getItem('voice-mic-sensitivity')
@@ -106,6 +101,7 @@ function App() {
   const micTestStreamRef = useRef<MediaStream | null>(null)
   const micTestContextRef = useRef<AudioContext | null>(null)
   const micTestAnimationRef = useRef<number | null>(null)
+  const t = useMemo(() => getTranslations(language), [language])
 
   const playNotificationSound = () => {
     const AudioCtx = window.AudioContext || (window as any).webkitAudioContext
@@ -292,6 +288,11 @@ function App() {
   }, [language])
 
   useEffect(() => {
+    if (!micTestError) return
+    setMicTestError(t.userSettings.micPermission)
+  }, [t, micTestError])
+
+  useEffect(() => {
     const stopMicTest = () => {
       micTestStreamRef.current?.getTracks().forEach((track) => track.stop())
       micTestStreamRef.current = null
@@ -340,7 +341,7 @@ function App() {
         micTestAnimationRef.current = requestAnimationFrame(tick)
       })
       .catch(() => {
-        setMicTestError('마이크 접근 권한이 필요합니다.')
+        setMicTestError(t.userSettings.micPermission)
         setIsTestingMic(false)
       })
 
@@ -348,7 +349,7 @@ function App() {
       cancelled = true
       stopMicTest()
     }
-  }, [isTestingMic, noiseSuppressionEnabled])
+  }, [isTestingMic, noiseSuppressionEnabled, t])
 
   useEffect(() => {
     const handler = (e: any) => {
@@ -392,7 +393,7 @@ function App() {
       const isOwn = user && msg.author?.id === user.id
       const hasFocus = document.visibilityState === 'visible'
       if (!isOwn && !hasFocus && 'Notification' in window && Notification.permission === 'granted') {
-        new Notification(`${msg.author?.displayName || msg.author?.username || '누군가'}`, { body: msg.content || '' })
+        new Notification(`${msg.author?.displayName || msg.author?.username || t.app.someone}`, { body: msg.content || '' })
         playNotificationSound()
       }
     })
@@ -499,19 +500,18 @@ function App() {
       })
   }
 
-  const t = getTranslations(language)
-
   return (
     <div className={(isDark ? 'theme-dark ' : '') + 'app-shell flex'} style={{ background: 'var(--bg-app)', color: 'var(--text-primary)' }}>
       <div className="hidden md:flex flex-col w-[320px] h-full">
         <div className="flex flex-1 min-h-0">
-          <SidebarGuilds />
+          <SidebarGuilds t={t} />
           <div className="w-64 min-h-0" style={{ background: 'var(--sidebar-bg)', borderRight: '1px solid var(--border)' }}>
             <SidebarChannels
               channels={channels}
               activeId={activeChannelId}
               voiceMembersByChannel={voiceMembersByChannel}
               unreadByChannel={unreadByChannel}
+              t={t}
               onSelect={(channelId) => {
                 activeChannelRef.current = channelId
                 setActiveChannelId(channelId)
@@ -529,7 +529,7 @@ function App() {
               }}
               onCreateChannel={(type) => {
                 if (!canManageChannels) return
-                const name = window.prompt('채널 이름을 입력하세요')
+                const name = window.prompt(t.sidebarChannels.channelNamePrompt)
                 if (!name) return
                 axios.post(`${serverBase}/api/channels`, { name, type }, { withCredentials: true }).then(fetchChannels).catch(() => {})
               }}
@@ -569,6 +569,7 @@ function App() {
               setSettingsTab(tab)
               setShowUserSettings(true)
             }}
+            t={t}
             language={language}
             onLanguageChange={setLanguage}
             micSensitivity={micSensitivity}
@@ -604,6 +605,7 @@ function App() {
                 activeId={activeChannelId}
                 voiceMembersByChannel={voiceMembersByChannel}
                 unreadByChannel={unreadByChannel}
+                t={t}
                 onSelect={(channelId) => {
                   activeChannelRef.current = channelId
                   setActiveChannelId(channelId)
@@ -621,7 +623,7 @@ function App() {
                 }}
                 onCreateChannel={(type) => {
                   if (!canManageChannels) return
-                  const name = window.prompt('채널 이름을 입력하세요')
+                  const name = window.prompt(t.sidebarChannels.channelNamePrompt)
                   if (!name) return
                   axios.post(`${serverBase}/api/channels`, { name, type }, { withCredentials: true }).then(fetchChannels).catch(() => {})
                 }}
@@ -660,6 +662,7 @@ function App() {
                   setSettingsTab(tab)
                   setShowUserSettings(true)
                 }}
+                t={t}
                 language={language}
                 onLanguageChange={setLanguage}
                 micSensitivity={micSensitivity}
@@ -687,6 +690,7 @@ function App() {
             onLogin={login}
             onLogout={logout}
             onToggleChannels={() => setShowMobileChannels((prev) => !prev)}
+            t={t}
           />
           {voiceChannelId ? (
             <div style={{ display: isVoiceChannel ? 'block' : 'none' }}>
@@ -695,6 +699,7 @@ function App() {
                 socket={socketRef.current}
                 user={user}
                 noiseSuppressionEnabled={noiseSuppressionEnabled}
+                t={t}
                 onRequireLogin={() => {
                   setEntryStep('choice')
                   setShowEntryModal(true)
@@ -704,8 +709,15 @@ function App() {
           ) : null}
           {isVoiceChannel ? null : (
             <>
-              <MessageList messages={messages} adminIds={adminIds} loading={loadingMessages} error={loadError} onRetry={() => fetchHistory(activeChannelId)} />
-              <Composer value={input} onChange={setInput} onSend={sendMessage} />
+              <MessageList
+                messages={messages}
+                adminIds={adminIds}
+                loading={loadingMessages}
+                error={loadError}
+                onRetry={() => fetchHistory(activeChannelId)}
+                t={t}
+              />
+              <Composer value={input} onChange={setInput} onSend={sendMessage} t={t} />
             </>
           )}
           {menu.visible && menu.message && (
@@ -721,7 +733,7 @@ function App() {
                   setMenu({ visible: false, x: 0, y: 0, message: null })
                 }}
               >
-                메시지 복사
+                {t.app.copyMessage}
               </button>
               {user && (menu.message.author.id === user.id || adminIds.includes(user.id)) && (
                 <button
@@ -733,7 +745,7 @@ function App() {
                     setMenu({ visible: false, x: 0, y: 0, message: null })
                   }}
                 >
-                  메시지 삭제
+                  {t.app.deleteMessage}
                 </button>
               )}
             </div>
@@ -744,10 +756,10 @@ function App() {
                 {entryStep === 'choice' ? (
                   <>
                     <div className="px-5 py-4 text-base" style={{ color: 'var(--text-primary)' }}>
-                      {t.app.entryTitle}
+                      {t.app.loginTitle}
                     </div>
                     <div className="px-5 pb-2 text-sm" style={{ color: 'var(--text-muted)' }}>
-                      {t.app.entrySubtitle}
+                      {t.app.loginSubtitle}
                     </div>
                     <div className="px-5 py-3 flex justify-end gap-2" style={{ background: 'var(--panel)', borderTop: '1px solid var(--border)' }}>
                       <button
@@ -755,7 +767,7 @@ function App() {
                         style={{ background: 'rgba(127,127,127,0.2)', color: 'var(--text-primary)' }}
                         onClick={() => setEntryStep('guest')}
                       >
-                        {t.app.entryGuestButton}
+                        {t.app.loginWithout}
                       </button>
                       <button
                         className="px-3 h-9 rounded-md text-white cursor-pointer"
@@ -765,7 +777,7 @@ function App() {
                           login()
                         }}
                       >
-                        {t.app.entryLoginButton}
+                        {t.app.loginDiscord}
                       </button>
                     </div>
                   </>
@@ -789,7 +801,7 @@ function App() {
                         style={{ background: 'rgba(127,127,127,0.2)', color: 'var(--text-primary)' }}
                         onClick={() => setEntryStep('choice')}
                       >
-                        {t.app.guestBack}
+                        {t.app.back}
                       </button>
                       <button
                         className="px-3 h-9 rounded-md text-white cursor-pointer disabled:opacity-50"
@@ -797,7 +809,7 @@ function App() {
                         onClick={createGuest}
                         disabled={!guestName.trim() || guestSubmitting}
                       >
-                        {t.app.guestConfirm}
+                        {t.app.confirm}
                       </button>
                     </div>
                   </>
@@ -813,6 +825,7 @@ function App() {
         onCloseSettings={() => setShowSettings(false)}
         adminInput={adminInput}
         onAdminInputChange={setAdminInput}
+        t={t}
         onAddAdmin={(id) => {
           if (!canManageChannels) return
           axios
