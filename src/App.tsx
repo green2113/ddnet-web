@@ -83,6 +83,12 @@ function App() {
     if (!Number.isFinite(parsed)) return -60
     return Math.min(0, Math.max(-100, parsed))
   })
+  const [noiseSuppressionEnabled, setNoiseSuppressionEnabled] = useState(() => {
+    if (typeof window === 'undefined') return true
+    const stored = window.localStorage.getItem('voice-noise-suppression')
+    if (stored === null) return true
+    return stored === 'true'
+  })
   const [isTestingMic, setIsTestingMic] = useState(false)
   const [micLevel, setMicLevel] = useState(-100)
   const [micTestError, setMicTestError] = useState('')
@@ -268,6 +274,11 @@ function App() {
   }, [micSensitivity])
 
   useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem('voice-noise-suppression', String(noiseSuppressionEnabled))
+  }, [noiseSuppressionEnabled])
+
+  useEffect(() => {
     const stopMicTest = () => {
       micTestStreamRef.current?.getTracks().forEach((track) => track.stop())
       micTestStreamRef.current = null
@@ -290,7 +301,7 @@ function App() {
     let cancelled = false
     setMicTestError('')
     navigator.mediaDevices
-      .getUserMedia({ audio: true })
+      .getUserMedia({ audio: { noiseSuppression: noiseSuppressionEnabled } })
       .then((stream) => {
         if (cancelled) {
           stream.getTracks().forEach((track) => track.stop())
@@ -324,7 +335,7 @@ function App() {
       cancelled = true
       stopMicTest()
     }
-  }, [isTestingMic])
+  }, [isTestingMic, noiseSuppressionEnabled])
 
   useEffect(() => {
     const handler = (e: any) => {
@@ -569,6 +580,8 @@ function App() {
             }}
             micSensitivity={micSensitivity}
             onMicSensitivityChange={setMicSensitivity}
+            noiseSuppressionEnabled={noiseSuppressionEnabled}
+            onToggleNoiseSuppression={setNoiseSuppressionEnabled}
             micLevelPercent={dbToPercent(micLevel)}
             micLevelLabel={micLevel}
             micSensitivityPercent={dbToPercent(micSensitivity)}
@@ -680,6 +693,8 @@ function App() {
                 }}
                 micSensitivity={micSensitivity}
                 onMicSensitivityChange={setMicSensitivity}
+                noiseSuppressionEnabled={noiseSuppressionEnabled}
+                onToggleNoiseSuppression={setNoiseSuppressionEnabled}
                 micLevelPercent={dbToPercent(micLevel)}
                 micLevelLabel={micLevel}
                 micSensitivityPercent={dbToPercent(micSensitivity)}
@@ -708,6 +723,7 @@ function App() {
                 channelId={voiceChannelId}
                 socket={socketRef.current}
                 user={user}
+                noiseSuppressionEnabled={noiseSuppressionEnabled}
                 onRequireLogin={() => {
                   setEntryStep('choice')
                   setShowEntryModal(true)
