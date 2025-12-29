@@ -24,6 +24,8 @@ type SettingsProps = {
   user: SettingsUser | null
   micSensitivity: number
   onMicSensitivityChange: (value: number) => void
+  noiseSuppressionEnabled: boolean
+  onToggleNoiseSuppression: (value: boolean) => void
   micLevelPercent: number
   micLevelLabel: number
   micSensitivityPercent: number
@@ -48,6 +50,8 @@ export default function Settings({
   user,
   micSensitivity,
   onMicSensitivityChange,
+  noiseSuppressionEnabled,
+  onToggleNoiseSuppression,
   micLevelPercent,
   micLevelLabel,
   micSensitivityPercent,
@@ -237,6 +241,23 @@ export default function Settings({
                             </div>
                           </div>
                           <div className="text-xs opacity-70 mt-2">높을수록 작은 소리에도 마이크가 반응합니다.</div>
+                        </div>
+                        <div className="rounded-xl p-5" style={{ background: '#1f202b' }}>
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <div className="text-sm font-semibold">잡음 제거</div>
+                              <div className="text-xs opacity-70 mt-1">WebRTC의 노이즈 억제를 사용해 주변 소음을 줄입니다.</div>
+                            </div>
+                            <button
+                              type="button"
+                              className="px-3 h-8 rounded-md text-sm"
+                              style={{ background: noiseSuppressionEnabled ? '#22c55e' : '#4b5563' }}
+                              onClick={() => onToggleNoiseSuppression(!noiseSuppressionEnabled)}
+                            >
+                              {noiseSuppressionEnabled ? '켜짐' : '꺼짐'}
+                            </button>
+                          </div>
+                          <div className="text-[11px] opacity-70 mt-3">설정 변경 후 음성 채널을 다시 입장하면 적용됩니다.</div>
                         </div>
                         <div className="rounded-xl p-5" style={{ background: '#1f202b' }}>
                           <div className="text-sm font-semibold mb-2">입력 테스트</div>
