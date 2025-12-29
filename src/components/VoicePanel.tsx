@@ -371,27 +371,33 @@ export default function VoicePanel({
     const data = new Float32Array(analyser.fftSize)
 
     const tick = () => {
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => {})
+      }
       analyser.getFloatTimeDomainData(data)
       const normalized = normalizeLevel(data)
       const shouldTransmit = normalized >= micSensitivity && !micMuted && !headsetMuted
       outputStream.getAudioTracks().forEach((track) => {
         track.enabled = shouldTransmit
       })
-      const raf = requestAnimationFrame(tick)
-      if (localGateRef.current) {
-        localGateRef.current.raf = raf
-      }
     }
 
-    const raf = requestAnimationFrame(tick)
-    localGateRef.current = { ctx, analyser, data, raf }
+    tick()
+    const intervalId = window.setInterval(tick, 120)
+    localGateRef.current = { ctx, analyser, data, raf: intervalId }
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && ctx.state === 'suspended') {
+        ctx.resume().catch(() => {})
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
 
     return () => {
-      if (localGateRef.current) {
-        cancelAnimationFrame(localGateRef.current.raf)
-        localGateRef.current.ctx.close()
-        localGateRef.current = null
-      }
+      document.removeEventListener('visibilitychange', handleVisibility)
+      window.clearInterval(intervalId)
+      ctx.close()
+      localGateRef.current = null
     }
   }, [joined, micMuted, headsetMuted, micSensitivity])
 
