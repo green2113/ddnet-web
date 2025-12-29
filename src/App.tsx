@@ -5,6 +5,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import SidebarGuilds from './components/SidebarGuilds'
 import SidebarChannels from './components/SidebarChannels'
 import SidebarProfileBar from './components/SidebarProfileBar'
+import ServerSettings from './components/ServerSettings'
 import Header from './components/Header'
 import MessageList from './components/MessageList'
 import Composer from './components/Composer'
@@ -543,33 +544,9 @@ function App() {
         <div className="px-3 pb-3" style={{ background: 'var(--sidebar-bg)', borderRight: '1px solid var(--border)' }}>
           <SidebarProfileBar
             user={user}
-            canManage={canManageChannels}
-            adminIds={adminIds}
-            adminInput={adminInput}
-            onAdminInputChange={setAdminInput}
-            onAddAdmin={(id) => {
-              if (!canManageChannels) return
-              axios
-                .post(`${serverBase}/api/admins`, { id }, { withCredentials: true })
-                .then((res) => {
-                  if (Array.isArray(res.data)) setAdminIds(res.data)
-                })
-                .catch(() => {})
-            }}
-            onRemoveAdmin={(id) => {
-              if (!canManageChannels) return
-              axios
-                .delete(`${serverBase}/api/admins/${id}`, { withCredentials: true })
-                .then((res) => {
-                  if (Array.isArray(res.data)) setAdminIds(res.data)
-                })
-                .catch(() => {})
-            }}
-            showSettings={showSettings}
             showUserSettings={showUserSettings}
             settingsTab={settingsTab}
             onSetTab={setSettingsTab}
-            onCloseSettings={() => setShowSettings(false)}
             onCloseUserSettings={() => {
               setShowUserSettings(false)
               setIsTestingMic(false)
@@ -656,33 +633,9 @@ function App() {
             <div className="px-3 pb-3" style={{ background: 'var(--sidebar-bg)', borderRight: '1px solid var(--border)' }}>
               <SidebarProfileBar
                 user={user}
-                canManage={canManageChannels}
-                adminIds={adminIds}
-                adminInput={adminInput}
-                onAdminInputChange={setAdminInput}
-                onAddAdmin={(id) => {
-                  if (!canManageChannels) return
-                  axios
-                    .post(`${serverBase}/api/admins`, { id }, { withCredentials: true })
-                    .then((res) => {
-                      if (Array.isArray(res.data)) setAdminIds(res.data)
-                    })
-                    .catch(() => {})
-                }}
-                onRemoveAdmin={(id) => {
-                  if (!canManageChannels) return
-                  axios
-                    .delete(`${serverBase}/api/admins/${id}`, { withCredentials: true })
-                    .then((res) => {
-                      if (Array.isArray(res.data)) setAdminIds(res.data)
-                    })
-                    .catch(() => {})
-                }}
-                showSettings={showSettings}
                 showUserSettings={showUserSettings}
                 settingsTab={settingsTab}
                 onSetTab={setSettingsTab}
-                onCloseSettings={() => setShowSettings(false)}
                 onCloseUserSettings={() => {
                   setShowUserSettings(false)
                   setIsTestingMic(false)
@@ -836,6 +789,32 @@ function App() {
           )}
         </main>
       </div>
+      <ServerSettings
+        showSettings={showSettings}
+        canManage={canManageChannels}
+        onCloseSettings={() => setShowSettings(false)}
+        adminInput={adminInput}
+        onAdminInputChange={setAdminInput}
+        onAddAdmin={(id) => {
+          if (!canManageChannels) return
+          axios
+            .post(`${serverBase}/api/admins`, { id }, { withCredentials: true })
+            .then((res) => {
+              if (Array.isArray(res.data)) setAdminIds(res.data)
+            })
+            .catch(() => {})
+        }}
+        onRemoveAdmin={(id) => {
+          if (!canManageChannels) return
+          axios
+            .delete(`${serverBase}/api/admins/${id}`, { withCredentials: true })
+            .then((res) => {
+              if (Array.isArray(res.data)) setAdminIds(res.data)
+            })
+            .catch(() => {})
+        }}
+        adminIds={adminIds}
+      />
     </div>
   )
 }
