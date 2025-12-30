@@ -109,6 +109,11 @@ export type UiText = {
     sensitivityHint: string
     noiseSuppression: string
     noiseSuppressionHint: string
+    noiseSuppressionOptions: {
+      krisp: string
+      webrtc: string
+      off: string
+    }
     rejoinHint: string
     on: string
     off: string
@@ -246,6 +251,11 @@ const translations: TranslationMap = {
       sensitivityHint: 'Higher values let the mic react to smaller sounds.',
       noiseSuppression: 'Noise Suppression',
       noiseSuppressionHint: 'Use WebRTC noise suppression to reduce background noise.',
+      noiseSuppressionOptions: {
+        krisp: 'Krisp',
+        webrtc: 'Default',
+        off: 'None',
+      },
       rejoinHint: 'Rejoin the voice channel after changing this setting.',
       on: 'On',
       off: 'Off',
@@ -381,6 +391,11 @@ const translations: TranslationMap = {
       sensitivityHint: '높을수록 작은 소리에도 마이크가 반응합니다.',
       noiseSuppression: '잡음 제거',
       noiseSuppressionHint: 'WebRTC의 노이즈 억제를 사용해 주변 소음을 줄입니다.',
+      noiseSuppressionOptions: {
+        krisp: 'Krisp',
+        webrtc: '기본',
+        off: '없음',
+      },
       rejoinHint: '설정 변경 후 음성 채널을 다시 입장하면 적용됩니다.',
       on: '켜짐',
       off: '꺼짐',
@@ -516,6 +531,11 @@ const translations: TranslationMap = {
       sensitivityHint: '数值越高，麦克风越容易响应微小声音。',
       noiseSuppression: '噪声抑制',
       noiseSuppressionHint: '使用 WebRTC 噪声抑制降低背景噪声。',
+      noiseSuppressionOptions: {
+        krisp: 'Krisp',
+        webrtc: '??',
+        off: '?',
+      },
       rejoinHint: '更改后请重新进入语音频道以生效。',
       on: '开启',
       off: '关闭',
@@ -651,6 +671,11 @@ const translations: TranslationMap = {
       sensitivityHint: '數值越高，麥克風越容易回應細微聲音。',
       noiseSuppression: '雜訊抑制',
       noiseSuppressionHint: '使用 WebRTC 雜訊抑制降低背景噪音。',
+      noiseSuppressionOptions: {
+        krisp: 'Krisp',
+        webrtc: '??',
+        off: '?',
+      },
       rejoinHint: '變更後請重新進入語音頻道以生效。',
       on: '開啟',
       off: '關閉',

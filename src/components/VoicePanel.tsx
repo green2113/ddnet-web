@@ -23,19 +23,39 @@ type VoicePanelProps = {
   socket: Socket | null
   user: User | null
   forceHeadsetMuted?: boolean
-  noiseSuppressionEnabled: boolean
+  noiseSuppressionMode: 'krisp' | 'webrtc' | 'off'
   t: UiText
   onRequireLogin?: () => void
 }
 
 const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }]
+const KRISP_ENV = {
+  enabled: (import.meta as any).env?.VITE_KRISP_ENABLED === 'true',
+  sdkPath: (import.meta as any).env?.VITE_KRISP_SDK_PATH || '/dist/krispsdk.mjs',
+  modelBvc: (import.meta as any).env?.VITE_KRISP_MODEL_BVC_URL as string | undefined,
+  model8: (import.meta as any).env?.VITE_KRISP_MODEL_8_URL as string | undefined,
+  modelNc: (import.meta as any).env?.VITE_KRISP_MODEL_NC_URL as string | undefined,
+  bvcAllowed: (import.meta as any).env?.VITE_KRISP_BVC_ALLOWED_URL as string | undefined,
+}
+
+type KrispSdkInstance = {
+  init: () => Promise<void>
+  createNoiseFilter: (...args: any[]) => Promise<AudioWorkletNode>
+  on?: (event: string, handler: (...args: any[]) => void) => void
+  destroy?: () => void
+}
+
+type KrispSdkCtor = {
+  new (args: { params: Record<string, any> }): KrispSdkInstance
+  isSupported?: () => boolean
+}
 
 export default function VoicePanel({
   channelId,
   socket,
   user,
   forceHeadsetMuted = false,
-  noiseSuppressionEnabled,
+  noiseSuppressionMode,
   t,
   onRequireLogin,
 }: VoicePanelProps) {
@@ -63,6 +83,8 @@ export default function VoicePanel({
   const micGainRef = useRef<GainNode | null>(null)
   const micDestinationRef = useRef<MediaStreamAudioDestinationNode | null>(null)
   const peersRef = useRef<Map<string, RTCPeerConnection>>(new Map())
+  const krispSdkRef = useRef<KrispSdkInstance | null>(null)
+  const krispFilterRef = useRef<AudioWorkletNode | null>(null)
   const speakingRef = useRef<Set<string>>(new Set())
   const speakingThresholdRef = useRef<Map<string, number>>(new Map())
   const localGateRef = useRef<{ ctx: AudioContext; analyser: AnalyserNode; data: Float32Array; raf: number } | null>(null)
@@ -160,6 +182,10 @@ export default function VoicePanel({
     rawStreamRef.current?.getTracks().forEach((track) => track.stop())
     localStreamRef.current?.getTracks().forEach((track) => track.stop())
     micContextRef.current?.close()
+    if (krispFilterRef.current) {
+      krispFilterRef.current.disconnect()
+      krispFilterRef.current = null
+    }
     micContextRef.current = null
     micGainRef.current = null
     micDestinationRef.current = null
@@ -244,6 +270,42 @@ export default function VoicePanel({
     })
   }
 
+  const getKrispSdk = async () => {
+    if (!KRISP_ENV.enabled) return null
+    if (krispSdkRef.current) return krispSdkRef.current
+    if (!KRISP_ENV.modelBvc && !KRISP_ENV.model8 && !KRISP_ENV.modelNc) return null
+    try {
+      const mod = (await import(/* @vite-ignore */ KRISP_ENV.sdkPath)) as {
+        default?: KrispSdkCtor
+        KrispSDK?: KrispSdkCtor
+      }
+      const KrispSDK = mod.default || mod.KrispSDK
+      if (!KrispSDK) return null
+      if (KrispSDK.isSupported && !KrispSDK.isSupported()) return null
+      const models: Record<string, string> = {}
+      if (KRISP_ENV.modelBvc) models.modelBVC = KRISP_ENV.modelBvc
+      if (KRISP_ENV.model8) models.model8 = KRISP_ENV.model8
+      if (KRISP_ENV.modelNc) models.modelNC = KRISP_ENV.modelNc
+      const params: Record<string, any> = {
+        debugLogs: false,
+        logProcessStats: false,
+        useSharedArrayBuffer: false,
+        models,
+      }
+      if (KRISP_ENV.bvcAllowed && models.modelBVC) {
+        params.useBVC = true
+        params.bvc = { allowedDevices: KRISP_ENV.bvcAllowed }
+      }
+      const sdk = new KrispSDK({ params })
+      await sdk.init()
+      krispSdkRef.current = sdk
+      return sdk
+    } catch (error) {
+      console.warn('[voice] failed to init Krisp SDK', error)
+      return null
+    }
+  }
+
   const joinVoice = async () => {
     if (!socket) return
     if (!user) {
@@ -252,7 +314,14 @@ export default function VoicePanel({
     }
     if (joined) return
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: { noiseSuppression: noiseSuppressionEnabled } })
+      const useKrisp = noiseSuppressionMode === 'krisp' && KRISP_ENV.enabled
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: useKrisp ? false : undefined,
+          noiseSuppression: noiseSuppressionMode === 'webrtc',
+          autoGainControl: useKrisp ? false : undefined,
+        },
+      })
       rawStreamRef.current = stream
       const ctx = new AudioContext()
       micContextRef.current = ctx
@@ -261,7 +330,42 @@ export default function VoicePanel({
       const destination = ctx.createMediaStreamDestination()
       micGainRef.current = gain
       micDestinationRef.current = destination
-      source.connect(gain)
+      let inputNode: AudioNode | null = null
+      if (useKrisp) {
+        const krispSdk = await getKrispSdk()
+        if (krispSdk) {
+          const useBvc = Boolean(KRISP_ENV.bvcAllowed && KRISP_ENV.modelBvc)
+          const filterNode = (useBvc
+            ? await krispSdk.createNoiseFilter(
+                {
+                  audioContext: ctx,
+                  stream,
+                },
+                () => {
+                  filterNode.enable?.()
+                },
+                () => {},
+              )
+            : await krispSdk.createNoiseFilter(
+                ctx,
+                () => {
+                  filterNode.enable?.()
+                },
+                () => {},
+              )) as AudioWorkletNode & { enable?: () => void }
+          krispFilterRef.current = filterNode
+          filterNode.addEventListener?.('error', (event: any) => {
+            console.warn('[voice] krisp filter error', event?.data || event)
+          })
+          inputNode = filterNode
+        }
+      }
+      if (inputNode) {
+        source.connect(inputNode)
+        inputNode.connect(gain)
+      } else {
+        source.connect(gain)
+      }
       gain.connect(destination)
       localStreamRef.current = destination.stream
       localStreamRef.current.getAudioTracks().forEach((track) => {

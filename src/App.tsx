@@ -42,6 +42,7 @@ type VoiceMember = {
 
 type VoiceMembersByChannel = Record<string, VoiceMember[]>
 type UnreadByChannel = Record<string, boolean>
+type NoiseSuppressionMode = 'krisp' | 'webrtc' | 'off'
 
 type Channel = {
   id: string
@@ -86,11 +87,13 @@ function App() {
     if (!Number.isFinite(parsed)) return -60
     return Math.min(0, Math.max(-100, parsed))
   })
-  const [noiseSuppressionEnabled, setNoiseSuppressionEnabled] = useState(() => {
-    if (typeof window === 'undefined') return true
-    const stored = window.localStorage.getItem('voice-noise-suppression')
-    if (stored === null) return true
-    return stored === 'true'
+  const [noiseSuppressionMode, setNoiseSuppressionMode] = useState<NoiseSuppressionMode>(() => {
+    if (typeof window === 'undefined') return 'webrtc'
+    const stored = window.localStorage.getItem('voice-noise-mode')
+    if (stored === 'krisp' || stored === 'webrtc' || stored === 'off') return stored
+    const legacy = window.localStorage.getItem('voice-noise-suppression')
+    if (legacy === null) return 'webrtc'
+    return legacy === 'true' ? 'webrtc' : 'off'
   })
   const [isTestingMic, setIsTestingMic] = useState(false)
   const [micLevel, setMicLevel] = useState(-100)
@@ -279,8 +282,8 @@ function App() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    window.localStorage.setItem('voice-noise-suppression', String(noiseSuppressionEnabled))
-  }, [noiseSuppressionEnabled])
+    window.localStorage.setItem('voice-noise-mode', noiseSuppressionMode)
+  }, [noiseSuppressionMode])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -315,7 +318,13 @@ function App() {
     let cancelled = false
     setMicTestError('')
     navigator.mediaDevices
-      .getUserMedia({ audio: { noiseSuppression: noiseSuppressionEnabled } })
+      .getUserMedia({
+        audio: {
+          echoCancellation: noiseSuppressionMode === 'krisp' ? false : undefined,
+          noiseSuppression: noiseSuppressionMode === 'webrtc',
+          autoGainControl: noiseSuppressionMode === 'krisp' ? false : undefined,
+        },
+      })
       .then((stream) => {
         if (cancelled) {
           stream.getTracks().forEach((track) => track.stop())
@@ -349,7 +358,7 @@ function App() {
       cancelled = true
       stopMicTest()
     }
-  }, [isTestingMic, noiseSuppressionEnabled, t])
+  }, [isTestingMic, noiseSuppressionMode, t])
 
   useEffect(() => {
     const handler = (e: any) => {
@@ -574,8 +583,8 @@ function App() {
             onLanguageChange={setLanguage}
             micSensitivity={micSensitivity}
             onMicSensitivityChange={setMicSensitivity}
-            noiseSuppressionEnabled={noiseSuppressionEnabled}
-            onToggleNoiseSuppression={setNoiseSuppressionEnabled}
+            noiseSuppressionMode={noiseSuppressionMode}
+            onNoiseSuppressionModeChange={setNoiseSuppressionMode}
             micLevelPercent={dbToPercent(micLevel)}
             micLevelLabel={micLevel}
             micSensitivityPercent={dbToPercent(micSensitivity)}
@@ -667,8 +676,8 @@ function App() {
                 onLanguageChange={setLanguage}
                 micSensitivity={micSensitivity}
                 onMicSensitivityChange={setMicSensitivity}
-                noiseSuppressionEnabled={noiseSuppressionEnabled}
-                onToggleNoiseSuppression={setNoiseSuppressionEnabled}
+                noiseSuppressionMode={noiseSuppressionMode}
+                onNoiseSuppressionModeChange={setNoiseSuppressionMode}
                 micLevelPercent={dbToPercent(micLevel)}
                 micLevelLabel={micLevel}
                 micSensitivityPercent={dbToPercent(micSensitivity)}
@@ -698,7 +707,7 @@ function App() {
                 channelId={voiceChannelId}
                 socket={socketRef.current}
                 user={user}
-                noiseSuppressionEnabled={noiseSuppressionEnabled}
+                noiseSuppressionMode={noiseSuppressionMode}
                 t={t}
                 onRequireLogin={() => {
                   setEntryStep('choice')

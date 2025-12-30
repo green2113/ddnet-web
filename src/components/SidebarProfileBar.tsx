@@ -13,8 +13,8 @@ type SidebarProfileBarProps = {
   onLanguageChange: (value: 'ko' | 'en' | 'zh-Hans' | 'zh-Hant') => void
   micSensitivity: number
   onMicSensitivityChange: (value: number) => void
-  noiseSuppressionEnabled: boolean
-  onToggleNoiseSuppression: (value: boolean) => void
+  noiseSuppressionMode: 'krisp' | 'webrtc' | 'off'
+  onNoiseSuppressionModeChange: (value: 'krisp' | 'webrtc' | 'off') => void
   micLevelPercent: number
   micLevelLabel: number
   micSensitivityPercent: number
@@ -36,8 +36,8 @@ export default function SidebarProfileBar({
   onLanguageChange,
   micSensitivity,
   onMicSensitivityChange,
-  noiseSuppressionEnabled,
-  onToggleNoiseSuppression,
+  noiseSuppressionMode,
+  onNoiseSuppressionModeChange,
   micLevelPercent,
   micLevelLabel,
   micSensitivityPercent,
@@ -97,8 +97,8 @@ export default function SidebarProfileBar({
           onLanguageChange={onLanguageChange}
           micSensitivity={micSensitivity}
           onMicSensitivityChange={onMicSensitivityChange}
-          noiseSuppressionEnabled={noiseSuppressionEnabled}
-          onToggleNoiseSuppression={onToggleNoiseSuppression}
+          noiseSuppressionMode={noiseSuppressionMode}
+          onNoiseSuppressionModeChange={onNoiseSuppressionModeChange}
           micLevelPercent={micLevelPercent}
           micLevelLabel={micLevelLabel}
           micSensitivityPercent={micSensitivityPercent}

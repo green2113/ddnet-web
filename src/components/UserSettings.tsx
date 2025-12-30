@@ -20,8 +20,8 @@ type UserSettingsProps = {
   onLanguageChange: (value: 'ko' | 'en' | 'zh-Hans' | 'zh-Hant') => void
   micSensitivity: number
   onMicSensitivityChange: (value: number) => void
-  noiseSuppressionEnabled: boolean
-  onToggleNoiseSuppression: (value: boolean) => void
+  noiseSuppressionMode: 'krisp' | 'webrtc' | 'off'
+  onNoiseSuppressionModeChange: (value: 'krisp' | 'webrtc' | 'off') => void
   micLevelPercent: number
   micLevelLabel: number
   micSensitivityPercent: number
@@ -41,8 +41,8 @@ export default function UserSettings({
   onLanguageChange,
   micSensitivity,
   onMicSensitivityChange,
-  noiseSuppressionEnabled,
-  onToggleNoiseSuppression,
+  noiseSuppressionMode,
+  onNoiseSuppressionModeChange,
   micLevelPercent,
   micLevelLabel,
   micSensitivityPercent,
@@ -203,19 +203,24 @@ export default function UserSettings({
                   <div className="text-xs opacity-70 mt-2">{t.userSettings.sensitivityHint}</div>
                 </div>
                 <div className="rounded-xl p-5" style={{ background: '#1f202b' }}>
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <div className="text-sm font-semibold">{t.userSettings.noiseSuppression}</div>
-                      <div className="text-xs opacity-70 mt-1">{t.userSettings.noiseSuppressionHint}</div>
-                    </div>
-                    <button
-                      type="button"
-                      className="px-3 h-8 rounded-md text-sm"
-                      style={{ background: noiseSuppressionEnabled ? '#22c55e' : '#4b5563' }}
-                      onClick={() => onToggleNoiseSuppression(!noiseSuppressionEnabled)}
-                    >
-                      {noiseSuppressionEnabled ? t.userSettings.on : t.userSettings.off}
-                    </button>
+                  <div className="text-sm font-semibold">{t.userSettings.noiseSuppression}</div>
+                  <div className="text-xs opacity-70 mt-1">{t.userSettings.noiseSuppressionHint}</div>
+                  <div className="mt-4 space-y-2">
+                    {(['krisp', 'webrtc', 'off'] as const).map((option) => (
+                      <button
+                        key={option}
+                        type="button"
+                        className="w-full flex items-center justify-between px-4 py-3 rounded-md"
+                        style={{
+                          background: noiseSuppressionMode === option ? 'rgba(88,101,242,0.2)' : 'transparent',
+                          border: noiseSuppressionMode === option ? '1px solid rgba(88,101,242,0.6)' : '1px solid transparent',
+                        }}
+                        onClick={() => onNoiseSuppressionModeChange(option)}
+                      >
+                        <span className="text-sm">{t.userSettings.noiseSuppressionOptions[option]}</span>
+                        {noiseSuppressionMode === option ? <span className="text-xs opacity-70">{t.userSettings.on}</span> : null}
+                      </button>
+                    ))}
                   </div>
                   <div className="text-[11px] opacity-70 mt-3">{t.userSettings.rejoinHint}</div>
                 </div>
