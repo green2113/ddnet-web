@@ -20,8 +20,8 @@ type UserSettingsProps = {
   onLanguageChange: (value: 'ko' | 'en' | 'zh-Hans' | 'zh-Hant') => void
   micSensitivity: number
   onMicSensitivityChange: (value: number) => void
-  noiseSuppressionMode: 'krisp' | 'webrtc' | 'off'
-  onNoiseSuppressionModeChange: (value: 'krisp' | 'webrtc' | 'off') => void
+  noiseSuppressionMode: 'webrtc' | 'off'
+  onNoiseSuppressionModeChange: (value: 'webrtc' | 'off') => void
   micLevelPercent: number
   micLevelLabel: number
   micSensitivityPercent: number
@@ -206,7 +206,7 @@ export default function UserSettings({
                   <div className="text-sm font-semibold">{t.userSettings.noiseSuppression}</div>
                   <div className="text-xs opacity-70 mt-1">{t.userSettings.noiseSuppressionHint}</div>
                   <div className="mt-4 space-y-2">
-                    {(['krisp', 'webrtc', 'off'] as const).map((option) => (
+                    {(['webrtc', 'off'] as const).map((option) => (
                       <button
                         key={option}
                         type="button"

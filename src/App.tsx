@@ -42,7 +42,7 @@ type VoiceMember = {
 
 type VoiceMembersByChannel = Record<string, VoiceMember[]>
 type UnreadByChannel = Record<string, boolean>
-type NoiseSuppressionMode = 'krisp' | 'webrtc' | 'off'
+type NoiseSuppressionMode = 'webrtc' | 'off'
 
 type Channel = {
   id: string
@@ -90,7 +90,7 @@ function App() {
   const [noiseSuppressionMode, setNoiseSuppressionMode] = useState<NoiseSuppressionMode>(() => {
     if (typeof window === 'undefined') return 'webrtc'
     const stored = window.localStorage.getItem('voice-noise-mode')
-    if (stored === 'krisp' || stored === 'webrtc' || stored === 'off') return stored
+    if (stored === 'webrtc' || stored === 'off') return stored
     const legacy = window.localStorage.getItem('voice-noise-suppression')
     if (legacy === null) return 'webrtc'
     return legacy === 'true' ? 'webrtc' : 'off'
@@ -320,9 +320,7 @@ function App() {
     navigator.mediaDevices
       .getUserMedia({
         audio: {
-          echoCancellation: noiseSuppressionMode === 'krisp' ? false : undefined,
           noiseSuppression: noiseSuppressionMode === 'webrtc',
-          autoGainControl: noiseSuppressionMode === 'krisp' ? false : undefined,
         },
       })
       .then((stream) => {

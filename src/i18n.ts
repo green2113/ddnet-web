@@ -110,7 +110,6 @@ export type UiText = {
     noiseSuppression: string
     noiseSuppressionHint: string
     noiseSuppressionOptions: {
-      krisp: string
       webrtc: string
       off: string
     }
@@ -252,7 +251,6 @@ const translations: TranslationMap = {
       noiseSuppression: 'Noise Suppression',
       noiseSuppressionHint: 'Use WebRTC noise suppression to reduce background noise.',
       noiseSuppressionOptions: {
-        krisp: 'Krisp',
         webrtc: 'Default',
         off: 'None',
       },
@@ -392,7 +390,6 @@ const translations: TranslationMap = {
       noiseSuppression: '잡음 제거',
       noiseSuppressionHint: 'WebRTC의 노이즈 억제를 사용해 주변 소음을 줄입니다.',
       noiseSuppressionOptions: {
-        krisp: 'Krisp',
         webrtc: '기본',
         off: '없음',
       },
@@ -532,7 +529,6 @@ const translations: TranslationMap = {
       noiseSuppression: '噪声抑制',
       noiseSuppressionHint: '使用 WebRTC 噪声抑制降低背景噪声。',
       noiseSuppressionOptions: {
-        krisp: 'Krisp',
         webrtc: '??',
         off: '?',
       },
@@ -672,7 +668,6 @@ const translations: TranslationMap = {
       noiseSuppression: '雜訊抑制',
       noiseSuppressionHint: '使用 WebRTC 雜訊抑制降低背景噪音。',
       noiseSuppressionOptions: {
-        krisp: 'Krisp',
         webrtc: '??',
         off: '?',
       },
