@@ -755,7 +755,7 @@ function App() {
               <div className="w-[520px] max-w-[90vw] rounded-lg" style={{ background: 'var(--header-bg)', border: '1px solid var(--border)' }}>
                 {entryStep === 'choice' ? (
                   <>
-                    <div className="px-5 py-4 text-base" style={{ color: 'var(--text-primary)' }}>
+                    <div className="px-5 py-2 text-base" style={{ color: 'var(--text-primary)' }}>
                       {t.app.loginTitle}
                     </div>
                     <div className="px-5 pb-2 text-sm" style={{ color: 'var(--text-muted)' }}>
