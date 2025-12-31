@@ -9,6 +9,13 @@ type VoiceMember = {
   avatar?: string | null
 }
 
+const memberNameCollator = new Intl.Collator('ko', { numeric: true, sensitivity: 'base' })
+
+const getMemberLabel = (member: VoiceMember) => member.displayName || member.username
+
+const sortMembersByName = (members: VoiceMember[]) =>
+  [...members].sort((a, b) => memberNameCollator.compare(getMemberLabel(a), getMemberLabel(b)))
+
 export type SidebarChannelsProps = {
   channels: Array<{ id: string; name: string; hidden?: boolean; type?: 'text' | 'voice' }>
   activeId?: string
@@ -256,6 +263,7 @@ export default function SidebarChannels({
         <div className="flex-1 space-y-1">
           {voiceChannels.map((c) => {
             const members = voiceMembersByChannel[c.id] || []
+            const sortedMembers = members.length > 1 ? sortMembersByName(members) : members
             return (
               <div key={c.id} className="space-y-1">
                 <div
@@ -340,14 +348,14 @@ export default function SidebarChannels({
                 </div>
                 {members.length > 0 ? (
                   <div className="pl-6 space-y-1">
-                    {members.map((member) => (
+                    {sortedMembers.map((member) => (
                       <div key={member.id} className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-muted)' }}>
                         <div className="w-5 h-5 rounded-full overflow-hidden" style={{ background: 'var(--input-bg)' }}>
                           {member.avatar ? (
                             <img src={member.avatar} alt={member.username} className="w-full h-full object-cover" />
                           ) : null}
                         </div>
-                        <span className="truncate">{member.displayName || member.username}</span>
+                        <span className="truncate">{getMemberLabel(member)}</span>
                       </div>
                     ))}
                   </div>

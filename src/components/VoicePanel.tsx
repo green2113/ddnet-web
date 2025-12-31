@@ -29,6 +29,10 @@ type VoicePanelProps = {
 }
 
 const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }]
+const memberNameCollator = new Intl.Collator('ko', { numeric: true, sensitivity: 'base' })
+const getMemberLabel = (member: VoiceMember) => member.displayName || member.username
+const sortMembersByName = (members: VoiceMember[]) =>
+  [...members].sort((a, b) => memberNameCollator.compare(getMemberLabel(a), getMemberLabel(b)))
 
 export default function VoicePanel({
   channelId,
@@ -466,7 +470,7 @@ export default function VoicePanel({
         )}
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-        {members.map((member) => {
+        {(members.length > 1 ? sortMembersByName(members) : members).map((member) => {
           const isSpeaking = speakingIds.includes(member.id) && !member.muted && !member.deafened
           return (
             <div
@@ -485,7 +489,7 @@ export default function VoicePanel({
                   ) : null}
                 </div>
                 <div className="min-w-0">
-                  <div className="text-sm font-medium truncate">{member.displayName || member.username}</div>
+                  <div className="text-sm font-medium truncate">{getMemberLabel(member)}</div>
                   <div className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
                     {member.username}
                   </div>
