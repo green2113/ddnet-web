@@ -34,6 +34,11 @@ const getMemberLabel = (member: VoiceMember) => member.displayName || member.use
 const sortMembersByName = (members: VoiceMember[]) =>
   [...members].sort((a, b) => memberNameCollator.compare(getMemberLabel(a), getMemberLabel(b)))
 
+const emitMuteState = (micMuted: boolean, headsetMuted: boolean) => {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new CustomEvent('voice-mute-update', { detail: { micMuted, headsetMuted } }))
+}
+
 export default function VoicePanel({
   channelId,
   socket,
@@ -190,12 +195,22 @@ export default function VoicePanel({
   useEffect(() => {
     if (typeof window === 'undefined') return
     window.localStorage.setItem('voice-mic-muted', String(micMuted))
-  }, [micMuted])
+    window.localStorage.setItem('voice-headset-muted', String(headsetMuted))
+    emitMuteState(micMuted, headsetMuted)
+  }, [headsetMuted, micMuted])
 
   useEffect(() => {
-    if (typeof window === 'undefined') return
-    window.localStorage.setItem('voice-headset-muted', String(headsetMuted))
-  }, [headsetMuted])
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<{ micMuted?: boolean; headsetMuted?: boolean }>).detail
+      if (!detail) return
+      const nextMicMuted = detail.micMuted ?? micMuted
+      const nextHeadsetMuted = detail.headsetMuted ?? headsetMuted
+      if (nextMicMuted !== micMuted) setMicMuted(nextMicMuted)
+      if (nextHeadsetMuted !== headsetMuted) setHeadsetMuted(nextHeadsetMuted)
+    }
+    window.addEventListener('voice-mute-update', handler as EventListener)
+    return () => window.removeEventListener('voice-mute-update', handler as EventListener)
+  }, [headsetMuted, micMuted])
 
   useEffect(() => {
     if (!socket?.id) return

@@ -20,6 +20,8 @@
   --hover-bg: rgba(0,0,0,0.06);
   --scroll-thumb: rgba(120, 124, 135, 0.6);
   --divider: rgba(0,0,0,0.25);
+  --tooltip-bg: #ffffff;
+  --tooltip-border: rgba(0,0,0,0.12);
 
   /* Skeleton */
   --skeleton-base: #e7e9ee;
@@ -66,6 +68,8 @@ body {
   --hover-bg: rgba(255,255,255,0.08);
   --scroll-thumb: rgba(168, 172, 186, 0.6);
   --divider: rgba(255,255,255,0.18);
+  --tooltip-bg: rgb(46, 46, 46);
+  --tooltip-border: rgba(255,255,255,0.12);
 
   /* Skeleton */
   --skeleton-base: #3a3c43;

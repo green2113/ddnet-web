@@ -39,19 +39,7 @@ export default function Header({ title, isDark, onLight, onDark, user, onLogin, 
           <path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
         </svg>
       </button>
-      <div className="font-semibold">{title}</div>
-      <div className="ml-4 hidden md:flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>
-        <span className="chip" style={{ background: 'var(--input-bg)' }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M21 10H3m7-7v18m4-18v18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-          </svg>
-          {t.header.channel}</span>
-        <span className="chip" style={{ background: 'var(--input-bg)' }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M4 6h16M4 12h10M4 18h16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-          </svg>
-          {t.header.members}</span>
-      </div>
+      <div className="min-w-0 flex-1 font-semibold truncate">{title}</div>
       <div className="ml-auto flex items-center gap-2">
         <button
           aria-label={isDark ? t.header.light : t.header.dark}
