@@ -83,7 +83,7 @@ export default function UserSettings({
             <div className="space-y-2 text-sm">
               <button
                 type="button"
-                className="w-full text-left px-3 py-2 rounded-md flex items-center gap-2"
+                className="w-full text-left px-3 py-2 rounded-md flex items-center gap-2 cursor-pointer"
                 style={{ background: settingsTab === 'profile' ? 'rgba(255,255,255,0.12)' : 'transparent' }}
                 onClick={() => onSetTab('profile')}
               >
@@ -95,7 +95,7 @@ export default function UserSettings({
               </button>
               <button
                 type="button"
-                className="w-full text-left px-3 py-2 rounded-md flex items-center gap-2"
+                className="w-full text-left px-3 py-2 rounded-md flex items-center gap-2 cursor-pointer"
                 style={{ background: settingsTab === 'voice' ? 'rgba(255,255,255,0.12)' : 'transparent' }}
                 onClick={() => onSetTab('voice')}
               >
@@ -108,7 +108,7 @@ export default function UserSettings({
               </button>
               <button
                 type="button"
-                className="w-full text-left px-3 py-2 rounded-md flex items-center gap-2"
+                className="w-full text-left px-3 py-2 rounded-md flex items-center gap-2 cursor-pointer"
                 style={{ background: settingsTab === 'language' ? 'rgba(255,255,255,0.12)' : 'transparent' }}
                 onClick={() => onSetTab('language')}
               >
