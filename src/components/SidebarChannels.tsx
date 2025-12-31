@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { formatText, type UiText } from '../i18n'
+import Tooltip from './Tooltip'
 
 type VoiceMember = {
   id: string
@@ -141,20 +142,22 @@ export default function SidebarChannels({
         <div className="flex items-center justify-between text-[11px] uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
           <span>{t.sidebarChannels.textChannels}</span>
           {canManage ? (
-            <button
-              type="button"
-              aria-label={t.sidebarChannels.addTextChannel}
-              className="rounded-md p-1 cursor-pointer hover-surface"
-              style={{ color: 'var(--text-muted)' }}
-              onClick={(e) => {
-                e.stopPropagation()
-                onCreateChannel?.('text')
-              }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
-                <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-              </svg>
-            </button>
+            <Tooltip label={t.sidebarChannels.addTextChannel}>
+              <button
+                type="button"
+                aria-label={t.sidebarChannels.addTextChannel}
+                className="rounded-md p-1 cursor-pointer hover-surface"
+                style={{ color: 'var(--text-muted)' }}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onCreateChannel?.('text')
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+              </button>
+            </Tooltip>
           ) : null}
         </div>
         {canManage && hiddenChannelsCount > 0 ? (
@@ -244,20 +247,22 @@ export default function SidebarChannels({
         <div className="mt-4 flex items-center justify-between text-[11px] uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
           <span>{t.sidebarChannels.voiceChannels}</span>
           {canManage ? (
-            <button
-              type="button"
-              aria-label={t.sidebarChannels.addVoiceChannel}
-              className="rounded-md p-1 cursor-pointer hover-surface"
-              style={{ color: 'var(--text-muted)' }}
-              onClick={(e) => {
-                e.stopPropagation()
-                onCreateChannel?.('voice')
-              }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
-                <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-              </svg>
-            </button>
+            <Tooltip label={t.sidebarChannels.addVoiceChannel}>
+              <button
+                type="button"
+                aria-label={t.sidebarChannels.addVoiceChannel}
+                className="rounded-md p-1 cursor-pointer hover-surface"
+                style={{ color: 'var(--text-muted)' }}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onCreateChannel?.('voice')
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+              </button>
+            </Tooltip>
           ) : null}
         </div>
         <div className="flex-1 space-y-1">
