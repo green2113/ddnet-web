@@ -142,7 +142,7 @@ export default function SidebarChannels({
         <div className="flex items-center justify-between text-[11px] uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
           <span>{t.sidebarChannels.textChannels}</span>
           {canManage ? (
-            <Tooltip label={t.sidebarChannels.addTextChannel} dockTop>
+            <Tooltip label={t.sidebarChannels.addTextChannel} side="top" portal>
               <button
                 type="button"
                 aria-label={t.sidebarChannels.addTextChannel}
@@ -247,7 +247,7 @@ export default function SidebarChannels({
         <div className="mt-4 flex items-center justify-between text-[11px] uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
           <span>{t.sidebarChannels.voiceChannels}</span>
           {canManage ? (
-            <Tooltip label={t.sidebarChannels.addVoiceChannel} dockTop>
+            <Tooltip label={t.sidebarChannels.addVoiceChannel} side="top" portal>
               <button
                 type="button"
                 aria-label={t.sidebarChannels.addVoiceChannel}

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 
 type TooltipSide = 'top' | 'right' | 'bottom' | 'left'
 
@@ -6,7 +7,7 @@ type TooltipProps = {
   label: string
   children: ReactNode
   side?: TooltipSide
-  dockTop?: boolean
+  portal?: boolean
 }
 
 const sideClassMap: Record<TooltipSide, string> = {
@@ -30,63 +31,95 @@ const arrowRotateMap: Record<TooltipSide, string> = {
   left: 'rotate-90',
 }
 
-export default function Tooltip({ label, children, side = 'top', dockTop = false }: TooltipProps) {
+const portalTransformMap: Record<TooltipSide, string> = {
+  top: 'translate(-50%, calc(-100% - 8px))',
+  right: 'translate(8px, -50%)',
+  bottom: 'translate(-50%, 8px)',
+  left: 'translate(calc(-100% - 8px), -50%)',
+}
+
+export default function Tooltip({ label, children, side = 'top', portal = false }: TooltipProps) {
   const wrapRef = useRef<HTMLSpanElement | null>(null)
-  const [dockLeft, setDockLeft] = useState<number | null>(null)
+  const [open, setOpen] = useState(false)
+  const [portalPos, setPortalPos] = useState<{ left: number; top: number } | null>(null)
 
   useEffect(() => {
-    if (!dockTop) return
-    const updateDockLeft = () => {
+    if (!portal || !open) return
+    const updatePortalPos = () => {
       const rect = wrapRef.current?.getBoundingClientRect()
       if (!rect) return
-      setDockLeft(rect.left + rect.width / 2)
+      if (side === 'left') {
+        setPortalPos({ left: rect.left, top: rect.top + rect.height / 2 })
+        return
+      }
+      if (side === 'right') {
+        setPortalPos({ left: rect.right, top: rect.top + rect.height / 2 })
+        return
+      }
+      if (side === 'bottom') {
+        setPortalPos({ left: rect.left + rect.width / 2, top: rect.bottom })
+        return
+      }
+      setPortalPos({ left: rect.left + rect.width / 2, top: rect.top })
     }
-    updateDockLeft()
-    window.addEventListener('resize', updateDockLeft)
-    window.addEventListener('scroll', updateDockLeft, true)
+    updatePortalPos()
+    window.addEventListener('resize', updatePortalPos)
+    window.addEventListener('scroll', updatePortalPos, true)
     return () => {
-      window.removeEventListener('resize', updateDockLeft)
-      window.removeEventListener('scroll', updateDockLeft, true)
+      window.removeEventListener('resize', updatePortalPos)
+      window.removeEventListener('scroll', updatePortalPos, true)
     }
-  }, [dockTop])
+  }, [open, portal, side])
 
-  const placementClass = dockTop ? 'top-2 -translate-x-1/2' : sideClassMap[side]
-  return (
-    <span ref={wrapRef} className="relative inline-flex group">
-      {children}
-      <span
-        role="tooltip"
-        className={`pointer-events-none ${dockTop ? 'fixed' : 'absolute'} z-50 rounded-lg px-3 py-2 text-[13px] whitespace-nowrap opacity-0 translate-y-1 transition duration-150 ease-out ${placementClass} group-hover:opacity-100 group-hover:translate-y-0`}
-        style={{
-          background: 'var(--tooltip-bg)',
-          color: 'var(--text-primary)',
-          boxShadow: '0 6px 14px rgba(0,0,0,0.25)',
-          border: '1px solid var(--tooltip-border)',
-          ...(dockTop ? { left: dockLeft ?? 0 } : {}),
-        }}
+  const placementClass = portal ? '' : sideClassMap[side]
+  const visibilityClass = open ? 'opacity-100' : 'opacity-0'
+  const motionClass = portal ? '' : open ? 'translate-y-0' : 'translate-y-1'
+  const tooltip = (
+    <span
+      role="tooltip"
+      className={`pointer-events-none ${portal ? 'fixed' : 'absolute'} z-50 rounded-lg px-3 py-2 text-[13px] whitespace-nowrap transition duration-150 ease-out ${placementClass} ${visibilityClass} ${motionClass}`}
+      style={{
+        background: 'var(--tooltip-bg)',
+        color: 'var(--text-primary)',
+        boxShadow: '0 6px 14px rgba(0,0,0,0.25)',
+        border: '1px solid var(--tooltip-border)',
+        ...(portal && portalPos ? { left: portalPos.left, top: portalPos.top, transform: portalTransformMap[side] } : {}),
+      }}
+    >
+      {label}
+      <svg
+        aria-hidden
+        width="16"
+        height="10"
+        viewBox="0 0 16 10"
+        className={`absolute ${arrowClassMap[side]} ${arrowRotateMap[side]}`}
       >
-        {label}
-        <svg
-          aria-hidden
-          width="16"
-          height="10"
-          viewBox="0 0 16 10"
-          className={`absolute ${arrowClassMap[side]} ${arrowRotateMap[side]}`}
-        >
-          <path
-            d="M1 9 L8 1 L15 9 Z"
-            fill="var(--tooltip-bg)"
-          />
-          <path
-            d="M1 9 L6.6 2.6 Q8 1 9.4 2.6 L15 9"
-            fill="none"
-            stroke="var(--tooltip-border)"
-            strokeWidth="1"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </span>
+        <path
+          d="M1 9 L8 1 L15 9 Z"
+          fill="var(--tooltip-bg)"
+        />
+        <path
+          d="M1 9 L6.6 2.6 Q8 1 9.4 2.6 L15 9"
+          fill="none"
+          stroke="var(--tooltip-border)"
+          strokeWidth="1"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </span>
+  )
+  return (
+    <span
+      ref={wrapRef}
+      className="relative inline-flex"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+      onFocus={() => setOpen(true)}
+      onBlur={() => setOpen(false)}
+    >
+      {children}
+      {portal ? createPortal(tooltip, document.body) : tooltip}
     </span>
   )
 }
