@@ -18,13 +18,36 @@ export default function Composer({ value, onChange, onSend, disabled = false, t 
   const isEnabled = !disabled && value.trim().length > 0
   const taRef = useRef<HTMLTextAreaElement | null>(null)
 
-  useEffect(() => {
+  const adjustHeight = () => {
     const el = taRef.current
     if (!el) return
     el.style.height = 'auto'
-    const max = 180 // px, 최대 높이
+    const max = 180 // px, max height
     el.style.height = Math.min(el.scrollHeight, max) + 'px'
+  }
+
+  useEffect(() => {
+    adjustHeight()
   }, [value])
+
+  useEffect(() => {
+    const target: EventTarget | null = typeof window === 'undefined' ? null : window
+    if (!target) return
+    const el = taRef.current
+    if (!el) return
+    let observer: ResizeObserver | null = null
+    if (typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(() => adjustHeight())
+      observer.observe(el)
+    } else {
+      const onResize = () => adjustHeight()
+      target.addEventListener('resize', onResize)
+      return () => target.removeEventListener('resize', onResize)
+    }
+    return () => {
+      observer?.disconnect()
+    }
+  }, [])
   return (
     <div className="px-4 pb-4">
       <div className="flex items-center gap-2">
@@ -41,7 +64,7 @@ export default function Composer({ value, onChange, onSend, disabled = false, t 
             }}
             placeholder={disabled ? t.composer.placeholderLogin : t.composer.placeholderMessage}
             disabled={disabled}
-            className={`flex-1 bg-transparent outline-none resize-none leading-6 ${disabled ? 'cursor-not-allowed' : ''}`}
+            className={`flex-1 bg-transparent outline-none resize-none leading-6 text-[13px] ${disabled ? 'cursor-not-allowed' : ''}`}
             rows={1}
             style={{ maxHeight: 180 }}
             maxLength={1000}
@@ -69,4 +92,5 @@ export default function Composer({ value, onChange, onSend, disabled = false, t 
     </div>
   )
 }
+
 
