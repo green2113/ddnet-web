@@ -9,13 +9,6 @@ type TooltipProps = {
   side?: TooltipSide
 }
 
-const sideClassMap: Record<TooltipSide, string> = {
-  top: 'bottom-full mb-3 left-1/2 -translate-x-1/2',
-  right: 'left-full ml-1.5 top-1/2 -translate-y-1/2',
-  bottom: 'top-full mt-0 left-1/2 -translate-x-1/2',
-  left: 'right-full mr-1.5 top-1/2 -translate-y-1/2',
-}
-
 const arrowClassMap: Record<TooltipSide, string> = {
   top: 'top-full left-1/2 -translate-x-1/2 -translate-y-[1px]',
   right: 'right-full top-1/2 -translate-y-1/2 translate-x-1/2',
@@ -72,10 +65,10 @@ export default function Tooltip({ label, children, side = 'top' }: TooltipProps)
     }
   }, [open, side])
 
-  const tooltip = (
+  const tooltip = open ? (
     <span
       role="tooltip"
-      className={`pointer-events-none absolute z-50 rounded-lg px-3 py-2 text-[13px] whitespace-nowrap transition duration-150 ease-out ${open ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1'}`}
+      className="pointer-events-none absolute z-50 rounded-lg px-3 py-2 text-[13px] whitespace-nowrap transition duration-150 ease-out opacity-100 translate-y-0"
       style={{
         background: 'var(--tooltip-bg)',
         color: 'var(--text-primary)',
@@ -103,7 +96,7 @@ export default function Tooltip({ label, children, side = 'top' }: TooltipProps)
         />
       </svg>
     </span>
-  )
+  ) : null
 
   const portalRoot = getPortalRoot()
   return (
@@ -116,7 +109,7 @@ export default function Tooltip({ label, children, side = 'top' }: TooltipProps)
       onBlur={() => setOpen(false)}
     >
       {children}
-      {portalRoot ? createPortal(tooltip, portalRoot) : tooltip}
+      {portalRoot && tooltip ? createPortal(tooltip, portalRoot) : tooltip}
     </span>
   )
 }
