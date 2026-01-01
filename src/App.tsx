@@ -510,7 +510,11 @@ function App() {
   }
 
   return (
-    <div className={(isDark ? 'theme-dark ' : '') + 'app-shell flex flex-col'} style={{ background: 'var(--bg-app)', color: 'var(--text-primary)' }}>
+    <div
+      className={(isDark ? 'theme-dark ' : '') + 'app-shell flex flex-col'}
+      style={{ background: 'var(--bg-app)', color: 'var(--text-primary)' }}
+      onContextMenu={(event) => event.preventDefault()}
+    >
       <div className="h-9 flex items-center justify-center no-select" style={{ background: 'var(--topbar-bg)' }}>
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center" style={{ background: 'var(--input-bg)', color: 'var(--text-primary)' }}>

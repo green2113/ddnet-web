@@ -58,11 +58,14 @@ export default function SidebarChannels({
     y: 0,
     channel: null,
   })
+  const [serverMenuPos, setServerMenuPos] = useState<{ top: number; left: number; width: number } | null>(null)
   const wrapRef = useRef<HTMLDivElement | null>(null)
+  const serverMenuRef = useRef<HTMLDivElement | null>(null)
   const dragIdRef = useRef<string | null>(null)
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
       if (!wrapRef.current) return
+      if (serverMenuRef.current?.contains(e.target as Node)) return
       if (!wrapRef.current.contains(e.target as Node)) setOpen(false)
     }
     document.addEventListener('click', onDoc)
@@ -77,6 +80,30 @@ export default function SidebarChannels({
     window.addEventListener('mousedown', closeMenu)
     return () => window.removeEventListener('mousedown', closeMenu)
   }, [])
+
+  useEffect(() => {
+    if (!open) {
+      setServerMenuPos(null)
+      return
+    }
+    const update = () => {
+      if (!wrapRef.current) return
+      const rect = wrapRef.current.getBoundingClientRect()
+      const inset = 8
+      setServerMenuPos({
+        top: rect.bottom + inset,
+        left: rect.left + inset,
+        width: Math.max(0, rect.width - inset * 2),
+      })
+    }
+    update()
+    window.addEventListener('resize', update)
+    window.addEventListener('scroll', update, true)
+    return () => {
+      window.removeEventListener('resize', update)
+      window.removeEventListener('scroll', update, true)
+    }
+  }, [open])
 
   const hiddenChannelsCount = canManage ? channels.filter((channel) => channel.hidden).length : 0
   const visibleChannels = channels.filter((channel) => {
@@ -122,32 +149,42 @@ export default function SidebarChannels({
             <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
-        {open && (
-          <div
-            className="absolute left-2 right-2 z-40 mt-2 rounded-xl p-2 text-sm"
-            style={{ background: 'var(--header-bg)', border: '1px solid var(--border)', color: 'var(--text-primary)', boxShadow: '0 8px 24px rgba(0,0,0,0.32)' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {canManage ? (
-              <>
-                <MenuItem
-                  icon="settings"
-                  label={t.sidebarChannels.serverSettings}
-                  bold
-                  onClick={() => {
-                    onOpenServerSettings?.()
-                    setOpen(false)
-                  }}
-                />
-                <div
-                  className="m-2"
-                  style={{ height: '1px', background: 'var(--divider)', opacity: 0.25 }}
-                />
-              </>
-            ) : null}
-            <MenuItem icon="bell" label={t.sidebarChannels.notifications} bold />
-          </div>
-        )}
+        {open && serverMenuPos
+          ? createPortal(
+              <div
+                ref={serverMenuRef}
+                className="fixed z-50 rounded-xl p-2 text-sm"
+                style={{
+                  top: serverMenuPos.top,
+                  left: serverMenuPos.left,
+                  width: serverMenuPos.width,
+                  background: 'var(--header-bg)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--text-primary)',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.32)',
+                  pointerEvents: 'auto',
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {canManage ? (
+                  <>
+                    <MenuItem
+                      icon="settings"
+                      label={t.sidebarChannels.serverSettings}
+                      bold
+                      onClick={() => {
+                        onOpenServerSettings?.()
+                        setOpen(false)
+                      }}
+                    />
+                    <div className="m-2" style={{ height: '1px', background: 'var(--divider)', opacity: 0.25 }} />
+                  </>
+                ) : null}
+                <MenuItem icon="bell" label={t.sidebarChannels.notifications} bold />
+              </div>,
+              document.getElementById('overlay-root') || document.body
+            )
+          : null}
       </div>
 
       <div className="p-3 flex-1 overflow-y-auto overflow-x-visible">

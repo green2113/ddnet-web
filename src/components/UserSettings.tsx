@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { UiText } from '../i18n'
 
@@ -50,18 +51,50 @@ export default function UserSettings({
   onToggleMicTest,
   micTestError,
 }: UserSettingsProps) {
-  if (!showUserSettings) return null
+  const [isVisible, setIsVisible] = useState(showUserSettings)
+  const [isClosing, setIsClosing] = useState(false)
+  const closeTimerRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (showUserSettings) {
+      setIsVisible(true)
+      setIsClosing(false)
+      if (closeTimerRef.current) {
+        window.clearTimeout(closeTimerRef.current)
+        closeTimerRef.current = null
+      }
+      return
+    }
+    if (!isVisible) return
+    setIsClosing(true)
+    closeTimerRef.current = window.setTimeout(() => {
+      setIsVisible(false)
+      setIsClosing(false)
+      closeTimerRef.current = null
+    }, 180)
+  }, [showUserSettings, isVisible])
+
+  useEffect(
+    () => () => {
+      if (closeTimerRef.current) {
+        window.clearTimeout(closeTimerRef.current)
+      }
+    },
+    []
+  )
+
+  if (!isVisible) return null
 
   const displayName = user?.displayName || user?.username || t.userSettings.guest
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[80] flex items-center justify-center px-10 py-9"
+      className={`fixed inset-0 z-[80] flex items-center justify-center px-10 py-9 user-settings-overlay${isClosing ? ' is-exiting' : ''}`}
       style={{ background: 'rgba(0,0,0,0.65)' }}
       onMouseDown={onCloseUserSettings}
     >
       <div
-        className="w-full h-full rounded-2xl overflow-hidden shadow-xl"
+        className={`w-full h-full rounded-2xl overflow-hidden shadow-xl user-settings-panel${isClosing ? ' is-exiting' : ''}`}
         style={{ background: '#2b2c3c', color: 'white' }}
         onMouseDown={(e) => e.stopPropagation()}
       >
