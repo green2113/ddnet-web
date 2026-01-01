@@ -410,11 +410,8 @@ export default function SidebarChannels({
                       return (
                         <div key={member.id} className="flex items-center gap-2 text-xs">
                           <div
-                            className="w-5 h-5 rounded-full overflow-hidden"
-                            style={{
-                              background: 'var(--input-bg)',
-                              boxShadow: isSpeaking ? '0 0 0 2px rgba(34,197,94,0.95), 0 0 8px rgba(34,197,94,0.75)' : 'none',
-                            }}
+                            className={`w-5 h-5 rounded-full overflow-hidden${isSpeaking ? ' voice-speaking-ring' : ''}`}
+                            style={{ background: 'var(--input-bg)' }}
                           >
                           {member.avatar ? (
                             <img src={member.avatar} alt={member.username} className="w-full h-full object-cover" />

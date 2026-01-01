@@ -514,10 +514,9 @@ export default function VoicePanel({
           return (
             <div
               key={member.id}
-              className="flex items-center justify-between gap-3 rounded-md px-2 py-2 transition-shadow"
+              className={`flex items-center justify-between gap-3 rounded-md px-2 py-2${isSpeaking ? ' voice-speaking-card' : ''}`}
               style={{
                 background: 'var(--panel)',
-                boxShadow: isSpeaking ? '0 0 0 2px rgba(34,197,94,0.9), 0 0 12px rgba(34,197,94,0.6)' : 'none',
               }}
             >
               <div className="flex items-center gap-3 min-w-0">
