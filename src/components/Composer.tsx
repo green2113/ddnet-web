@@ -19,11 +19,19 @@ export default function Composer({ value, onChange, onSend, disabled = false, t 
   const taRef = useRef<HTMLTextAreaElement | null>(null)
 
   const adjustHeight = () => {
+    if (typeof window === 'undefined') return
     const el = taRef.current
     if (!el) return
     el.style.height = 'auto'
+    const style = window.getComputedStyle(el)
+    const fontSize = parseFloat(style.fontSize) || 14
+    const lineHeight = parseFloat(style.lineHeight) || fontSize * 1.5
+    const padding = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0)
     const max = 180 // px, max height
-    el.style.height = Math.min(el.scrollHeight, max) + 'px'
+    const contentHeight = Math.max(0, el.scrollHeight - padding)
+    const rows = Math.max(1, Math.ceil((contentHeight + 1) / lineHeight))
+    const next = Math.min(rows * lineHeight + padding, max)
+    el.style.height = `${next}px`
   }
 
   useEffect(() => {
@@ -64,7 +72,7 @@ export default function Composer({ value, onChange, onSend, disabled = false, t 
             }}
             placeholder={disabled ? t.composer.placeholderLogin : t.composer.placeholderMessage}
             disabled={disabled}
-            className={`flex-1 bg-transparent outline-none resize-none leading-6 text-[13px] ${disabled ? 'cursor-not-allowed' : ''}`}
+            className={`flex-1 bg-transparent outline-none resize-none leading-6 text-[14px] ${disabled ? 'cursor-not-allowed' : ''}`}
             rows={1}
             style={{ maxHeight: 180 }}
             maxLength={1000}
