@@ -591,7 +591,7 @@ function App() {
           <div className="flex flex-1 min-h-0">
             <SidebarGuilds t={t} />
           <div
-            className="w-64 min-h-0"
+            className="w-64 min-h-0 flex flex-col"
             style={{
               background: 'var(--sidebar-bg)',
               boxShadow: 'inset 1px 0 0 var(--topbar-divider), inset 0 1px 0 var(--topbar-divider)',
@@ -646,7 +646,7 @@ function App() {
             </div>
           </div>
         <div
-          className="px-3 pb-3"
+          className="px-3 pb-3 shrink-0"
           style={{ background: 'var(--sidebar-bg)', boxShadow: 'inset 1px 0 0 var(--topbar-divider)' }}
         >
           <SidebarProfileBar
@@ -694,7 +694,7 @@ function App() {
         >
           <div className="flex h-full flex-col" style={{ background: 'var(--rail-bg)' }}>
             <div
-              className="flex-1 min-h-0"
+              className="flex-1 min-h-0 flex flex-col"
               style={{
                 background: 'var(--sidebar-bg)',
                 boxShadow: 'inset 1px 0 0 var(--topbar-divider), inset 0 1px 0 var(--topbar-divider)',
@@ -748,7 +748,7 @@ function App() {
               />
             </div>
             <div
-              className="px-3 pb-3"
+              className="px-3 pb-3 shrink-0"
               style={{ background: 'var(--sidebar-bg)', boxShadow: 'inset 1px 0 0 var(--topbar-divider)' }}
             >
               <SidebarProfileBar
