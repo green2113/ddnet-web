@@ -7,11 +7,11 @@
     "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
 
   /* Light theme (default) */
-  --bg-app: #f5f6f8;
-  --panel: #ffffff;
+  --bg-app: #f3f4f7;
+  --panel: #f8f9fb;
   --text-primary: #060607;
   --text-muted: #6b7280;
-  --rail-bg: #e7e9ee;
+  --rail-bg: #e5e7ed;
   --sidebar-bg: var(--rail-bg);
   --header-bg: var(--rail-bg);
   --topbar-bg: var(--rail-bg);

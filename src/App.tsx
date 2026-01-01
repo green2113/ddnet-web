@@ -517,10 +517,10 @@ function App() {
     >
       <div className="h-9 flex items-center justify-center no-select" style={{ background: 'var(--topbar-bg)' }}>
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center" style={{ background: 'var(--input-bg)', color: 'var(--text-primary)' }}>
+          <div className="w-6 h-6 rounded-2xl overflow-hidden flex items-center justify-center" style={{ background: 'var(--input-bg)', color: 'var(--text-primary)' }}>
             <span className="text-xs font-semibold">{serverLabel.slice(0, 1)}</span>
           </div>
-          <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{serverLabel}</span>
+          <span className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{serverLabel}</span>
         </div>
       </div>
       <div className="flex-1 flex min-h-0">
