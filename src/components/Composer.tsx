@@ -25,13 +25,13 @@ export default function Composer({ value, onChange, onSend, disabled = false, t 
     el.style.height = 'auto'
     const style = window.getComputedStyle(el)
     const fontSize = parseFloat(style.fontSize) || 14
-    const lineHeight = parseFloat(style.lineHeight) || fontSize * 1.5
+    const lineHeight = parseFloat(style.lineHeight) || fontSize * 1.4
     const padding = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0)
     const max = 180 // px, max height
-    const contentHeight = Math.max(0, el.scrollHeight - padding)
-    const rows = Math.max(1, Math.ceil((contentHeight + 1) / lineHeight))
-    const next = Math.min(rows * lineHeight + padding, max)
-    el.style.height = `${next}px`
+    const minHeight = lineHeight + padding
+    const threshold = minHeight + 2
+    const next = el.scrollHeight <= threshold ? minHeight : Math.min(el.scrollHeight, max)
+    el.style.height = `${Math.ceil(next)}px`
   }
 
   useEffect(() => {
