@@ -66,6 +66,7 @@ function App() {
   const [voiceChannelId, setVoiceChannelId] = useState('')
   const [joinedVoiceChannelId, setJoinedVoiceChannelId] = useState('')
   const [voiceSpeakingByChannel, setVoiceSpeakingByChannel] = useState<Record<string, string[]>>({})
+  const [autoJoinVoiceChannelId, setAutoJoinVoiceChannelId] = useState<string | null>(null)
   const [input, setInput] = useState('')
   const socketRef = useRef<Socket | null>(null)
   const activeChannelRef = useRef('')
@@ -505,6 +506,9 @@ function App() {
       setVoiceSwitchTargetId(channelId)
       return
     }
+    if (channel.type === 'voice') {
+      setAutoJoinVoiceChannelId(channelId)
+    }
     applyChannelSelect(channelId)
   }
 
@@ -759,7 +763,10 @@ function App() {
                 user={user}
                 noiseSuppressionMode={noiseSuppressionMode}
                 t={t}
-                autoJoin
+                autoJoin={autoJoinVoiceChannelId === voiceChannelId}
+                onAutoJoinHandled={() => {
+                  setAutoJoinVoiceChannelId(null)
+                }}
                 onJoinStateChange={(channelId, joined) => {
                   setJoinedVoiceChannelId((prev) => {
                     if (joined) return channelId

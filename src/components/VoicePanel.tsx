@@ -29,6 +29,7 @@ type VoicePanelProps = {
   onJoinStateChange?: (channelId: string, joined: boolean) => void
   onSpeakingChange?: (channelId: string, speakingIds: string[]) => void
   autoJoin?: boolean
+  onAutoJoinHandled?: () => void
 }
 
 const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }]
@@ -53,6 +54,7 @@ export default function VoicePanel({
   onJoinStateChange,
   onSpeakingChange,
   autoJoin = false,
+  onAutoJoinHandled,
 }: VoicePanelProps) {
   const [joined, setJoined] = useState(false)
   const [members, setMembers] = useState<VoiceMember[]>([])
@@ -307,6 +309,7 @@ export default function VoicePanel({
     if (!autoJoin) return
     if (joined) return
     void joinVoice()
+    onAutoJoinHandled?.()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoJoin, channelId, joined, user?.id])
 
