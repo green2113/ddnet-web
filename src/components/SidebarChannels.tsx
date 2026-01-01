@@ -372,48 +372,58 @@ export default function SidebarChannels({
       </div>
       {channelMenu.visible && channelMenu.channel && canManage
         ? createPortal(
-            <div
-              className="fixed z-50 min-w-[180px] rounded-md p-2 text-sm"
-              style={{ top: channelMenu.y, left: channelMenu.x, background: 'var(--header-bg)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
-              onMouseDown={(e) => e.stopPropagation()}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                className="w-full text-left px-3 py-2 hover-surface cursor-pointer"
-                onClick={() => {
-                  const name = window.prompt(t.sidebarChannels.channelNamePrompt, channelMenu.channel!.name)
-                  if (!name) return
-                  onRenameChannel?.(channelMenu.channel!.id, name)
+            <>
+              <div
+                className="fixed inset-0 z-40 pointer-events-auto"
+                onMouseDown={() => setChannelMenu({ visible: false, x: 0, y: 0, channel: null })}
+                onContextMenu={(e) => {
+                  e.preventDefault()
                   setChannelMenu({ visible: false, x: 0, y: 0, channel: null })
                 }}
+              />
+              <div
+                className="fixed z-50 min-w-[180px] rounded-md p-2 text-sm pointer-events-auto"
+                style={{ top: channelMenu.y, left: channelMenu.x, background: 'var(--header-bg)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
               >
-                {t.sidebarChannels.channelName}
-              </button>
-              <button
-                className="w-full text-left px-3 py-2 hover-surface cursor-pointer"
-                onClick={() => {
-                  const nextHidden = !channelMenu.channel!.hidden
-                  if (nextHidden) {
-                    setShowHiddenChannels(true)
-                  }
-                  onToggleChannelHidden?.(channelMenu.channel!.id, nextHidden)
-                  setChannelMenu({ visible: false, x: 0, y: 0, channel: null })
-                }}
-              >
-                {channelMenu.channel.hidden ? t.sidebarChannels.channelShow : t.sidebarChannels.channelHide}
-              </button>
-              <button
-                className="w-full text-left px-3 py-2 hover-surface cursor-pointer"
-                style={{ color: '#f87171' }}
-                onClick={() => {
-                  onDeleteChannel?.(channelMenu.channel!.id)
-                  setChannelMenu({ visible: false, x: 0, y: 0, channel: null })
-                }}
-              >
-                {t.sidebarChannels.channelDelete}
-              </button>
-            </div>,
-            document.body
+                <button
+                  className="w-full text-left px-3 py-2 hover-surface cursor-pointer"
+                  onClick={() => {
+                    const name = window.prompt(t.sidebarChannels.channelNamePrompt, channelMenu.channel!.name)
+                    if (!name) return
+                    onRenameChannel?.(channelMenu.channel!.id, name)
+                    setChannelMenu({ visible: false, x: 0, y: 0, channel: null })
+                  }}
+                >
+                  {t.sidebarChannels.channelName}
+                </button>
+                <button
+                  className="w-full text-left px-3 py-2 hover-surface cursor-pointer"
+                  onClick={() => {
+                    const nextHidden = !channelMenu.channel!.hidden
+                    if (nextHidden) {
+                      setShowHiddenChannels(true)
+                    }
+                    onToggleChannelHidden?.(channelMenu.channel!.id, nextHidden)
+                    setChannelMenu({ visible: false, x: 0, y: 0, channel: null })
+                  }}
+                >
+                  {channelMenu.channel.hidden ? t.sidebarChannels.channelShow : t.sidebarChannels.channelHide}
+                </button>
+                <button
+                  className="w-full text-left px-3 py-2 hover-surface cursor-pointer"
+                  style={{ color: '#f87171' }}
+                  onClick={() => {
+                    onDeleteChannel?.(channelMenu.channel!.id)
+                    setChannelMenu({ visible: false, x: 0, y: 0, channel: null })
+                  }}
+                >
+                  {t.sidebarChannels.channelDelete}
+                </button>
+              </div>
+            </>,
+            document.getElementById('overlay-root') || document.body
           )
         : null}
     </aside>

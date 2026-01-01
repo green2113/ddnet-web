@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { io, Socket } from 'socket.io-client'
 import axios from 'axios'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -446,14 +447,14 @@ function App() {
     })
   }, [channels])
 
-  // ë©”ì‹œì§€ ë³€ê²½ ì‹œ í•­ìƒ ìŠ¤í¬ë¡¤ì„ ë§¨ ì•„ë˜ë¡œ ìœ ì§€ (í•˜ë‹¨ ì •ë ¬)
+  // ë©”ì‹œì§€ ë³€ê²?????ƒ ?¤í¬ë¡¤ì„ ë§??„ë˜ë¡?? ì? (?˜ë‹¨ ?•ë ¬)
   useEffect(() => {
     const el = document.getElementById('messages-scroll')
     if (el) el.scrollTop = el.scrollHeight
   }, [messages])
 
   const login = () => {
-    // ë¡œê·¸ì¸ ì§„ì…ì€ í•­ìƒ í”„ëŸ°íŠ¸ë¥¼ ê²½ìœ í•˜ì§€ë§Œ, /login ë‚´ë¶€ì—ì„œ VITE_API_BASEë¥¼ ì‚¬ìš©í•´ ì„œë²„ë¡œ ì´ë™
+    // ë¡œê·¸??ì§„ì…?€ ??ƒ ?„ëŸ°?¸ë? ê²½ìœ ?˜ì?ë§? /login ?´ë??ì„œ VITE_API_BASEë¥??¬ìš©???œë²„ë¡??´ë™
     localStorage.setItem('return_to', window.location.pathname + window.location.search)
     window.location.href = '/login'
   }
@@ -689,7 +690,7 @@ function App() {
         </div>
         <main className="flex-1 flex flex-col min-w-0">
           <Header
-            title={`${isVoiceChannel ? 'ğŸ”Š' : '#'} ${activeChannel?.name || 'general'}`}
+            title={`${isVoiceChannel ? '?”Š' : '#'} ${activeChannel?.name || 'general'}`}
             isDark={isDark}
             onLight={() => setIsDark(false)}
             onDark={() => setIsDark(true)}
@@ -727,36 +728,49 @@ function App() {
               <Composer value={input} onChange={setInput} onSend={sendMessage} t={t} />
             </>
           )}
-          {menu.visible && menu.message && (
-            <div
-              className="fixed z-50 min-w-[180px] rounded-md p-2 text-sm"
-              style={{ top: menu.y, left: menu.x, background: 'var(--header-bg)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                className="w-full text-left px-3 py-2 hover-surface cursor-pointer"
-                onClick={() => {
-                  navigator.clipboard.writeText(menu.message!.content || '')
-                  setMenu({ visible: false, x: 0, y: 0, message: null })
-                }}
-              >
-                {t.app.copyMessage}
-              </button>
-              {user && (menu.message.author.id === user.id || adminIds.includes(user.id)) && (
-                <button
-                  className="w-full text-left px-3 py-2 hover-surface cursor-pointer"
-                  style={{ color: '#f87171' }}
-                  onClick={() => {
-                    // ì„œë²„ì— ì‚­ì œ ìš”ì²­(ì†Œì¼“). ì„±ê³µ ì‹œ ì„œë²„ê°€ chat:delete ë¸Œë¡œë“œìºìŠ¤íŠ¸í•¨
-                    socketRef.current?.emit('chat:delete', { id: menu.message!.id })
-                    setMenu({ visible: false, x: 0, y: 0, message: null })
-                  }}
-                >
-                  {t.app.deleteMessage}
-                </button>
-              )}
-            </div>
-          )}
+          {menu.visible && menu.message
+            ? createPortal(
+                <>
+                  <div
+                    className="fixed inset-0 z-40 pointer-events-auto"
+                    onMouseDown={() => setMenu({ visible: false, x: 0, y: 0, message: null })}
+                    onContextMenu={(e) => {
+                      e.preventDefault()
+                      setMenu({ visible: false, x: 0, y: 0, message: null })
+                    }}
+                  />
+                  <div
+                    className="fixed z-50 min-w-[180px] rounded-md p-2 text-sm pointer-events-auto"
+                    style={{ top: menu.y, left: menu.x, background: 'var(--header-bg)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      className="w-full text-left px-3 py-2 hover-surface cursor-pointer"
+                      onClick={() => {
+                        navigator.clipboard.writeText(menu.message!.content || '')
+                        setMenu({ visible: false, x: 0, y: 0, message: null })
+                      }}
+                    >
+                      {t.app.copyMessage}
+                    </button>
+                    {user && (menu.message.author.id === user.id || adminIds.includes(user.id)) && (
+                      <button
+                        className="w-full text-left px-3 py-2 hover-surface cursor-pointer"
+                        style={{ color: '#f87171' }}
+                        onClick={() => {
+                          // ?©«e©÷??????©« ?¡±i©÷¡©(?¨«i¨ù¡°). ?¡¾e©ø¥ì ???©«e©÷?e¡Æ¢æ chat:delete e¢¬¨«e¢®©«?©«i¨¬??¢´i?¢¬??
+                          socketRef.current?.emit('chat:delete', { id: menu.message!.id })
+                          setMenu({ visible: false, x: 0, y: 0, message: null })
+                        }}
+                      >
+                        {t.app.deleteMessage}
+                      </button>
+                    )}
+                  </div>
+                </>,
+                document.getElementById('overlay-root') || document.body
+              )
+            : null}
           {showEntryModal && (
             <div className="fixed inset-0 grid place-items-center" style={{ background: 'rgba(0,0,0,0.4)' }}>
               <div className="w-[520px] max-w-[90vw] rounded-lg" style={{ background: 'var(--header-bg)', border: '1px solid var(--border)' }}>
@@ -853,9 +867,10 @@ function App() {
         }}
         adminIds={adminIds}
       />
-      <div id="tooltip-root" style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 999 }} />
+      <div id="overlay-root" style={{ position: 'fixed', inset: 0, zIndex: 999, pointerEvents: 'none' }} />
     </div>
   )
 }
 
 export default App
+

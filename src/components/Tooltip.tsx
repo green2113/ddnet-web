@@ -30,7 +30,7 @@ const portalTransformMap: Record<TooltipSide, string> = {
   left: 'translate(calc(-100% - 8px), -50%)',
 }
 
-const getPortalRoot = () => (typeof document === 'undefined' ? null : document.getElementById('tooltip-root'))
+const getPortalRoot = () => (typeof document === 'undefined' ? null : document.getElementById('overlay-root') || document.body)
 
 export default function Tooltip({ label, children, side = 'top' }: TooltipProps) {
   const wrapRef = useRef<HTMLSpanElement | null>(null)
