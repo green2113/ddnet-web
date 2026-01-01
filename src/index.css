@@ -175,7 +175,9 @@ body {
 
 .voice-speaking-ring {
   animation: voice-speaking-ring 180ms ease-out;
-  box-shadow: inset 0 0 0 2px rgba(34,197,94,0.95), 0 0 0 1px rgba(255,255,255,0.35);
+  background: rgba(34,197,94,0.95);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.35);
+  padding: 2px;
 }
 
 .voice-speaking-card {
@@ -185,11 +187,30 @@ body {
 
 @keyframes voice-speaking-ring {
   from {
-    box-shadow: inset 0 0 0 0 rgba(34,197,94,0.95), 0 0 0 0 rgba(255,255,255,0.35);
+    box-shadow: 0 0 0 0 rgba(255,255,255,0.35);
   }
   to {
-    box-shadow: inset 0 0 0 2px rgba(34,197,94,0.95), 0 0 0 1px rgba(255,255,255,0.35);
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.35);
   }
+}
+
+.voice-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--input-bg);
+}
+
+.voice-avatar-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 9999px;
+  overflow: hidden;
+  background: var(--input-bg);
 }
 
 @keyframes voice-speaking-card {

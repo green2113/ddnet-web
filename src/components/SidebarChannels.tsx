@@ -409,14 +409,13 @@ export default function SidebarChannels({
                       const isSpeaking = speakingIds.includes(member.id)
                       return (
                         <div key={member.id} className="flex items-center gap-2 text-xs">
-                          <div
-                            className={`w-5 h-5 rounded-full overflow-hidden${isSpeaking ? ' voice-speaking-ring' : ''}`}
-                            style={{ background: 'var(--input-bg)' }}
-                          >
-                          {member.avatar ? (
-                            <img src={member.avatar} alt={member.username} className="w-full h-full object-cover" />
-                          ) : null}
+                        <div className={`voice-avatar${isSpeaking ? ' voice-speaking-ring' : ''}`}>
+                          <div className="voice-avatar-inner">
+                            {member.avatar ? (
+                              <img src={member.avatar} alt={member.username} className="w-full h-full object-cover" />
+                            ) : null}
                           </div>
+                        </div>
                           <span
                             className="truncate"
                             style={{
