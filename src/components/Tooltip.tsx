@@ -82,10 +82,35 @@ export default function Tooltip({ label, children, side = 'top' }: TooltipProps)
   }, [open, side])
 
   useEffect(() => {
+    const closeTooltipImmediate = () => {
+      if (hideTimerRef.current) {
+        window.clearTimeout(hideTimerRef.current)
+        hideTimerRef.current = null
+      }
+      setOpen(false)
+      setVisible(false)
+      setRendered(false)
+    }
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') closeTooltipImmediate()
+    }
+    const handleVisibility = () => {
+      if (document.visibilityState !== 'visible') closeTooltipImmediate()
+    }
+    window.addEventListener('mousedown', closeTooltipImmediate)
+    window.addEventListener('touchstart', closeTooltipImmediate, { passive: true })
+    window.addEventListener('blur', closeTooltipImmediate)
+    window.addEventListener('keydown', handleKey)
+    document.addEventListener('visibilitychange', handleVisibility)
     return () => {
       if (hideTimerRef.current) {
         window.clearTimeout(hideTimerRef.current)
       }
+      window.removeEventListener('mousedown', closeTooltipImmediate)
+      window.removeEventListener('touchstart', closeTooltipImmediate)
+      window.removeEventListener('blur', closeTooltipImmediate)
+      window.removeEventListener('keydown', handleKey)
+      document.removeEventListener('visibilitychange', handleVisibility)
     }
   }, [])
 
