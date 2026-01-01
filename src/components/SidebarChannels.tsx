@@ -22,6 +22,7 @@ export type SidebarChannelsProps = {
   activeId?: string
   serverName?: string
   voiceMembersByChannel?: Record<string, VoiceMember[]>
+  voiceSpeakingByChannel?: Record<string, string[]>
   unreadByChannel?: Record<string, boolean>
   t: UiText
   onSelect?: (channelId: string) => void
@@ -39,6 +40,7 @@ export default function SidebarChannels({
   activeId,
   serverName,
   voiceMembersByChannel = {},
+  voiceSpeakingByChannel = {},
   unreadByChannel = {},
   t,
   onSelect,
@@ -318,6 +320,7 @@ export default function SidebarChannels({
           {voiceChannels.map((c) => {
             const members = voiceMembersByChannel[c.id] || []
             const sortedMembers = members.length > 1 ? sortMembersByName(members) : members
+            const speakingIds = voiceSpeakingByChannel[c.id] || []
             return (
               <div key={c.id} className="space-y-1">
                 <div
@@ -402,16 +405,33 @@ export default function SidebarChannels({
                 </div>
                 {members.length > 0 ? (
                   <div className="pl-6 space-y-1">
-                    {sortedMembers.map((member) => (
-                      <div key={member.id} className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-muted)' }}>
-                        <div className="w-5 h-5 rounded-full overflow-hidden" style={{ background: 'var(--input-bg)' }}>
+                    {sortedMembers.map((member) => {
+                      const isSpeaking = speakingIds.includes(member.id)
+                      return (
+                        <div key={member.id} className="flex items-center gap-2 text-xs">
+                          <div
+                            className="w-5 h-5 rounded-full overflow-hidden"
+                            style={{
+                              background: 'var(--input-bg)',
+                              boxShadow: isSpeaking ? '0 0 0 2px rgba(34,197,94,0.95), 0 0 8px rgba(34,197,94,0.75)' : 'none',
+                            }}
+                          >
                           {member.avatar ? (
                             <img src={member.avatar} alt={member.username} className="w-full h-full object-cover" />
                           ) : null}
+                          </div>
+                          <span
+                            className="truncate"
+                            style={{
+                              color: isSpeaking ? '#ffffff' : 'var(--text-muted)',
+                              textShadow: isSpeaking ? '0 0 6px rgba(34,197,94,0.6)' : 'none',
+                            }}
+                          >
+                            {getMemberLabel(member)}
+                          </span>
                         </div>
-                        <span className="truncate">{getMemberLabel(member)}</span>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 ) : null}
               </div>

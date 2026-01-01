@@ -65,6 +65,7 @@ function App() {
   const [activeChannelId, setActiveChannelId] = useState('')
   const [voiceChannelId, setVoiceChannelId] = useState('')
   const [joinedVoiceChannelId, setJoinedVoiceChannelId] = useState('')
+  const [voiceSpeakingByChannel, setVoiceSpeakingByChannel] = useState<Record<string, string[]>>({})
   const [input, setInput] = useState('')
   const socketRef = useRef<Socket | null>(null)
   const activeChannelRef = useRef('')
@@ -573,6 +574,7 @@ function App() {
                 channels={channels}
                 activeId={activeChannelId}
                 voiceMembersByChannel={voiceMembersByChannel}
+                voiceSpeakingByChannel={voiceSpeakingByChannel}
                 unreadByChannel={unreadByChannel}
                 t={t}
               onSelect={(channelId) => {
@@ -675,6 +677,7 @@ function App() {
                 channels={channels}
                 activeId={activeChannelId}
                 voiceMembersByChannel={voiceMembersByChannel}
+                voiceSpeakingByChannel={voiceSpeakingByChannel}
                 unreadByChannel={unreadByChannel}
                 t={t}
                 onSelect={(channelId) => {
@@ -775,6 +778,9 @@ function App() {
                     if (prev === channelId) return ''
                     return prev
                   })
+                }}
+                onSpeakingChange={(channelId, speakingIds) => {
+                  setVoiceSpeakingByChannel((prev) => ({ ...prev, [channelId]: speakingIds }))
                 }}
                 onRequireLogin={() => {
                   setEntryStep('choice')

@@ -27,6 +27,7 @@ type VoicePanelProps = {
   t: UiText
   onRequireLogin?: () => void
   onJoinStateChange?: (channelId: string, joined: boolean) => void
+  onSpeakingChange?: (channelId: string, speakingIds: string[]) => void
 }
 
 const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }]
@@ -49,6 +50,7 @@ export default function VoicePanel({
   t,
   onRequireLogin,
   onJoinStateChange,
+  onSpeakingChange,
 }: VoicePanelProps) {
   const [joined, setJoined] = useState(false)
   const [members, setMembers] = useState<VoiceMember[]>([])
@@ -64,7 +66,6 @@ export default function VoicePanel({
     return window.localStorage.getItem('voice-headset-muted') === 'true'
   })
   const [micSensitivity, setMicSensitivity] = useState(-60)
-  const micBeforeDeafenRef = useRef(false)
   const forcedHeadsetRef = useRef(false)
   const micBeforeForceRef = useRef(false)
   const headsetBeforeForceRef = useRef(false)
@@ -365,6 +366,14 @@ export default function VoicePanel({
   }, [channelId, joined, onJoinStateChange])
 
   useEffect(() => {
+    if (!joined) {
+      onSpeakingChange?.(channelId, [])
+      return
+    }
+    onSpeakingChange?.(channelId, speakingIds)
+  }, [channelId, joined, onSpeakingChange, speakingIds])
+
+  useEffect(() => {
     if (!socket) return
     if (!user) return
     return () => {
@@ -542,54 +551,6 @@ export default function VoicePanel({
           )
         })}
       </div>
-      {joined ? (
-        <div className="flex items-center gap-3 rounded-md px-3 py-2" style={{ background: 'var(--panel)' }}>
-          <button
-            type="button"
-            className="flex items-center gap-2 px-3 h-9 rounded-md cursor-pointer hover-surface"
-            style={{ color: micMuted ? '#f87171' : 'var(--text-primary)' }}
-            onClick={() => {
-              if (micMuted) {
-                if (headsetMuted) setHeadsetMuted(false)
-                setMicMuted(false)
-              } else {
-                setMicMuted(true)
-              }
-            }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-              <path d="M12 5a3 3 0 0 0-3 3v4a3 3 0 1 0 6 0V8a3 3 0 0 0-3-3Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-              <path d="M5 11a7 7 0 0 0 14 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-              <path d="M12 18v3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-              {micMuted ? <path d="M4 4l16 16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /> : null}
-            </svg>
-            <span className="text-sm">{micMuted ? t.voice.micOn : t.voice.micOff}</span>
-          </button>
-          <button
-            type="button"
-            className="flex items-center gap-2 px-3 h-9 rounded-md cursor-pointer hover-surface"
-            style={{ color: headsetMuted ? '#f87171' : 'var(--text-primary)' }}
-            onClick={() => {
-              if (headsetMuted) {
-                setHeadsetMuted(false)
-                setMicMuted(micBeforeDeafenRef.current)
-              } else {
-                micBeforeDeafenRef.current = micMuted
-                setHeadsetMuted(true)
-                setMicMuted(true)
-              }
-            }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-              <path d="M4 12a8 8 0 0 1 16 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-              <path d="M4 12v6a2 2 0 0 0 2 2h2v-6H6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-              <path d="M20 12v6a2 2 0 1 1-2 2h-2v-6h2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-              {headsetMuted ? <path d="M4 4l16 16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /> : null}
-            </svg>
-            <span className="text-sm">{headsetMuted ? t.voice.headsetOn : t.voice.headsetOff}</span>
-          </button>
-        </div>
-      ) : null}
     </div>
   )
 }
