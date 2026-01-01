@@ -64,6 +64,7 @@ function App() {
   const [adminIds, setAdminIds] = useState<string[]>([])
   const [activeChannelId, setActiveChannelId] = useState('')
   const [voiceChannelId, setVoiceChannelId] = useState('')
+  const [joinedVoiceChannelId, setJoinedVoiceChannelId] = useState('')
   const [input, setInput] = useState('')
   const socketRef = useRef<Socket | null>(null)
   const activeChannelRef = useRef('')
@@ -80,6 +81,11 @@ function App() {
   const [showSettings, setShowSettings] = useState(false)
   const [showUserSettings, setShowUserSettings] = useState(false)
   const [settingsTab, setSettingsTab] = useState<'profile' | 'voice' | 'language'>('profile')
+  const [voiceSwitchTargetId, setVoiceSwitchTargetId] = useState<string | null>(null)
+  const [skipVoiceSwitchConfirm, setSkipVoiceSwitchConfirm] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return window.localStorage.getItem('skip-voice-switch-confirm') === 'true'
+  })
   const [language, setLanguage] = useState<Language>(() => getStoredLanguage())
   const [micSensitivity, setMicSensitivity] = useState(() => {
     if (typeof window === 'undefined') return -60
@@ -293,6 +299,11 @@ function App() {
   }, [language])
 
   useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem('skip-voice-switch-confirm', String(skipVoiceSwitchConfirm))
+  }, [skipVoiceSwitchConfirm])
+
+  useEffect(() => {
     if (!micTestError) return
     setMicTestError(t.userSettings.micPermission)
   }, [t, micTestError])
@@ -484,6 +495,30 @@ function App() {
   const activeChannel = channels.find((channel) => channel.id === activeChannelId)
   const isVoiceChannel = activeChannel?.type === 'voice'
   const canManageChannels = Boolean(user?.id && adminIds.includes(user.id))
+  const voiceSwitchTarget = voiceSwitchTargetId ? channels.find((channel) => channel.id === voiceSwitchTargetId) : null
+
+  const applyChannelSelect = (channelId: string) => {
+    activeChannelRef.current = channelId
+    setActiveChannelId(channelId)
+    setUnreadByChannel((prev) => ({ ...prev, [channelId]: false }))
+    navigate(`/channels/${channelId}`)
+    setShowMobileChannels(false)
+  }
+
+  const handleSelectChannel = (channelId: string) => {
+    const channel = channels.find((item) => item.id === channelId)
+    if (!channel) return
+    if (
+      channel.type === 'voice' &&
+      joinedVoiceChannelId &&
+      joinedVoiceChannelId !== channelId &&
+      !skipVoiceSwitchConfirm
+    ) {
+      setVoiceSwitchTargetId(channelId)
+      return
+    }
+    applyChannelSelect(channelId)
+  }
 
   const createGuest = () => {
     const name = guestName.trim()
@@ -540,13 +575,9 @@ function App() {
                 voiceMembersByChannel={voiceMembersByChannel}
                 unreadByChannel={unreadByChannel}
                 t={t}
-                onSelect={(channelId) => {
-                  activeChannelRef.current = channelId
-                  setActiveChannelId(channelId)
-                  setUnreadByChannel((prev) => ({ ...prev, [channelId]: false }))
-                  navigate(`/channels/${channelId}`)
-                  setShowMobileChannels(false)
-                }}
+              onSelect={(channelId) => {
+                handleSelectChannel(channelId)
+              }}
                 onOpenServerSettings={() => setShowSettings(true)}
                 onRenameChannel={(channelId, name) => {
                   if (!canManageChannels) return
@@ -647,11 +678,7 @@ function App() {
                 unreadByChannel={unreadByChannel}
                 t={t}
                 onSelect={(channelId) => {
-                  activeChannelRef.current = channelId
-                  setActiveChannelId(channelId)
-                  setUnreadByChannel((prev) => ({ ...prev, [channelId]: false }))
-                  navigate(`/channels/${channelId}`)
-                  setShowMobileChannels(false)
+                  handleSelectChannel(channelId)
                 }}
                 onOpenServerSettings={() => setShowSettings(true)}
                 onRenameChannel={(channelId, name) => {
@@ -742,6 +769,13 @@ function App() {
                 user={user}
                 noiseSuppressionMode={noiseSuppressionMode}
                 t={t}
+                onJoinStateChange={(channelId, joined) => {
+                  setJoinedVoiceChannelId((prev) => {
+                    if (joined) return channelId
+                    if (prev === channelId) return ''
+                    return prev
+                  })
+                }}
                 onRequireLogin={() => {
                   setEntryStep('choice')
                   setShowEntryModal(true)
@@ -805,6 +839,52 @@ function App() {
                 document.getElementById('overlay-root') || document.body
               )
             : null}
+          {voiceSwitchTarget ? (
+            <div
+              className="fixed inset-0 z-50 grid place-items-center"
+              style={{ background: 'rgba(0,0,0,0.55)' }}
+              onMouseDown={() => setVoiceSwitchTargetId(null)}
+            >
+              <div
+                className="w-[520px] max-w-[92vw] rounded-2xl p-6"
+                style={{ background: 'var(--panel)', color: 'var(--text-primary)' }}
+                onMouseDown={(e) => e.stopPropagation()}
+              >
+                <div className="text-lg font-semibold mb-2">확실하세요?</div>
+                <div className="text-sm mb-5" style={{ color: 'var(--text-muted)' }}>
+                  다른 음성 채널에 계신 것 같아요. {voiceSwitchTarget.name}(으)로 전환하시겠어요?
+                </div>
+                <label className="flex items-center gap-3 text-sm mb-5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={skipVoiceSwitchConfirm}
+                    onChange={(event) => setSkipVoiceSwitchConfirm(event.target.checked)}
+                  />
+                  다시 묻지 않기
+                </label>
+                <div className="flex justify-end gap-2">
+                  <button
+                    className="px-4 h-10 rounded-md cursor-pointer"
+                    style={{ background: 'var(--input-bg)', color: 'var(--text-primary)' }}
+                    onClick={() => setVoiceSwitchTargetId(null)}
+                  >
+                    취소
+                  </button>
+                  <button
+                    className="px-4 h-10 rounded-md text-white cursor-pointer"
+                    style={{ background: 'var(--accent)' }}
+                    onClick={() => {
+                      if (!voiceSwitchTargetId) return
+                      applyChannelSelect(voiceSwitchTargetId)
+                      setVoiceSwitchTargetId(null)
+                    }}
+                  >
+                    확인
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
           {showEntryModal && (
             <div className="fixed inset-0 grid place-items-center" style={{ background: 'rgba(0,0,0,0.4)' }}>
               <div className="w-[520px] max-w-[90vw] rounded-lg" style={{ background: 'var(--header-bg)', border: '1px solid var(--border)' }}>

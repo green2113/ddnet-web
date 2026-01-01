@@ -26,6 +26,7 @@ type VoicePanelProps = {
   noiseSuppressionMode: 'webrtc' | 'off'
   t: UiText
   onRequireLogin?: () => void
+  onJoinStateChange?: (channelId: string, joined: boolean) => void
 }
 
 const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }]
@@ -47,6 +48,7 @@ export default function VoicePanel({
   noiseSuppressionMode,
   t,
   onRequireLogin,
+  onJoinStateChange,
 }: VoicePanelProps) {
   const [joined, setJoined] = useState(false)
   const [members, setMembers] = useState<VoiceMember[]>([])
@@ -357,6 +359,10 @@ export default function VoicePanel({
       socket.off('voice:leave', handleLeave)
     }
   }, [channelId, joined, socket, user])
+
+  useEffect(() => {
+    onJoinStateChange?.(channelId, joined)
+  }, [channelId, joined, onJoinStateChange])
 
   useEffect(() => {
     if (!socket) return
