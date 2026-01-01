@@ -191,7 +191,7 @@ export default function SidebarChannels({
           : null}
       </div>
 
-      <div className="p-3 flex-1 overflow-y-auto overflow-x-visible">
+      <div className="p-3 flex-1 overflow-y-auto overflow-x-visible channels-scroll">
         <div className="flex items-center justify-between text-[11px] uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
           <span>{t.sidebarChannels.textChannels}</span>
           {canManage ? (
