@@ -28,6 +28,7 @@ type VoicePanelProps = {
   onRequireLogin?: () => void
   onJoinStateChange?: (channelId: string, joined: boolean) => void
   onSpeakingChange?: (channelId: string, speakingIds: string[]) => void
+  autoJoin?: boolean
 }
 
 const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }]
@@ -51,6 +52,7 @@ export default function VoicePanel({
   onRequireLogin,
   onJoinStateChange,
   onSpeakingChange,
+  autoJoin = false,
 }: VoicePanelProps) {
   const [joined, setJoined] = useState(false)
   const [members, setMembers] = useState<VoiceMember[]>([])
@@ -300,6 +302,13 @@ export default function VoicePanel({
       console.error('[voice] failed to get user media', error)
     }
   }
+
+  useEffect(() => {
+    if (!autoJoin) return
+    if (joined) return
+    void joinVoice()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoJoin, channelId, joined, user?.id])
 
   useEffect(() => {
     if (!socket) return

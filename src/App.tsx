@@ -83,10 +83,6 @@ function App() {
   const [showUserSettings, setShowUserSettings] = useState(false)
   const [settingsTab, setSettingsTab] = useState<'profile' | 'voice' | 'language'>('profile')
   const [voiceSwitchTargetId, setVoiceSwitchTargetId] = useState<string | null>(null)
-  const [skipVoiceSwitchConfirm, setSkipVoiceSwitchConfirm] = useState(() => {
-    if (typeof window === 'undefined') return false
-    return window.localStorage.getItem('skip-voice-switch-confirm') === 'true'
-  })
   const [language, setLanguage] = useState<Language>(() => getStoredLanguage())
   const [micSensitivity, setMicSensitivity] = useState(() => {
     if (typeof window === 'undefined') return -60
@@ -299,10 +295,6 @@ function App() {
     window.localStorage.setItem('ui-language', language)
   }, [language])
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    window.localStorage.setItem('skip-voice-switch-confirm', String(skipVoiceSwitchConfirm))
-  }, [skipVoiceSwitchConfirm])
 
   useEffect(() => {
     if (!micTestError) return
@@ -509,12 +501,7 @@ function App() {
   const handleSelectChannel = (channelId: string) => {
     const channel = channels.find((item) => item.id === channelId)
     if (!channel) return
-    if (
-      channel.type === 'voice' &&
-      joinedVoiceChannelId &&
-      joinedVoiceChannelId !== channelId &&
-      !skipVoiceSwitchConfirm
-    ) {
+    if (channel.type === 'voice' && joinedVoiceChannelId && joinedVoiceChannelId !== channelId) {
       setVoiceSwitchTargetId(channelId)
       return
     }
@@ -772,6 +759,7 @@ function App() {
                 user={user}
                 noiseSuppressionMode={noiseSuppressionMode}
                 t={t}
+                autoJoin
                 onJoinStateChange={(channelId, joined) => {
                   setJoinedVoiceChannelId((prev) => {
                     if (joined) return channelId
