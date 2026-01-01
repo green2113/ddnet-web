@@ -35,7 +35,10 @@ const getPortalRoot = () => (typeof document === 'undefined' ? null : document.g
 export default function Tooltip({ label, children, side = 'top' }: TooltipProps) {
   const wrapRef = useRef<HTMLSpanElement | null>(null)
   const [open, setOpen] = useState(false)
+  const [rendered, setRendered] = useState(false)
+  const [visible, setVisible] = useState(false)
   const [portalPos, setPortalPos] = useState<{ left: number; top: number } | null>(null)
+  const hideTimerRef = useRef<number | null>(null)
 
   const updatePortalPos = () => {
     const rect = wrapRef.current?.getBoundingClientRect()
@@ -56,20 +59,40 @@ export default function Tooltip({ label, children, side = 'top' }: TooltipProps)
   }
 
   useEffect(() => {
-    if (!open) return
-    updatePortalPos()
-    window.addEventListener('resize', updatePortalPos)
-    window.addEventListener('scroll', updatePortalPos, true)
-    return () => {
-      window.removeEventListener('resize', updatePortalPos)
-      window.removeEventListener('scroll', updatePortalPos, true)
+    if (hideTimerRef.current) {
+      window.clearTimeout(hideTimerRef.current)
+      hideTimerRef.current = null
     }
+    if (open) {
+      updatePortalPos()
+      setRendered(true)
+      requestAnimationFrame(() => setVisible(true))
+      window.addEventListener('resize', updatePortalPos)
+      window.addEventListener('scroll', updatePortalPos, true)
+      return () => {
+        window.removeEventListener('resize', updatePortalPos)
+        window.removeEventListener('scroll', updatePortalPos, true)
+      }
+    }
+    setVisible(false)
+    hideTimerRef.current = window.setTimeout(() => {
+      setRendered(false)
+      hideTimerRef.current = null
+    }, 150)
   }, [open, side])
 
-  const tooltip = open && portalPos ? (
+  useEffect(() => {
+    return () => {
+      if (hideTimerRef.current) {
+        window.clearTimeout(hideTimerRef.current)
+      }
+    }
+  }, [])
+
+  const tooltip = rendered && portalPos ? (
     <span
       role="tooltip"
-      className="pointer-events-none absolute z-50 rounded-lg px-3 py-2 text-[13px] whitespace-nowrap transition duration-150 ease-out opacity-100 translate-y-0"
+      className={`pointer-events-none absolute z-50 rounded-lg px-3 py-2 text-[13px] whitespace-nowrap transition duration-150 ease-out ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1'}`}
       style={{
         background: 'var(--tooltip-bg)',
         color: 'var(--text-primary)',
