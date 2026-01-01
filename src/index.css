@@ -7,18 +7,18 @@
     "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
 
   /* Light theme (default) */
-  --bg-app: var(--sidebar-bg);
+  --bg-app: #f5f6f8;
   --panel: #ffffff;
   --text-primary: #060607;
   --text-muted: #6b7280;
-  --rail-bg: #eef0f3;
+  --rail-bg: #e7e9ee;
   --sidebar-bg: var(--rail-bg);
-  --header-bg: #ffffff;
+  --header-bg: var(--rail-bg);
   --topbar-bg: var(--rail-bg);
   --topbar-divider: rgba(0,0,0,0.04);
   --topbar-radius: 12px;
   --border: rgba(0,0,0,0.04);
-  --input-bg: #eef0f3;
+  --input-bg: #ffffff;
   --accent: #5865f2;
   --hover-bg: rgba(0,0,0,0.06);
   --scroll-thumb: rgba(120, 124, 135, 0.6);
