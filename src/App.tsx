@@ -68,6 +68,7 @@ function App() {
   const [voiceSpeakingByChannel, setVoiceSpeakingByChannel] = useState<Record<string, string[]>>({})
   const [autoJoinVoiceChannelId, setAutoJoinVoiceChannelId] = useState<string | null>(null)
   const [input, setInput] = useState('')
+  const [uploading, setUploading] = useState(false)
   const socketRef = useRef<Socket | null>(null)
   const activeChannelRef = useRef('')
   const lastHistoryChannelIdRef = useRef('')
@@ -486,6 +487,43 @@ function App() {
     setInput('')
   }
 
+  const uploadFile = async (file: File) => {
+    if (!activeChannelId) return
+    if (file.size > 50 * 1024 * 1024) {
+      window.alert('파일 크기가 50MB를 초과합니다.')
+      return
+    }
+    if (file.type.startsWith('video/')) {
+      window.alert('영상 파일은 아직 지원하지 않습니다.')
+      return
+    }
+    if (!user) {
+      setEntryStep('choice')
+      setShowEntryModal(true)
+      return
+    }
+    const form = new FormData()
+    form.append('file', file)
+    form.append('channelId', activeChannelId)
+    setUploading(true)
+    try {
+      const res = await axios.post(`${serverBase}/api/upload`, form, { withCredentials: true })
+      const url = res.data?.url as string | undefined
+      if (!url) return
+      const content = input.trim() ? `${input.trim()}\n${url}` : url
+      socketRef.current?.emit('chat:send', {
+        content,
+        channelId: activeChannelId,
+        source: 'web',
+      })
+      setInput('')
+    } catch (error) {
+      window.alert('업로드에 실패했습니다.')
+    } finally {
+      setUploading(false)
+    }
+  }
+
   const activeChannel = channels.find((channel) => channel.id === activeChannelId)
   const isVoiceChannel = activeChannel?.type === 'voice'
   const canManageChannels = Boolean(user?.id && adminIds.includes(user.id))
@@ -794,7 +832,14 @@ function App() {
                 onRetry={() => fetchHistory(activeChannelId)}
                 t={t}
               />
-              <Composer value={input} onChange={setInput} onSend={sendMessage} t={t} />
+              <Composer
+                value={input}
+                onChange={setInput}
+                onSend={sendMessage}
+                onUpload={uploadFile}
+                uploading={uploading}
+                t={t}
+              />
             </>
           )}
           {menu.visible && menu.message

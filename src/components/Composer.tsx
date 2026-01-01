@@ -4,6 +4,8 @@ type Props = {
   value: string
   onChange: (v: string) => void
   onSend: () => void
+  onUpload?: (file: File) => void
+  uploading?: boolean
   disabled?: boolean
   t: {
     composer: {
@@ -14,9 +16,10 @@ type Props = {
   }
 }
 
-export default function Composer({ value, onChange, onSend, disabled = false, t }: Props) {
+export default function Composer({ value, onChange, onSend, onUpload, uploading = false, disabled = false, t }: Props) {
   const isEnabled = !disabled && value.trim().length > 0
   const taRef = useRef<HTMLTextAreaElement | null>(null)
+  const fileRef = useRef<HTMLInputElement | null>(null)
 
   const adjustHeight = () => {
     if (typeof window === 'undefined') return
@@ -60,6 +63,31 @@ export default function Composer({ value, onChange, onSend, disabled = false, t 
     <div className="px-4 pb-4">
       <div className="flex items-center gap-2">
         <div className={`flex w-full items-center rounded-[10px] px-3 py-3 ${disabled ? 'cursor-not-allowed opacity-90' : ''}`} style={{ background: 'var(--input-bg)', color: 'var(--text-primary)' }}>
+          <input
+            ref={fileRef}
+            type="file"
+            className="hidden"
+            onChange={(event) => {
+              const file = event.target.files?.[0]
+              if (file) onUpload?.(file)
+              if (event.target) event.target.value = ''
+            }}
+            accept="image/*,application/pdf,text/plain,application/zip,application/x-zip-compressed"
+            disabled={disabled || uploading}
+          />
+          <button
+            type="button"
+            aria-label="Attach file"
+            disabled={disabled || uploading}
+            onClick={() => fileRef.current?.click()}
+            className={`p-2 rounded-md transition-colors ${disabled || uploading ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+            style={{ color: disabled || uploading ? '#9aa0a6' : 'var(--text-primary)' }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path d="M21 12.5V17a4 4 0 0 1-8 0V7a3 3 0 1 1 6 0v9a2 2 0 1 1-4 0V8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M9 12v5a4 4 0 0 0 8 0v-4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
           <textarea
             ref={taRef}
             value={value}
@@ -81,12 +109,12 @@ export default function Composer({ value, onChange, onSend, disabled = false, t 
             <button
               type="button"
               aria-label={t.composer.send}
-              disabled={!isEnabled}
+              disabled={!isEnabled || uploading}
               onClick={() => isEnabled && onSend()}
               className={`p-2 rounded-md transition-colors ${isEnabled ? 'cursor-pointer' : 'cursor-not-allowed'}`}
               style={{
-                color: isEnabled ? '#ffffff' : '#9aa0a6',
-                backgroundColor: isEnabled ? 'var(--accent)' : 'rgba(127,127,127,0.35)',
+                color: isEnabled && !uploading ? '#ffffff' : '#9aa0a6',
+                backgroundColor: isEnabled && !uploading ? 'var(--accent)' : 'rgba(127,127,127,0.35)',
               }}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

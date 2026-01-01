@@ -39,6 +39,22 @@ export default function MessageList({ messages, adminIds = [], loading = false, 
     const parts = content.split(/(https?:\/\/[^\s]+)/g)
     return parts.map((part, idx) => {
       if (/^https?:\/\//.test(part)) {
+        const isAttachment = /\/attachments\//i.test(part)
+        const cleanUrl = part.split('?')[0]
+        const isImage = /\.(png|jpe?g|webp|gif)$/i.test(cleanUrl)
+        if (isAttachment && isImage) {
+          return (
+            <span key={`${part}-${idx}`} className="inline-flex">
+              <img
+                src={part}
+                alt="attachment"
+                loading="lazy"
+                className="max-w-[360px] max-h-[360px] rounded-md"
+                style={{ border: '1px solid var(--border)' }}
+              />
+            </span>
+          )
+        }
         return (
           <a key={`${part}-${idx}`} href={part} target="_blank" rel="noreferrer" className="underline" style={{ color: 'var(--accent)' }}>
             {part}
