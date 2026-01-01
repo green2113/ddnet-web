@@ -106,6 +106,7 @@ function App() {
   const micTestContextRef = useRef<AudioContext | null>(null)
   const micTestAnimationRef = useRef<number | null>(null)
   const t = useMemo(() => getTranslations(language), [language])
+  const serverLabel = t.sidebarChannels.serverName
 
   const playNotificationSound = () => {
     const AudioCtx = window.AudioContext || (window as any).webkitAudioContext
@@ -447,14 +448,14 @@ function App() {
     })
   }, [channels])
 
-  // ë©”ì‹œì§€ ë³€ê²?????ƒ ?¤í¬ë¡¤ì„ ë§??„ë˜ë¡?? ì? (?˜ë‹¨ ?•ë ¬)
+  // ë©”ì‹œì§€ ë³€ï¿½?????ï¿½ï¿½ ?ï¿½í¬ë¡¤ì„ ï¿½??ï¿½ë˜ï¿½??ï¿½ï¿½? (?ï¿½ë‹¨ ?ï¿½ë ¬)
   useEffect(() => {
     const el = document.getElementById('messages-scroll')
     if (el) el.scrollTop = el.scrollHeight
   }, [messages])
 
   const login = () => {
-    // ë¡œê·¸??ì§„ì…?€ ??ƒ ?„ëŸ°?¸ë? ê²½ìœ ?˜ì?ë§? /login ?´ë??ì„œ VITE_API_BASEë¥??¬ìš©???œë²„ë¡??´ë™
+    // ë¡œê·¸??ì§„ì…?ï¿½ ??ï¿½ï¿½ ?ï¿½ëŸ°?ï¿½ï¿½? ê²½ìœ ?ï¿½ï¿½?ï¿½? /login ?ï¿½ï¿½??ï¿½ì„œ VITE_API_BASEï¿½??ï¿½ìš©???ï¿½ë²„ï¿½??ï¿½ë™
     localStorage.setItem('return_to', window.location.pathname + window.location.search)
     window.location.href = '/login'
   }
@@ -509,105 +510,28 @@ function App() {
   }
 
   return (
-    <div className={(isDark ? 'theme-dark ' : '') + 'app-shell flex'} style={{ background: 'var(--bg-app)', color: 'var(--text-primary)' }}>
-      <div className="hidden md:flex flex-col w-[320px] h-full">
-        <div className="flex flex-1 min-h-0">
-          <SidebarGuilds t={t} />
-          <div className="w-64 min-h-0" style={{ background: 'var(--sidebar-bg)', borderRight: '1px solid var(--border)' }}>
-            <SidebarChannels
-              channels={channels}
-              activeId={activeChannelId}
-              voiceMembersByChannel={voiceMembersByChannel}
-              unreadByChannel={unreadByChannel}
-              t={t}
-              onSelect={(channelId) => {
-                activeChannelRef.current = channelId
-                setActiveChannelId(channelId)
-                setUnreadByChannel((prev) => ({ ...prev, [channelId]: false }))
-                navigate(`/channels/${channelId}`)
-                setShowMobileChannels(false)
-              }}
-              onOpenServerSettings={() => setShowSettings(true)}
-              onRenameChannel={(channelId, name) => {
-                if (!canManageChannels) return
-                axios
-                  .patch(`${serverBase}/api/channels/${channelId}/name`, { name }, { withCredentials: true })
-                  .then(fetchChannels)
-                  .catch(() => {})
-              }}
-              onCreateChannel={(type) => {
-                if (!canManageChannels) return
-                const name = window.prompt(t.sidebarChannels.channelNamePrompt)
-                if (!name) return
-                axios.post(`${serverBase}/api/channels`, { name, type }, { withCredentials: true }).then(fetchChannels).catch(() => {})
-              }}
-              onDeleteChannel={(channelId) => {
-                if (!canManageChannels) return
-                axios.delete(`${serverBase}/api/channels/${channelId}`, { withCredentials: true }).then(fetchChannels).catch(() => {})
-              }}
-              onToggleChannelHidden={(channelId, hidden) => {
-                if (!canManageChannels) return
-                axios
-                  .patch(`${serverBase}/api/channels/${channelId}/hidden`, { hidden }, { withCredentials: true })
-                  .then(fetchChannels)
-                  .catch(() => {})
-              }}
-              onReorderChannels={(orderedIds) => {
-                if (!canManageChannels) return
-                axios
-                  .patch(`${serverBase}/api/channels/order`, { orderedIds }, { withCredentials: true })
-                  .then(fetchChannels)
-                  .catch(() => {})
-              }}
-              canManage={canManageChannels}
-            />
+    <div className={(isDark ? 'theme-dark ' : '') + 'app-shell flex flex-col'} style={{ background: 'var(--bg-app)', color: 'var(--text-primary)' }}>
+      <div className="h-9 flex items-center justify-center no-select" style={{ background: 'var(--topbar-bg)' }}>
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center" style={{ background: 'var(--input-bg)', color: 'var(--text-primary)' }}>
+            <span className="text-xs font-semibold">{serverLabel.slice(0, 1)}</span>
           </div>
-        </div>
-        <div className="px-3 pb-3" style={{ background: 'var(--sidebar-bg)', borderRight: '1px solid var(--border)' }}>
-          <SidebarProfileBar
-            user={user}
-            showUserSettings={showUserSettings}
-            settingsTab={settingsTab}
-            onSetTab={setSettingsTab}
-            onCloseUserSettings={() => {
-              setShowUserSettings(false)
-              setIsTestingMic(false)
-            }}
-            onOpenUserSettings={(tab) => {
-              setSettingsTab(tab)
-              setShowUserSettings(true)
-            }}
-            t={t}
-            language={language}
-            onLanguageChange={setLanguage}
-            micSensitivity={micSensitivity}
-            onMicSensitivityChange={setMicSensitivity}
-            noiseSuppressionMode={noiseSuppressionMode}
-            onNoiseSuppressionModeChange={setNoiseSuppressionMode}
-            micLevelPercent={dbToPercent(micLevel)}
-            micLevelLabel={micLevel}
-            micSensitivityPercent={dbToPercent(micSensitivity)}
-            isTestingMic={isTestingMic}
-            onToggleMicTest={() => setIsTestingMic((prev) => !prev)}
-            micTestError={micTestError}
-          />
+          <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{serverLabel}</span>
         </div>
       </div>
-      <div className="flex-1 flex min-w-0 relative">
-        {showMobileChannels ? (
+      <div className="flex-1 flex min-h-0">
+        <div className="hidden md:flex flex-col w-[320px] h-full" style={{ background: 'var(--rail-bg)' }}>
+          <div className="flex flex-1 min-h-0">
+            <SidebarGuilds t={t} />
           <div
-            className="fixed inset-0 z-40 bg-black/50 md:hidden"
-            onClick={() => setShowMobileChannels(false)}
-            aria-hidden
-          />
-        ) : null}
-        <div
-          className={`fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-200 md:hidden ${
-            showMobileChannels ? 'translate-x-0' : '-translate-x-full'
-          }`}
-        >
-          <div className="flex h-full flex-col">
-            <div className="flex-1 min-h-0" style={{ background: 'var(--sidebar-bg)', borderRight: '1px solid var(--border)' }}>
+            className="w-64 min-h-0"
+            style={{
+              background: 'var(--sidebar-bg)',
+              boxShadow: 'inset 1px 0 0 var(--topbar-divider), inset 0 1px 0 var(--topbar-divider)',
+              borderTopLeftRadius: 'var(--topbar-radius)',
+              overflow: 'hidden',
+            }}
+          >
               <SidebarChannels
                 channels={channels}
                 activeId={activeChannelId}
@@ -656,7 +580,115 @@ function App() {
                 canManage={canManageChannels}
               />
             </div>
-            <div className="px-3 pb-3" style={{ background: 'var(--sidebar-bg)', borderRight: '1px solid var(--border)' }}>
+          </div>
+        <div
+          className="px-3 pb-3"
+          style={{ background: 'var(--sidebar-bg)', boxShadow: 'inset 1px 0 0 var(--topbar-divider)' }}
+        >
+            <SidebarProfileBar
+              user={user}
+              showUserSettings={showUserSettings}
+              settingsTab={settingsTab}
+              onSetTab={setSettingsTab}
+              onCloseUserSettings={() => {
+                setShowUserSettings(false)
+                setIsTestingMic(false)
+              }}
+              onOpenUserSettings={(tab) => {
+                setSettingsTab(tab)
+                setShowUserSettings(true)
+              }}
+              t={t}
+              language={language}
+              onLanguageChange={setLanguage}
+              micSensitivity={micSensitivity}
+              onMicSensitivityChange={setMicSensitivity}
+              noiseSuppressionMode={noiseSuppressionMode}
+              onNoiseSuppressionModeChange={setNoiseSuppressionMode}
+              micLevelPercent={dbToPercent(micLevel)}
+              micLevelLabel={micLevel}
+              micSensitivityPercent={dbToPercent(micSensitivity)}
+              isTestingMic={isTestingMic}
+              onToggleMicTest={() => setIsTestingMic((prev) => !prev)}
+              micTestError={micTestError}
+            />
+          </div>
+        </div>
+        <div className="flex-1 flex min-w-0 relative">
+        {showMobileChannels ? (
+          <div
+            className="fixed inset-0 z-40 bg-black/50 md:hidden"
+            onClick={() => setShowMobileChannels(false)}
+            aria-hidden
+          />
+        ) : null}
+        <div
+          className={`fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-200 md:hidden ${
+            showMobileChannels ? 'translate-x-0' : '-translate-x-full'
+          }`}
+        >
+          <div className="flex h-full flex-col" style={{ background: 'var(--rail-bg)' }}>
+            <div
+              className="flex-1 min-h-0"
+              style={{
+                background: 'var(--sidebar-bg)',
+                boxShadow: 'inset 1px 0 0 var(--topbar-divider), inset 0 1px 0 var(--topbar-divider)',
+                borderTopLeftRadius: 'var(--topbar-radius)',
+                overflow: 'hidden',
+              }}
+            >
+              <SidebarChannels
+                channels={channels}
+                activeId={activeChannelId}
+                voiceMembersByChannel={voiceMembersByChannel}
+                unreadByChannel={unreadByChannel}
+                t={t}
+                onSelect={(channelId) => {
+                  activeChannelRef.current = channelId
+                  setActiveChannelId(channelId)
+                  setUnreadByChannel((prev) => ({ ...prev, [channelId]: false }))
+                  navigate(`/channels/${channelId}`)
+                  setShowMobileChannels(false)
+                }}
+                onOpenServerSettings={() => setShowSettings(true)}
+                onRenameChannel={(channelId, name) => {
+                  if (!canManageChannels) return
+                  axios
+                    .patch(`${serverBase}/api/channels/${channelId}/name`, { name }, { withCredentials: true })
+                    .then(fetchChannels)
+                    .catch(() => {})
+                }}
+                onCreateChannel={(type) => {
+                  if (!canManageChannels) return
+                  const name = window.prompt(t.sidebarChannels.channelNamePrompt)
+                  if (!name) return
+                  axios.post(`${serverBase}/api/channels`, { name, type }, { withCredentials: true }).then(fetchChannels).catch(() => {})
+                }}
+                onDeleteChannel={(channelId) => {
+                  if (!canManageChannels) return
+                  axios.delete(`${serverBase}/api/channels/${channelId}`, { withCredentials: true }).then(fetchChannels).catch(() => {})
+                }}
+                onToggleChannelHidden={(channelId, hidden) => {
+                  if (!canManageChannels) return
+                  axios
+                    .patch(`${serverBase}/api/channels/${channelId}/hidden`, { hidden }, { withCredentials: true })
+                    .then(fetchChannels)
+                    .catch(() => {})
+                }}
+                onReorderChannels={(orderedIds) => {
+                  if (!canManageChannels) return
+                  axios
+                    .patch(`${serverBase}/api/channels/order`, { orderedIds }, { withCredentials: true })
+                    .then(fetchChannels)
+                    .catch(() => {})
+                }}
+                canManage={canManageChannels}
+              />
+            </div>
+            <div
+              className="px-3 pb-3"
+              style={{ background: 'var(--sidebar-bg)', boxShadow: 'inset 1px 0 0 var(--topbar-divider)' }}
+            >
               <SidebarProfileBar
                 user={user}
                 showUserSettings={showUserSettings}
@@ -690,7 +722,7 @@ function App() {
         </div>
         <main className="flex-1 flex flex-col min-w-0">
           <Header
-            title={`${isVoiceChannel ? '?”Š' : '#'} ${activeChannel?.name || 'general'}`}
+            title={`${isVoiceChannel ? '?ï¿½ï¿½' : '#'} ${activeChannel?.name || 'general'}`}
             isDark={isDark}
             onLight={() => setIsDark(false)}
             onDark={() => setIsDark(true)}
@@ -758,7 +790,7 @@ function App() {
                         className="w-full text-left px-3 py-2 hover-surface cursor-pointer"
                         style={{ color: '#f87171' }}
                         onClick={() => {
-                          // ?©«e©÷??????©« ?¡±i©÷¡©(?¨«i¨ù¡°). ?¡¾e©ø¥ì ???©«e©÷?e¡Æ¢æ chat:delete e¢¬¨«e¢®©«?©«i¨¬??¢´i?¢¬??
+                          // ?ï¿½ï¿½eï¿½ï¿½??????ï¿½ï¿½ ?ï¿½ï¿½iï¿½ï¿½ï¿½ï¿½(?ï¿½ï¿½iï¿½ï¿½ï¿½ï¿½). ?ï¿½ï¿½eï¿½ï¿½ï¿½ï¿½ ???ï¿½ï¿½eï¿½ï¿½?eï¿½Æ¢ï¿½ chat:delete eï¿½ï¿½ï¿½ï¿½eï¿½ï¿½ï¿½ï¿½?ï¿½ï¿½iï¿½ï¿½??ï¿½ï¿½i?ï¿½ï¿½??
                           socketRef.current?.emit('chat:delete', { id: menu.message!.id })
                           setMenu({ visible: false, x: 0, y: 0, message: null })
                         }}
@@ -840,7 +872,8 @@ function App() {
           )}
         </main>
       </div>
-      <ServerSettings
+    </div>
+    <ServerSettings
         showSettings={showSettings}
         canManage={canManageChannels}
         onCloseSettings={() => setShowSettings(false)}

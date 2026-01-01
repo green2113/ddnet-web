@@ -90,7 +90,11 @@ export default function SidebarChannels({
   return (
     <aside className="w-full flex flex-col p-0 flex-1 min-h-0">
       {/* 서버 헤더 */}
-      <div ref={wrapRef} className="relative select-none">
+      <div
+        ref={wrapRef}
+        className="relative select-none"
+        style={{ background: 'var(--sidebar-bg)', borderTopLeftRadius: 'var(--topbar-radius)', overflow: 'hidden' }}
+      >
         <button
           type="button"
           onClick={(e) => {
@@ -101,9 +105,17 @@ export default function SidebarChannels({
             }
           }}
           className="w-full px-3 h-12 flex items-center justify-between cursor-pointer"
-          style={{ color: 'var(--text-primary)', background: 'var(--header-bg)', borderBottom: '1px solid var(--border)', transition: 'background-color 150ms ease' }}
+          style={{
+            color: 'var(--text-primary)',
+            background: 'var(--sidebar-bg)',
+            borderBottom: '1px solid var(--border)',
+            borderTop: '1px solid var(--topbar-divider)',
+            borderLeft: '1px solid var(--topbar-divider)',
+            borderTopLeftRadius: 'var(--topbar-radius)',
+            transition: 'background-color 150ms ease',
+          }}
           onMouseEnter={(e) => ((e.currentTarget.style.background as any) = 'var(--hover-bg)')}
-          onMouseLeave={(e) => ((e.currentTarget.style.background as any) = 'var(--header-bg)')}
+          onMouseLeave={(e) => ((e.currentTarget.style.background as any) = 'var(--sidebar-bg)')}
         >
           <span className="truncate font-medium">{resolvedServerName}</span>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 120ms ease' }}>

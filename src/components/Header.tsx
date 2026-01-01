@@ -27,7 +27,7 @@ export default function Header({ title, isDark, onLight, onDark, user, onLogin, 
   return (
     <header
       className="h-12 px-4 flex items-center gap-3"
-      style={{ background: 'var(--header-bg)', borderBottom: '1px solid var(--border)' }}
+      style={{ background: 'var(--bg-app)', borderTop: '1px solid var(--topbar-divider)', borderBottom: '1px solid var(--border)' }}
     >
       <button
         type="button"

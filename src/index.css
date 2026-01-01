@@ -7,14 +7,17 @@
     "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
 
   /* Light theme (default) */
-  --bg-app: #f6f7f9;
+  --bg-app: var(--sidebar-bg);
   --panel: #ffffff;
   --text-primary: #060607;
   --text-muted: #6b7280;
   --rail-bg: #eef0f3;
-  --sidebar-bg: #f4f5f7;
+  --sidebar-bg: var(--rail-bg);
   --header-bg: #ffffff;
-  --border: rgba(0,0,0,0.08);
+  --topbar-bg: var(--rail-bg);
+  --topbar-divider: rgba(0,0,0,0.04);
+  --topbar-radius: 12px;
+  --border: rgba(0,0,0,0.04);
   --input-bg: #eef0f3;
   --accent: #5865f2;
   --hover-bg: rgba(0,0,0,0.06);
@@ -55,14 +58,16 @@ body {
 
 .theme-dark {
   /* Discord-like dark tokens */
-  --bg-app: #1e1f22;    /* app background */
+  --bg-app: #232428;    /* app background */
   --panel: #313338;     /* header / composer panel */
   --text-primary: #dbdee1;
   --text-muted: #949ba4;
   --rail-bg: #1a1b1e;   /* guild rail */
-  --sidebar-bg: #2b2d31;/* channel sidebar */
+  --sidebar-bg: var(--rail-bg);/* channel sidebar */
   --header-bg: #313338; /* header */
-  --border: rgba(255,255,255,0.15);
+  --topbar-bg: var(--rail-bg);
+  --topbar-divider: rgba(255,255,255,0.06);
+  --border: rgba(255,255,255,0.06);
   --input-bg: #383a40;  /* input surface */
   --accent: #5865f2;
   --hover-bg: rgba(255,255,255,0.08);
@@ -91,6 +96,14 @@ body {
 }
 .hover-surface:hover {
   background: var(--hover-bg);
+}
+
+.app-drag {
+  -webkit-app-region: drag;
+}
+
+.app-no-drag {
+  -webkit-app-region: no-drag;
 }
 
 /* 날짜 구분선 등 드래그/선택 방지용 */
