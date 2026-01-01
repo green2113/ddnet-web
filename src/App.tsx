@@ -853,6 +853,7 @@ function App() {
         }}
         adminIds={adminIds}
       />
+      <div id="tooltip-root" style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 999 }} />
     </div>
   )
 }

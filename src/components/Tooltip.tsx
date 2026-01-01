@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 
 type TooltipSide = 'top' | 'right' | 'bottom' | 'left'
 
@@ -29,42 +30,93 @@ const arrowRotateMap: Record<TooltipSide, string> = {
   left: 'rotate-90',
 }
 
+const portalTransformMap: Record<TooltipSide, string> = {
+  top: 'translate(-50%, calc(-100% - 8px))',
+  right: 'translate(8px, -50%)',
+  bottom: 'translate(-50%, 8px)',
+  left: 'translate(calc(-100% - 8px), -50%)',
+}
+
+const getPortalRoot = () => (typeof document === 'undefined' ? null : document.getElementById('tooltip-root'))
+
 export default function Tooltip({ label, children, side = 'top' }: TooltipProps) {
-  return (
-    <span className="relative inline-flex group">
-      {children}
-      <span
-        role="tooltip"
-        className={`pointer-events-none absolute z-50 rounded-lg px-3 py-2 text-[13px] whitespace-nowrap opacity-0 translate-y-1 transition duration-150 ease-out ${sideClassMap[side]} group-hover:opacity-100 group-hover:translate-y-0`}
-        style={{
-          background: 'var(--tooltip-bg)',
-          color: 'var(--text-primary)',
-          boxShadow: '0 6px 14px rgba(0,0,0,0.25)',
-          border: '1px solid var(--tooltip-border)',
-        }}
+  const wrapRef = useRef<HTMLSpanElement | null>(null)
+  const [open, setOpen] = useState(false)
+  const [portalPos, setPortalPos] = useState<{ left: number; top: number } | null>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const updatePortalPos = () => {
+      const rect = wrapRef.current?.getBoundingClientRect()
+      if (!rect) return
+      if (side === 'left') {
+        setPortalPos({ left: rect.left, top: rect.top + rect.height / 2 })
+        return
+      }
+      if (side === 'right') {
+        setPortalPos({ left: rect.right, top: rect.top + rect.height / 2 })
+        return
+      }
+      if (side === 'bottom') {
+        setPortalPos({ left: rect.left + rect.width / 2, top: rect.bottom })
+        return
+      }
+      setPortalPos({ left: rect.left + rect.width / 2, top: rect.top })
+    }
+    updatePortalPos()
+    window.addEventListener('resize', updatePortalPos)
+    window.addEventListener('scroll', updatePortalPos, true)
+    return () => {
+      window.removeEventListener('resize', updatePortalPos)
+      window.removeEventListener('scroll', updatePortalPos, true)
+    }
+  }, [open, side])
+
+  const tooltip = (
+    <span
+      role="tooltip"
+      className={`pointer-events-none absolute z-50 rounded-lg px-3 py-2 text-[13px] whitespace-nowrap transition duration-150 ease-out ${open ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1'}`}
+      style={{
+        background: 'var(--tooltip-bg)',
+        color: 'var(--text-primary)',
+        boxShadow: '0 6px 14px rgba(0,0,0,0.25)',
+        border: '1px solid var(--tooltip-border)',
+        ...(portalPos ? { left: portalPos.left, top: portalPos.top, transform: portalTransformMap[side] } : {}),
+      }}
+    >
+      {label}
+      <svg
+        aria-hidden
+        width="16"
+        height="10"
+        viewBox="0 0 16 10"
+        className={`absolute ${arrowClassMap[side]} ${arrowRotateMap[side]}`}
       >
-        {label}
-        <svg
-          aria-hidden
-          width="16"
-          height="10"
-          viewBox="0 0 16 10"
-          className={`absolute ${arrowClassMap[side]} ${arrowRotateMap[side]}`}
-        >
-          <path
-            d="M1 9 L8 1 L15 9 Z"
-            fill="var(--tooltip-bg)"
-          />
-          <path
-            d="M1 9 L6.6 2.6 Q8 1 9.4 2.6 L15 9"
-            fill="none"
-            stroke="var(--tooltip-border)"
-            strokeWidth="1"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </span>
+        <path d="M1 9 L8 1 L15 9 Z" fill="var(--tooltip-bg)" />
+        <path
+          d="M1 9 L6.6 2.6 Q8 1 9.4 2.6 L15 9"
+          fill="none"
+          stroke="var(--tooltip-border)"
+          strokeWidth="1"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </span>
+  )
+
+  const portalRoot = getPortalRoot()
+  return (
+    <span
+      ref={wrapRef}
+      className="relative inline-flex"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+      onFocus={() => setOpen(true)}
+      onBlur={() => setOpen(false)}
+    >
+      {children}
+      {portalRoot ? createPortal(tooltip, portalRoot) : tooltip}
     </span>
   )
 }
