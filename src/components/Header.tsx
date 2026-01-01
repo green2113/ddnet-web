@@ -4,8 +4,6 @@ type Props = {
   onLight: () => void
   onDark: () => void
   user: { username: string; isGuest?: boolean } | null
-  onLogin: () => void
-  onLogout: () => void
   onToggleChannels?: () => void
   t: {
     header: {
@@ -23,7 +21,7 @@ type Props = {
   }
 }
 
-export default function Header({ title, isDark, onLight, onDark, user, onLogin, onLogout, onToggleChannels, t }: Props) {
+export default function Header({ title, isDark, onLight, onDark, user, onToggleChannels, t }: Props) {
   return (
     <header
       className="h-12 px-4 flex items-center gap-3"

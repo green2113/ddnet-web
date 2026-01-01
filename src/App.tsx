@@ -731,8 +731,6 @@ function App() {
             onLight={() => setIsDark(false)}
             onDark={() => setIsDark(true)}
             user={user}
-            onLogin={login}
-            onLogout={logout}
             onToggleChannels={() => setShowMobileChannels((prev) => !prev)}
             t={t}
           />
