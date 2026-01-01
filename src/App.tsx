@@ -848,37 +848,41 @@ function App() {
           {voiceSwitchTarget ? (
             <div
               className="fixed inset-0 z-50 grid place-items-center"
-              style={{ background: 'rgba(0,0,0,0.55)' }}
+              style={{ background: 'rgba(0,0,0,0.6)' }}
               onMouseDown={() => setVoiceSwitchTargetId(null)}
             >
               <div
-                className="w-[520px] max-w-[92vw] rounded-2xl p-6"
-                style={{ background: 'var(--panel)', color: 'var(--text-primary)' }}
+                className="w-[560px] max-w-[92vw] rounded-2xl p-6"
+                style={{ background: 'var(--header-bg)', color: 'var(--text-primary)' }}
                 onMouseDown={(e) => e.stopPropagation()}
               >
-                <div className="text-lg font-semibold mb-2">확실하세요?</div>
-                <div className="text-sm mb-5" style={{ color: 'var(--text-muted)' }}>
+                <div className="flex items-start justify-between gap-4 mb-3">
+                  <div className="text-lg font-semibold">확실하세요?</div>
+                  <button
+                    type="button"
+                    className="h-8 w-8 rounded-full grid place-items-center hover-surface cursor-pointer"
+                    aria-label="close"
+                    onClick={() => setVoiceSwitchTargetId(null)}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                      <path d="M6 6l12 12M18 6l-12 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="text-sm mb-6" style={{ color: 'var(--text-muted)' }}>
                   다른 음성 채널에 계신 것 같아요. {voiceSwitchTarget.name}(으)로 전환하시겠어요?
                 </div>
-                <label className="flex items-center gap-3 text-sm mb-5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={skipVoiceSwitchConfirm}
-                    onChange={(event) => setSkipVoiceSwitchConfirm(event.target.checked)}
-                  />
-                  다시 묻지 않기
-                </label>
-                <div className="flex justify-end gap-2">
+                <div className="flex justify-end gap-3">
                   <button
-                    className="px-4 h-10 rounded-md cursor-pointer"
-                    style={{ background: 'var(--input-bg)', color: 'var(--text-primary)' }}
+                    className="px-5 h-10 rounded-md cursor-pointer"
+                    style={{ background: 'rgba(127,127,127,0.2)', color: 'var(--text-primary)' }}
                     onClick={() => setVoiceSwitchTargetId(null)}
                   >
                     취소
                   </button>
                   <button
-                    className="px-4 h-10 rounded-md text-white cursor-pointer"
-                    style={{ background: 'var(--accent)' }}
+                    className="px-5 h-10 rounded-md text-white cursor-pointer"
+                    style={{ background: '#5865f2' }}
                     onClick={() => {
                       if (!voiceSwitchTargetId) return
                       applyChannelSelect(voiceSwitchTargetId)
