@@ -59,20 +59,11 @@ export default function Header({ title, isDark, onLight, onDark, user, onLogin, 
           )}
         </button>
         {user ? (
-          <>
-            <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
-              {user.username}
-              {user.isGuest ? t.header.guestSuffix : ''}
-            </div>
-            <button onClick={onLogout} className="text-xs px-2 py-1 rounded hover:opacity-90 cursor-pointer" style={{ background: 'var(--input-bg)' }}>
-              {t.header.logout}
-            </button>
-          </>
-        ) : (
-          <button onClick={onLogin} className="text-xs px-2 py-2 text-white rounded hover:brightness-110 cursor-pointer" style={{ background: 'var(--accent)' }}>
-            {t.header.loginDiscord}
-          </button>
-        )}
+          <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
+            {user.username}
+            {user.isGuest ? t.header.guestSuffix : ''}
+          </div>
+        ) : null}
       </div>
     </header>
   )

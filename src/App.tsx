@@ -448,14 +448,12 @@ function App() {
     })
   }, [channels])
 
-  // 메시지 변�?????�� ?�크롤을 �??�래�??��? (?�단 ?�렬)
   useEffect(() => {
     const el = document.getElementById('messages-scroll')
     if (el) el.scrollTop = el.scrollHeight
   }, [messages])
 
   const login = () => {
-    // 로그??진입?� ??�� ?�런?��? 경유?��?�? /login ?��??�서 VITE_API_BASE�??�용???�버�??�동
     localStorage.setItem('return_to', window.location.pathname + window.location.search)
     window.location.href = '/login'
   }
@@ -589,24 +587,25 @@ function App() {
           className="px-3 pb-3"
           style={{ background: 'var(--sidebar-bg)', boxShadow: 'inset 1px 0 0 var(--topbar-divider)' }}
         >
-            <SidebarProfileBar
-              user={user}
-              showUserSettings={showUserSettings}
-              settingsTab={settingsTab}
-              onSetTab={setSettingsTab}
-              onCloseUserSettings={() => {
-                setShowUserSettings(false)
-                setIsTestingMic(false)
-              }}
-              onOpenUserSettings={(tab) => {
-                setSettingsTab(tab)
-                setShowUserSettings(true)
-              }}
-              t={t}
-              language={language}
-              onLanguageChange={setLanguage}
-              micSensitivity={micSensitivity}
-              onMicSensitivityChange={setMicSensitivity}
+          <SidebarProfileBar
+            user={user}
+            showUserSettings={showUserSettings}
+            settingsTab={settingsTab}
+            onSetTab={setSettingsTab}
+            onCloseUserSettings={() => {
+              setShowUserSettings(false)
+              setIsTestingMic(false)
+            }}
+            onOpenUserSettings={(tab) => {
+              setSettingsTab(tab)
+              setShowUserSettings(true)
+            }}
+            onLogout={logout}
+            t={t}
+            language={language}
+            onLanguageChange={setLanguage}
+            micSensitivity={micSensitivity}
+            onMicSensitivityChange={setMicSensitivity}
               noiseSuppressionMode={noiseSuppressionMode}
               onNoiseSuppressionModeChange={setNoiseSuppressionMode}
               micLevelPercent={dbToPercent(micLevel)}
@@ -706,6 +705,7 @@ function App() {
                   setSettingsTab(tab)
                   setShowUserSettings(true)
                 }}
+                onLogout={logout}
                 t={t}
                 language={language}
                 onLanguageChange={setLanguage}

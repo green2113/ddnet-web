@@ -15,6 +15,7 @@ type UserSettingsProps = {
   settingsTab: 'profile' | 'voice' | 'language'
   onSetTab: (tab: 'profile' | 'voice' | 'language') => void
   onCloseUserSettings: () => void
+  onLogout: () => void
   user: UserSettingsUser | null
   t: UiText
   language: 'ko' | 'en' | 'zh-Hans' | 'zh-Hant'
@@ -36,6 +37,7 @@ export default function UserSettings({
   settingsTab,
   onSetTab,
   onCloseUserSettings,
+  onLogout,
   user,
   t,
   language,
@@ -151,6 +153,22 @@ export default function UserSettings({
                   <path d="M12 3a14 14 0 0 0 0 18a14 14 0 0 0 0-18Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
                 </svg>
                 <span>{t.userSettings.language}</span>
+              </button>
+              <div className="my-3" style={{ height: 1, background: 'rgba(255,255,255,0.12)' }} />
+              <button
+                type="button"
+                className="w-full text-left px-3 py-2 rounded-md flex items-center gap-2 cursor-pointer"
+                style={{ background: 'transparent' }}
+                onClick={() => {
+                  onLogout()
+                  onCloseUserSettings()
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <path d="M10 7V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6a2 2 0 0 1-2-2v-2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M3 12h12m0 0-3-3m3 3-3 3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <span>{t.userSettings.logout}</span>
               </button>
             </div>
           </div>

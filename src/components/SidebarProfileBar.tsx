@@ -10,6 +10,7 @@ type SidebarProfileBarProps = {
   onSetTab: (tab: 'profile' | 'voice' | 'language') => void
   onCloseUserSettings: () => void
   onOpenUserSettings: (tab: 'profile' | 'voice' | 'language') => void
+  onLogout: () => void
   t: UiText
   language: 'ko' | 'en' | 'zh-Hans' | 'zh-Hant'
   onLanguageChange: (value: 'ko' | 'en' | 'zh-Hans' | 'zh-Hant') => void
@@ -33,6 +34,7 @@ export default function SidebarProfileBar({
   onSetTab,
   onCloseUserSettings,
   onOpenUserSettings,
+  onLogout,
   t,
   language,
   onLanguageChange,
@@ -171,6 +173,7 @@ export default function SidebarProfileBar({
           settingsTab={settingsTab}
           onSetTab={onSetTab}
           onCloseUserSettings={onCloseUserSettings}
+          onLogout={onLogout}
           user={user}
           t={t}
           language={language}

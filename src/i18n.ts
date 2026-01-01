@@ -124,6 +124,7 @@ export type UiText = {
     micPermission: string
     close: string
     open: string
+    logout: string
     guest: string
     guestAccount: string
     myAccount: string
@@ -265,6 +266,7 @@ const translations: TranslationMap = {
       micPermission: 'Microphone access is required.',
       close: 'Close user settings',
       open: 'Open user settings',
+      logout: 'Logout',
       guest: 'Guest',
       guestAccount: 'Guest account',
       myAccount: 'My account',
@@ -404,6 +406,7 @@ const translations: TranslationMap = {
       micPermission: '마이크 접근 권한이 필요합니다.',
       close: '사용자 설정',
       open: '사용자 설정',
+      logout: '로그아웃',
       guest: '게스트',
       guestAccount: '게스트 계정',
       myAccount: '내 계정',
@@ -543,6 +546,7 @@ const translations: TranslationMap = {
       micPermission: '需要麦克风访问权限。',
       close: '关闭用户设置',
       open: '打开用户设置',
+      logout: '退出登录',
       guest: '访客',
       guestAccount: '访客账户',
       myAccount: '我的账户',
@@ -682,6 +686,7 @@ const translations: TranslationMap = {
       micPermission: '需要麥克風存取權限。',
       close: '關閉使用者設定',
       open: '開啟使用者設定',
+      logout: '登出',
       guest: '訪客',
       guestAccount: '訪客帳號',
       myAccount: '我的帳號',
