@@ -37,25 +37,26 @@ export default function Tooltip({ label, children, side = 'top' }: TooltipProps)
   const [open, setOpen] = useState(false)
   const [portalPos, setPortalPos] = useState<{ left: number; top: number } | null>(null)
 
+  const updatePortalPos = () => {
+    const rect = wrapRef.current?.getBoundingClientRect()
+    if (!rect) return
+    if (side === 'left') {
+      setPortalPos({ left: rect.left, top: rect.top + rect.height / 2 })
+      return
+    }
+    if (side === 'right') {
+      setPortalPos({ left: rect.right, top: rect.top + rect.height / 2 })
+      return
+    }
+    if (side === 'bottom') {
+      setPortalPos({ left: rect.left + rect.width / 2, top: rect.bottom })
+      return
+    }
+    setPortalPos({ left: rect.left + rect.width / 2, top: rect.top })
+  }
+
   useEffect(() => {
     if (!open) return
-    const updatePortalPos = () => {
-      const rect = wrapRef.current?.getBoundingClientRect()
-      if (!rect) return
-      if (side === 'left') {
-        setPortalPos({ left: rect.left, top: rect.top + rect.height / 2 })
-        return
-      }
-      if (side === 'right') {
-        setPortalPos({ left: rect.right, top: rect.top + rect.height / 2 })
-        return
-      }
-      if (side === 'bottom') {
-        setPortalPos({ left: rect.left + rect.width / 2, top: rect.bottom })
-        return
-      }
-      setPortalPos({ left: rect.left + rect.width / 2, top: rect.top })
-    }
     updatePortalPos()
     window.addEventListener('resize', updatePortalPos)
     window.addEventListener('scroll', updatePortalPos, true)
@@ -65,7 +66,7 @@ export default function Tooltip({ label, children, side = 'top' }: TooltipProps)
     }
   }, [open, side])
 
-  const tooltip = open ? (
+  const tooltip = open && portalPos ? (
     <span
       role="tooltip"
       className="pointer-events-none absolute z-50 rounded-lg px-3 py-2 text-[13px] whitespace-nowrap transition duration-150 ease-out opacity-100 translate-y-0"
@@ -103,9 +104,15 @@ export default function Tooltip({ label, children, side = 'top' }: TooltipProps)
     <span
       ref={wrapRef}
       className="relative inline-flex"
-      onMouseEnter={() => setOpen(true)}
+      onMouseEnter={() => {
+        updatePortalPos()
+        requestAnimationFrame(() => setOpen(true))
+      }}
       onMouseLeave={() => setOpen(false)}
-      onFocus={() => setOpen(true)}
+      onFocus={() => {
+        updatePortalPos()
+        requestAnimationFrame(() => setOpen(true))
+      }}
       onBlur={() => setOpen(false)}
     >
       {children}
