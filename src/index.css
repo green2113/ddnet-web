@@ -150,7 +150,7 @@ body {
   scrollbar-color: rgba(255,255,255,0.08) transparent;
 }
 .channels-scroll::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
 }
 .channels-scroll::-webkit-scrollbar-track {
   background: transparent;
@@ -166,6 +166,11 @@ body {
   background-color: rgba(255,255,255,0.08);
 }
 .channels-scroll::-webkit-scrollbar-button {
+  width: 0;
+  height: 0;
+  display: none;
+}
+.channels-scroll::-webkit-scrollbar-button:single-button {
   width: 0;
   height: 0;
   display: none;
