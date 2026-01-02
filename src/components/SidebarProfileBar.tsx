@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import UserSettings, { type UserSettingsUser } from './UserSettings'
 import Tooltip from './Tooltip'
+import { HeadsetIcon, MicIcon } from './icons/VoiceIcons'
 import type { UiText } from '../i18n'
 
 type SidebarProfileBarProps = {
@@ -205,19 +206,9 @@ function Icon({ name, muted }: { name: 'settings' | 'mic' | 'headset'; muted?: b
         </svg>
       )
     case 'mic':
-      return (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-          <path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V20h2v-2.08A7 7 0 0 0 19 11h-2Z" />
-          {muted ? <path d="M4 4l16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /> : null}
-        </svg>
-      )
+      return <MicIcon muted={muted} outlineColor="var(--header-bg)" />
     case 'headset':
-      return (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-          <path d="M12 4a8 8 0 0 0-8 8v5a3 3 0 0 0 3 3h2v-7H6v-1a6 6 0 0 1 12 0v1h-3v7h2a3 3 0 0 0 3-3v-5a8 8 0 0 0-8-8Z" />
-          {muted ? <path d="M4 4l16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /> : null}
-        </svg>
-      )
+      return <HeadsetIcon muted={muted} outlineColor="var(--header-bg)" />
     default:
       return null
   }

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { formatText, type UiText } from '../i18n'
 import Tooltip from './Tooltip'
+import { HeadsetIcon, MicIcon } from './icons/VoiceIcons'
 
 type VoiceMember = {
   id: string
@@ -429,20 +430,10 @@ export default function SidebarChannels({
                           </span>
                           <span className="ml-auto flex items-center gap-1" style={{ color: '#f87171' }}>
                             {member.muted ? (
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden>
-                                <path d="M12 5a3 3 0 0 0-3 3v4a3 3 0 1 0 6 0V8a3 3 0 0 0-3-3Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                                <path d="M5 11a7 7 0 0 0 14 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                                <path d="M12 18v3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                                <path d="M4 4l16 16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                              </svg>
+                              <MicIcon size={12} muted outlineColor="var(--sidebar-bg)" />
                             ) : null}
                             {member.deafened ? (
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden>
-                                <path d="M4 12a8 8 0 0 1 16 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                                <path d="M4 12v6a2 2 0 0 0 2 2h2v-6H6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                                <path d="M20 12v6a2 2 0 0 1-2 2h-2v-6h2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                                <path d="M4 4l16 16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                              </svg>
+                              <HeadsetIcon size={12} muted outlineColor="var(--sidebar-bg)" />
                             ) : null}
                           </span>
                         </div>
