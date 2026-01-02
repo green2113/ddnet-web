@@ -127,6 +127,9 @@ export type UiText = {
       webrtc: string
       off: string
     }
+    outputDevice: string
+    inputDevice: string
+    deviceDefault: string
     rejoinHint: string
     on: string
     off: string
@@ -283,6 +286,9 @@ const translations: TranslationMap = {
         webrtc: 'Default',
         off: 'None',
       },
+      outputDevice: 'Output device',
+      inputDevice: 'Input device',
+      deviceDefault: 'Default',
       rejoinHint: 'Rejoin the voice channel after changing this setting.',
       on: 'On',
       off: 'Off',
@@ -437,6 +443,9 @@ const translations: TranslationMap = {
         webrtc: '기본',
         off: '없음',
       },
+      outputDevice: '출력 장치',
+      inputDevice: '입력 장치',
+      deviceDefault: '기본',
       rejoinHint: '설정 변경 후 음성 채널을 다시 입장하면 적용됩니다.',
       on: '켜짐',
       off: '꺼짐',
@@ -591,6 +600,9 @@ const translations: TranslationMap = {
         webrtc: '??',
         off: '?',
       },
+      outputDevice: '????',
+      inputDevice: '????',
+      deviceDefault: '??',
       rejoinHint: '更改后请重新进入语音频道以生效。',
       on: '开启',
       off: '关闭',
@@ -745,6 +757,9 @@ const translations: TranslationMap = {
         webrtc: '??',
         off: '?',
       },
+      outputDevice: '????',
+      inputDevice: '????',
+      deviceDefault: '??',
       rejoinHint: '變更後請重新進入語音頻道以生效。',
       on: '開啟',
       off: '關閉',

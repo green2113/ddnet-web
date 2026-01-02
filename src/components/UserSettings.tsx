@@ -56,6 +56,16 @@ export default function UserSettings({
   const [isVisible, setIsVisible] = useState(showUserSettings)
   const [isClosing, setIsClosing] = useState(false)
   const closeTimerRef = useRef<number | null>(null)
+  const [audioInputs, setAudioInputs] = useState<MediaDeviceInfo[]>([])
+  const [audioOutputs, setAudioOutputs] = useState<MediaDeviceInfo[]>([])
+  const [inputDeviceId, setInputDeviceId] = useState(() => {
+    if (typeof window === 'undefined') return 'default'
+    return window.localStorage.getItem('voice-input-device') || 'default'
+  })
+  const [outputDeviceId, setOutputDeviceId] = useState(() => {
+    if (typeof window === 'undefined') return 'default'
+    return window.localStorage.getItem('voice-output-device') || 'default'
+  })
 
   useEffect(() => {
     if (showUserSettings) {
@@ -84,6 +94,30 @@ export default function UserSettings({
     },
     []
   )
+
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.enumerateDevices) return
+    let mounted = true
+    const updateDevices = async () => {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices()
+        if (!mounted) return
+        setAudioInputs(devices.filter((device) => device.kind === 'audioinput'))
+        setAudioOutputs(devices.filter((device) => device.kind === 'audiooutput'))
+      } catch {
+        // Ignore device enumeration errors (permissions or unsupported).
+      }
+    }
+    updateDevices()
+    const handleChange = () => {
+      updateDevices()
+    }
+    navigator.mediaDevices.addEventListener?.('devicechange', handleChange)
+    return () => {
+      mounted = false
+      navigator.mediaDevices.removeEventListener?.('devicechange', handleChange)
+    }
+  }, [])
 
   if (!isVisible) return null
 
@@ -207,6 +241,50 @@ export default function UserSettings({
               </div>
             ) : settingsTab === 'voice' ? (
               <div className="space-y-6">
+                <div className="rounded-xl p-5" style={{ background: '#1f202b' }}>
+                  <div className="text-sm font-semibold mb-3">{t.userSettings.outputDevice}</div>
+                  <select
+                    value={outputDeviceId}
+                    onChange={(event) => {
+                      const next = event.target.value
+                      setOutputDeviceId(next)
+                      if (typeof window !== 'undefined') {
+                        window.localStorage.setItem('voice-output-device', next)
+                        window.dispatchEvent(new CustomEvent('voice-output-device', { detail: next }))
+                      }
+                    }}
+                    className="w-full h-10 rounded-md px-3 text-sm device-select"
+                    style={{ background: '#2f3142', color: 'var(--text-primary)', border: '1px solid rgba(255,255,255,0.12)' }}
+                  >
+                    <option value="default">{t.userSettings.deviceDefault}</option>
+                    {audioOutputs.map((device, index) => (
+                      <option key={device.deviceId} value={device.deviceId}>
+                        {device.label || `${t.userSettings.deviceDefault} ${index + 1}`}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="text-sm font-semibold mt-5 mb-3">{t.userSettings.inputDevice}</div>
+                  <select
+                    value={inputDeviceId}
+                    onChange={(event) => {
+                      const next = event.target.value
+                      setInputDeviceId(next)
+                      if (typeof window !== 'undefined') {
+                        window.localStorage.setItem('voice-input-device', next)
+                        window.dispatchEvent(new CustomEvent('voice-input-device', { detail: next }))
+                      }
+                    }}
+                    className="w-full h-10 rounded-md px-3 text-sm device-select"
+                    style={{ background: '#2f3142', color: 'var(--text-primary)', border: '1px solid rgba(255,255,255,0.12)' }}
+                  >
+                    <option value="default">{t.userSettings.deviceDefault}</option>
+                    {audioInputs.map((device, index) => (
+                      <option key={device.deviceId} value={device.deviceId}>
+                        {device.label || `${t.userSettings.deviceDefault} ${index + 1}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <div>
                   <div className="text-sm font-semibold mb-2">{t.userSettings.micSensitivity}</div>
                   <div className="flex items-center gap-4">

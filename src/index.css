@@ -139,6 +139,11 @@ a:hover {
   background: color-mix(in oklch, var(--accent) 35%, transparent);
 }
 
+.device-select option {
+  color: #0f1115;
+  background: #ffffff;
+}
+
 .app-drag {
   -webkit-app-region: drag;
 }

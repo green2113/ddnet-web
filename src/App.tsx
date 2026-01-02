@@ -351,11 +351,16 @@ function App() {
 
     let cancelled = false
     setMicTestError('')
+    const inputDeviceId = window.localStorage.getItem('voice-input-device')
+    const audioConstraints: MediaTrackConstraints = {
+      noiseSuppression: noiseSuppressionMode === 'webrtc',
+    }
+    if (inputDeviceId && inputDeviceId !== 'default') {
+      audioConstraints.deviceId = { exact: inputDeviceId }
+    }
     navigator.mediaDevices
       .getUserMedia({
-        audio: {
-          noiseSuppression: noiseSuppressionMode === 'webrtc',
-        },
+        audio: audioConstraints,
       })
       .then((stream) => {
         if (cancelled) {

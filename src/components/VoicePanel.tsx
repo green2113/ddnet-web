@@ -74,6 +74,14 @@ export default function VoicePanel({
     return window.localStorage.getItem('voice-headset-muted') === 'true'
   })
   const [micSensitivity, setMicSensitivity] = useState(-60)
+  const [inputDeviceId, setInputDeviceId] = useState(() => {
+    if (typeof window === 'undefined') return 'default'
+    return window.localStorage.getItem('voice-input-device') || 'default'
+  })
+  const [outputDeviceId, setOutputDeviceId] = useState(() => {
+    if (typeof window === 'undefined') return 'default'
+    return window.localStorage.getItem('voice-output-device') || 'default'
+  })
   const forcedHeadsetRef = useRef(false)
   const micBeforeForceRef = useRef(false)
   const headsetBeforeForceRef = useRef(false)
@@ -224,6 +232,26 @@ export default function VoicePanel({
   }, [headsetMuted, micMuted])
 
   useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<string>).detail
+      if (!detail) return
+      setInputDeviceId(detail)
+    }
+    window.addEventListener('voice-input-device', handler as EventListener)
+    return () => window.removeEventListener('voice-input-device', handler as EventListener)
+  }, [])
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<string>).detail
+      if (!detail) return
+      setOutputDeviceId(detail)
+    }
+    window.addEventListener('voice-output-device', handler as EventListener)
+    return () => window.removeEventListener('voice-output-device', handler as EventListener)
+  }, [])
+
+  useEffect(() => {
     if (!socket?.id) return
     speakingThresholdRef.current.set(socket.id, micSensitivity)
   }, [micSensitivity, socket?.id])
@@ -254,6 +282,7 @@ export default function VoicePanel({
         audio.setAttribute('playsinline', 'true')
         document.body.appendChild(audio)
       }
+      applyOutputDevice(audio, outputDeviceId)
       const [stream] = event.streams
       if (stream) {
         audio.srcObject = stream
@@ -274,6 +303,18 @@ export default function VoicePanel({
     })
   }
 
+  const applyOutputDevice = (audio: HTMLAudioElement, deviceId: string) => {
+    if (!deviceId || deviceId === 'default') return
+    const setSinkId = (audio as HTMLMediaElement & { setSinkId?: (id: string) => Promise<void> }).setSinkId
+    if (typeof setSinkId !== 'function') return
+    setSinkId.call(audio, deviceId).catch(() => {})
+  }
+
+  const resolveInputConstraints = () => {
+    if (!inputDeviceId || inputDeviceId === 'default') return {}
+    return { deviceId: { exact: inputDeviceId } }
+  }
+
   const joinVoice = async () => {
     if (!socket) return
     if (!user) {
@@ -282,11 +323,20 @@ export default function VoicePanel({
     }
     if (joined) return
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          noiseSuppression: noiseSuppressionMode === 'webrtc',
-        },
-      })
+      const audioConstraints = {
+        noiseSuppression: noiseSuppressionMode === 'webrtc',
+        ...resolveInputConstraints(),
+      }
+      let stream: MediaStream
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints })
+      } catch (error) {
+        if (inputDeviceId && inputDeviceId !== 'default') {
+          stream = await navigator.mediaDevices.getUserMedia({ audio: { noiseSuppression: noiseSuppressionMode === 'webrtc' } })
+        } else {
+          throw error
+        }
+      }
       rawStreamRef.current = stream
       const ctx = new AudioContext()
       micContextRef.current = ctx
@@ -475,6 +525,12 @@ export default function VoicePanel({
       })
     }
   }, [headsetMuted, micMuted])
+
+  useEffect(() => {
+    document.querySelectorAll<HTMLAudioElement>('audio[id^="voice-audio-"]').forEach((audio) => {
+      applyOutputDevice(audio, outputDeviceId)
+    })
+  }, [outputDeviceId])
 
   useEffect(() => {
     if (!joined) return
