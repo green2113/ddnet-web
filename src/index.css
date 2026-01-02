@@ -20,7 +20,6 @@
   --border: rgba(0,0,0,0.04);
   --input-bg: #ffffff;
   --accent: #5865f2;
-  --link: oklab(0.670197 -0.038481 -0.141434);
   --hover-bg: rgba(0,0,0,0.06);
   --scroll-thumb: #d7d9df;
   --divider: rgba(0,0,0,0.25);
@@ -37,16 +36,16 @@ html, body, #root {
   height: 100%;
 }
 
-/* 모바일에서 전체 페이지가 스크롤되지 않게 고정 */
+/* 모바?�에???�체 ?�이지가 ?�크롤되지 ?�게 고정 */
 body {
   overflow: hidden;
   overscroll-behavior: none;
 }
 
-/* 앱 루트 셸: 안드로이드/모바일에서 주소창 변동에도 정확한 뷰포트 높이를 차지 */
+/* ??루트 ?? ?�드로이??모바?�에??주소�?변?�에???�확??뷰포???�이�?차�? */
 .app-shell {
   height: 100dvh;
-  height: 100svh; /* 지원 브라우저에서 안전 뷰포트 적용 */
+  height: 100svh; /* 지??브라?��??�서 ?�전 뷰포???�용 */
   display: flex;
   width: 100%;
   overflow: hidden;
@@ -71,7 +70,6 @@ body {
   --border: rgba(255,255,255,0.06);
   --input-bg: #383a40;  /* input surface */
   --accent: #5865f2;
-  --link: oklab(0.670197 -0.038481 -0.141434);
   --hover-bg: rgba(255,255,255,0.08);
   --scroll-thumb: #2a2c31;
   --divider: rgba(255,255,255,0.18);
@@ -100,52 +98,6 @@ body {
   background: var(--hover-bg);
 }
 
-a {
-  color: var(--link);
-}
-a:hover {
-  color: color-mix(in oklch, var(--link) 85%, white);
-}
-
-.composer-highlight {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  color: var(--text-primary);
-  white-space: pre-wrap;
-  word-break: break-word;
-  box-sizing: border-box;
-}
-
-.composer-highlight-content {
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.composer-link {
-  color: var(--link);
-  text-decoration: underline;
-}
-
-.composer-textarea {
-  color: transparent;
-  caret-color: var(--text-primary);
-  box-sizing: border-box;
-}
-
-.composer-textarea::placeholder {
-  color: var(--text-muted);
-}
-
-.composer-textarea::selection {
-  background: color-mix(in oklch, var(--accent) 35%, transparent);
-}
-
-.device-select option {
-  color: #0f1115;
-  background: #ffffff;
-}
-
 .app-drag {
   -webkit-app-region: drag;
 }
@@ -154,14 +106,14 @@ a:hover {
   -webkit-app-region: no-drag;
 }
 
-/* 날짜 구분선 등 드래그/선택 방지용 */
+/* ?�짜 구분?????�래�??�택 방�???*/
 .no-select {
   user-select: none;
   -webkit-user-select: none;
   -ms-user-select: none;
 }
 
-/* 메시지 행 호버 하이라이트 */
+/* 메시지 ???�버 ?�이?�이??*/
 .row-hover {
   border-radius: 5px;
 }
@@ -173,8 +125,8 @@ a:hover {
 .messages-scroll {
   scrollbar-width: initial;               /* Firefox */
   scrollbar-color: var(--scroll-thumb) transparent;
-  overscroll-behavior: contain;           /* 부모로 스크롤 전파 방지 */
-  -webkit-overflow-scrolling: touch;      /* iOS 부드러운 스크롤 */
+  overscroll-behavior: contain;           /* 부모로 ?�크�??�파 방�? */
+  -webkit-overflow-scrolling: touch;      /* iOS 부?�러???�크�?*/
 }
 .messages-scroll::-webkit-scrollbar {
   width: 8px;
@@ -377,47 +329,6 @@ a:hover {
 .modal-overlay.is-exiting {
   animation: modal-fade-out 180ms ease-in;
   animation-fill-mode: both;
-}
-
-.screen-share-source {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 10px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: var(--panel);
-  text-align: left;
-}
-
-.screen-share-source:hover {
-  background: var(--hover-bg);
-}
-
-.screen-share-source.is-selected {
-  border-color: color-mix(in oklch, var(--accent) 70%, white);
-  box-shadow: 0 0 0 1px color-mix(in oklch, var(--accent) 40%, transparent);
-}
-
-.screen-share-radio {
-  width: 18px;
-  height: 18px;
-  border-radius: 999px;
-  border: 2px solid var(--border);
-  background: transparent;
-}
-
-.screen-share-source.is-selected .screen-share-radio {
-  border-color: var(--accent);
-  box-shadow: inset 0 0 0 4px var(--accent);
-}
-
-.screen-share-source img {
-  width: 100%;
-  height: 140px;
-  border-radius: 8px;
-  object-fit: cover;
-  background: #0f1115;
 }
 
 @keyframes user-settings-pop {

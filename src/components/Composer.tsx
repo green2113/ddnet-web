@@ -38,21 +38,6 @@ export default function Composer({
     : t.composer.placeholderMessageWithChannel.replace('{channel}', channelName || 'general')
   const taRef = useRef<HTMLTextAreaElement | null>(null)
   const fileRef = useRef<HTMLInputElement | null>(null)
-  const highlightRef = useRef<HTMLDivElement | null>(null)
-
-  const renderHighlightedText = (content: string) => {
-    const parts = content.split(/(https?:\/\/[^\s]+)/g)
-    return parts.map((part, idx) => {
-      if (/^https?:\/\//.test(part)) {
-        return (
-          <span key={`${part}-${idx}`} className="composer-link">
-            {part}
-          </span>
-        )
-      }
-      return <span key={idx}>{part}</span>
-    })
-  }
 
   const adjustHeight = () => {
     if (typeof window === 'undefined') return
@@ -64,7 +49,7 @@ export default function Composer({
     const lineHeight = parseFloat(style.lineHeight) || fontSize * 1.4
     const padding = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0)
     const max = 180 // px, max height
-    const minHeight = 36.5
+    const minHeight = lineHeight + padding
     const threshold = minHeight + 2
     const next = el.scrollHeight <= threshold ? minHeight : Math.min(el.scrollHeight, max)
     el.style.height = `${Math.ceil(next)}px`
@@ -176,46 +161,34 @@ export default function Composer({
               <path d="M9 12v5a4 4 0 0 0 8 0v-4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
-          <div className="relative flex-1">
-            <div className="composer-highlight text-[14px] leading-6" aria-hidden>
-              <div ref={highlightRef} className="composer-highlight-content">
-                {value ? renderHighlightedText(value) : null}
-              </div>
-            </div>
-            <textarea
-              ref={taRef}
-              value={value}
-              onChange={(e) => !disabled && onChange(e.target.value)}
-              onPaste={(event) => {
-                if (!onAddAttachment || disabled || uploading) return
-                const items = event.clipboardData?.items
-                if (!items) return
-                const fileItem = Array.from(items).find((item) => item.kind === 'file')
-                if (!fileItem) return
-                const file = fileItem.getAsFile()
-                if (!file) return
-                event.preventDefault()
-                onAddAttachment(file)
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  if (isEnabled) onSend()
-                }
-              }}
-              onScroll={(event) => {
-                const target = event.currentTarget
-                if (!highlightRef.current) return
-                highlightRef.current.style.transform = `translate(${-target.scrollLeft}px, ${-target.scrollTop}px)`
-              }}
-              placeholder={placeholder}
-              disabled={disabled}
-              className={`composer-textarea w-full bg-transparent outline-none resize-none leading-6 text-[14px] ${disabled ? 'cursor-not-allowed' : ''}`}
-              rows={1}
-              style={{ maxHeight: 180 }}
-              maxLength={1000}
-            />
-          </div>
+          <textarea
+            ref={taRef}
+            value={value}
+            onChange={(e) => !disabled && onChange(e.target.value)}
+            onPaste={(event) => {
+              if (!onAddAttachment || disabled || uploading) return
+              const items = event.clipboardData?.items
+              if (!items) return
+              const fileItem = Array.from(items).find((item) => item.kind === 'file')
+              if (!fileItem) return
+              const file = fileItem.getAsFile()
+              if (!file) return
+              event.preventDefault()
+              onAddAttachment(file)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                if (isEnabled) onSend()
+              }
+            }}
+            placeholder={placeholder}
+            disabled={disabled}
+            className={`flex-1 bg-transparent outline-none resize-none leading-6 text-[14px] ${disabled ? 'cursor-not-allowed' : ''}`}
+            rows={1}
+            style={{ maxHeight: 180 }}
+            maxLength={1000}
+          />
           <div className="flex items-center gap-1 ml-2">
             <button
               type="button"
