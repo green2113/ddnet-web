@@ -605,6 +605,8 @@ function App() {
       })
   }
 
+  const isElectronApp = typeof window !== 'undefined' && (window as any).electronAPI
+
   return (
     <div
       className={(isDark ? 'theme-dark ' : '') + 'app-shell flex flex-col'}
@@ -620,41 +622,44 @@ function App() {
             <span className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{serverLabel}</span>
           </div>
         </div>
-        {(window as any)?.electronAPI ? (
-          <div className="fixed right-0 top-0 h-8 z-[1000] flex items-center app-no-drag pointer-events-auto">
-            <button
-              type="button"
-              className="h-full w-10 grid place-items-center hover-surface cursor-pointer"
-              aria-label="Minimize"
-              onClick={() => (window as any).electronAPI.minimize()}
-            >
-              <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden>
-                <path d="M1 5h8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              className="h-full w-10 grid place-items-center hover-surface cursor-pointer"
-              aria-label="Maximize"
-              onClick={() => (window as any).electronAPI.toggleMaximize()}
-            >
-              <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden>
-                <rect x="1.5" y="1.5" width="7" height="7" fill="none" stroke="currentColor" strokeWidth="1.2" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              className="h-full w-10 grid place-items-center cursor-pointer hover:bg-[#ef4444] hover:text-white"
-              aria-label="Close"
-              onClick={() => (window as any).electronAPI.close()}
-            >
-              <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden>
-                <path d="M2 2l6 6M8 2L2 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-              </svg>
-            </button>
-          </div>
-        ) : null}
       </div>
+      {isElectronApp
+        ? createPortal(
+            <div className="fixed right-0 top-0 h-8 z-[1000] flex items-center app-no-drag pointer-events-auto">
+              <button
+                type="button"
+                className="h-full w-10 grid place-items-center hover-surface cursor-pointer"
+                aria-label="Minimize"
+                onClick={() => (window as any).electronAPI.minimize()}
+              >
+                <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden>
+                  <path d="M1 5h8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                className="h-full w-10 grid place-items-center hover-surface cursor-pointer"
+                aria-label="Maximize"
+                onClick={() => (window as any).electronAPI.toggleMaximize()}
+              >
+                <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden>
+                  <rect x="1.5" y="1.5" width="7" height="7" fill="none" stroke="currentColor" strokeWidth="1.2" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                className="h-full w-10 grid place-items-center cursor-pointer hover:bg-[#ef4444] hover:text-white"
+                aria-label="Close"
+                onClick={() => (window as any).electronAPI.close()}
+              >
+                <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden>
+                  <path d="M2 2l6 6M8 2L2 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                </svg>
+              </button>
+            </div>,
+            document.body
+          )
+        : null}
       <div className="flex-1 flex min-h-0">
         <div className="hidden md:flex flex-col w-[320px] h-full" style={{ background: 'var(--rail-bg)' }}>
           <div className="flex flex-1 min-h-0">
@@ -997,6 +1002,7 @@ function App() {
                     style={{ background: '#5865f2' }}
                     onClick={() => {
                       if (!voiceSwitchTargetId) return
+                      setAutoJoinVoiceChannelId(voiceSwitchTargetId)
                       applyChannelSelect(voiceSwitchTargetId)
                       setVoiceSwitchTargetId(null)
                     }}

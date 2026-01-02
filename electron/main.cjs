@@ -7,6 +7,7 @@ const createWindow = () => {
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
+    fullscreen: true,
     frame: false,
     autoHideMenuBar: true,
     webPreferences: {
@@ -14,11 +15,10 @@ const createWindow = () => {
     },
   })
 
+  const appUrl = 'https://ddnet.under1111.com'
+  win.loadURL(appUrl)
   if (isDev) {
-    win.loadURL('http://localhost:5173')
     win.webContents.openDevTools()
-  } else {
-    win.loadFile(path.join(__dirname, '../dist/index.html'))
   }
 }
 
