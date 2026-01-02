@@ -94,6 +94,9 @@ export type UiText = {
     leave: string
     disconnect: string
     join: string
+    screenShare: string
+    stopShare: string
+    screenShareYou: string
     micOn: string
     micOff: string
     headsetOn: string
@@ -253,6 +256,9 @@ const translations: TranslationMap = {
       leave: 'Leave',
       disconnect: 'Disconnect',
       join: 'Join',
+      screenShare: 'Share screen',
+      stopShare: 'Stop sharing',
+      screenShareYou: 'Your screen',
       micOn: 'Unmute mic',
       micOff: 'Mute mic',
       headsetOn: 'Unmute headset',
@@ -410,6 +416,9 @@ const translations: TranslationMap = {
       leave: '나가기',
       disconnect: '연결 끊기',
       join: '입장하기',
+      screenShare: '?? ??',
+      stopShare: '?? ??',
+      screenShareYou: '? ??',
       micOn: '음소거 해제',
       micOff: '음소거',
       headsetOn: '헤드셋 음소거 해제',
@@ -567,6 +576,9 @@ const translations: TranslationMap = {
       leave: '退出',
       disconnect: '断开连接',
       join: '加入',
+      screenShare: '????',
+      stopShare: '????',
+      screenShareYou: '????',
       micOn: '开启麦克风',
       micOff: '关闭麦克风',
       headsetOn: '开启耳机',
@@ -724,6 +736,9 @@ const translations: TranslationMap = {
       leave: '離開',
       disconnect: '斷開連線',
       join: '加入',
+      screenShare: '????',
+      stopShare: '????',
+      screenShareYou: '????',
       micOn: '開啟麥克風',
       micOff: '關閉麥克風',
       headsetOn: '開啟耳機',

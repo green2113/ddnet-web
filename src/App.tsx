@@ -12,7 +12,7 @@ import MessageList from './components/MessageList'
 import Composer from './components/Composer'
 import VoicePanel from './components/VoicePanel'
 import Tooltip from './components/Tooltip'
-import { VolumeIcon } from './components/icons/VoiceIcons'
+import { ScreenShareIcon, VolumeIcon } from './components/icons/VoiceIcons'
 import { getStoredLanguage, getTranslations, type Language } from './i18n'
 
 type User = {
@@ -68,6 +68,7 @@ function App() {
   const [voiceChannelId, setVoiceChannelId] = useState('')
   const [joinedVoiceChannelId, setJoinedVoiceChannelId] = useState('')
   const [voiceLeaveSignal, setVoiceLeaveSignal] = useState(0)
+  const [isScreenSharing, setIsScreenSharing] = useState(false)
   const [voiceSpeakingByChannel, setVoiceSpeakingByChannel] = useState<Record<string, string[]>>({})
   const [autoJoinVoiceChannelId, setAutoJoinVoiceChannelId] = useState<string | null>(null)
   const [input, setInput] = useState('')
@@ -322,6 +323,21 @@ function App() {
     if (typeof window === 'undefined') return
     window.localStorage.setItem('ui-language', language)
   }, [language])
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<boolean>).detail
+      setIsScreenSharing(Boolean(detail))
+    }
+    window.addEventListener('voice-screen-share-state', handler as EventListener)
+    return () => window.removeEventListener('voice-screen-share-state', handler as EventListener)
+  }, [])
+
+  useEffect(() => {
+    if (!joinedVoiceChannelId) {
+      setIsScreenSharing(false)
+    }
+  }, [joinedVoiceChannelId])
 
 
   useEffect(() => {
@@ -822,19 +838,33 @@ function App() {
                     {voiceSidebarChannel.name}
                   </button>
                 </div>
-                <Tooltip label={t.voice.disconnect}>
-                  <button
-                    type="button"
-                    aria-label={t.voice.leave}
-                    className="h-8 w-8 rounded-md grid place-items-center hover-surface cursor-pointer"
-                    style={{ color: '#cbd5e1' }}
-                    onClick={() => setVoiceLeaveSignal((prev) => prev + 1)}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                      <path d="M24,6.24c0,7.64-10.13,17.76-17.76,17.76-1.67,0-3.23-.63-4.38-1.78l-1-1.15c-1.16-1.16-1.16-3.12,.05-4.33,.03-.03,2.44-1.88,2.44-1.88,1.2-1.14,3.09-1.14,4.28,0l1.46,1.17c3.2-1.36,5.47-3.64,6.93-6.95l-1.16-1.46c-1.15-1.19-1.15-3.09,0-4.28,0,0,1.85-2.41,1.88-2.44,1.21-1.21,3.17-1.21,4.38,0l1.05,.91c1.2,1.19,1.83,2.75,1.83,4.42Z" />
-                    </svg>
-                  </button>
-                </Tooltip>
+                <div className="flex items-center gap-2">
+                  <Tooltip label={isScreenSharing ? t.voice.stopShare : t.voice.screenShare}>
+                    <button
+                      type="button"
+                      aria-label={isScreenSharing ? t.voice.stopShare : t.voice.screenShare}
+                      aria-pressed={isScreenSharing}
+                      className="h-8 w-8 rounded-md grid place-items-center hover-surface cursor-pointer"
+                      style={{ color: isScreenSharing ? '#38bdf8' : '#cbd5e1' }}
+                      onClick={() => window.dispatchEvent(new CustomEvent('voice-screen-share-toggle'))}
+                    >
+                      <ScreenShareIcon size={16} />
+                    </button>
+                  </Tooltip>
+                  <Tooltip label={t.voice.disconnect}>
+                    <button
+                      type="button"
+                      aria-label={t.voice.leave}
+                      className="h-8 w-8 rounded-md grid place-items-center hover-surface cursor-pointer"
+                      style={{ color: '#cbd5e1' }}
+                      onClick={() => setVoiceLeaveSignal((prev) => prev + 1)}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                        <path d="M24,6.24c0,7.64-10.13,17.76-17.76,17.76-1.67,0-3.23-.63-4.38-1.78l-1-1.15c-1.16-1.16-1.16-3.12,.05-4.33,.03-.03,2.44-1.88,2.44-1.88,1.2-1.14,3.09-1.14,4.28,0l1.46,1.17c3.2-1.36,5.47-3.64,6.93-6.95l-1.16-1.46c-1.15-1.19-1.15-3.09,0-4.28,0,0,1.85-2.41,1.88-2.44,1.21-1.21,3.17-1.21,4.38,0l1.05,.91c1.2,1.19,1.83,2.75,1.83,4.42Z" />
+                      </svg>
+                    </button>
+                  </Tooltip>
+                </div>
               </div>
             </div>
           ) : null}
@@ -969,19 +999,33 @@ function App() {
                         {voiceSidebarChannel.name}
                       </button>
                     </div>
-                    <Tooltip label={t.voice.disconnect}>
-                      <button
-                        type="button"
-                        aria-label={t.voice.leave}
-                        className="h-8 w-8 rounded-md grid place-items-center hover-surface cursor-pointer"
-                        style={{ color: '#cbd5e1' }}
-                        onClick={() => setVoiceLeaveSignal((prev) => prev + 1)}
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                          <path d="M24,6.24c0,7.64-10.13,17.76-17.76,17.76-1.67,0-3.23-.63-4.38-1.78l-1-1.15c-1.16-1.16-1.16-3.12,.05-4.33,.03-.03,2.44-1.88,2.44-1.88,1.2-1.14,3.09-1.14,4.28,0l1.46,1.17c3.2-1.36,5.47-3.64,6.93-6.95l-1.16-1.46c-1.15-1.19-1.15-3.09,0-4.28,0,0,1.85-2.41,1.88-2.44,1.21-1.21,3.17-1.21,4.38,0l1.05,.91c1.2,1.19,1.83,2.75,1.83,4.42Z" />
-                        </svg>
-                      </button>
-                    </Tooltip>
+                    <div className="flex items-center gap-2">
+                      <Tooltip label={isScreenSharing ? t.voice.stopShare : t.voice.screenShare}>
+                        <button
+                          type="button"
+                          aria-label={isScreenSharing ? t.voice.stopShare : t.voice.screenShare}
+                          aria-pressed={isScreenSharing}
+                          className="h-8 w-8 rounded-md grid place-items-center hover-surface cursor-pointer"
+                          style={{ color: isScreenSharing ? '#38bdf8' : '#cbd5e1' }}
+                          onClick={() => window.dispatchEvent(new CustomEvent('voice-screen-share-toggle'))}
+                        >
+                          <ScreenShareIcon size={16} />
+                        </button>
+                      </Tooltip>
+                      <Tooltip label={t.voice.disconnect}>
+                        <button
+                          type="button"
+                          aria-label={t.voice.leave}
+                          className="h-8 w-8 rounded-md grid place-items-center hover-surface cursor-pointer"
+                          style={{ color: '#cbd5e1' }}
+                          onClick={() => setVoiceLeaveSignal((prev) => prev + 1)}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                            <path d="M24,6.24c0,7.64-10.13,17.76-17.76,17.76-1.67,0-3.23-.63-4.38-1.78l-1-1.15c-1.16-1.16-1.16-3.12,.05-4.33,.03-.03,2.44-1.88,2.44-1.88,1.2-1.14,3.09-1.14,4.28,0l1.46,1.17c3.2-1.36,5.47-3.64,6.93-6.95l-1.16-1.46c-1.15-1.19-1.15-3.09,0-4.28,0,0,1.85-2.41,1.88-2.44,1.21-1.21,3.17-1.21,4.38,0l1.05,.91c1.2,1.19,1.83,2.75,1.83,4.42Z" />
+                          </svg>
+                        </button>
+                      </Tooltip>
+                    </div>
                   </div>
                 </div>
               ) : null}

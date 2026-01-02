@@ -49,3 +49,11 @@ export function VolumeIcon({ size = 18 }: { size?: number }) {
     </svg>
   )
 }
+
+export function ScreenShareIcon({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M4 5a2 2 0 0 0-2 2v8.5a2 2 0 0 0 2 2h6l-1.6 1.6a1 1 0 0 0 1.4 1.4L12 18.3l2.2 2.2a1 1 0 0 0 1.4-1.4L14 17.5h6a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H4Z" />
+    </svg>
+  )
+}

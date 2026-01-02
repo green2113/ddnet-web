@@ -19,6 +19,13 @@ type VoiceMember = {
   deafened?: boolean
 }
 
+type ScreenShareTile = {
+  id: string
+  stream: MediaStream
+  label: string
+  isLocal?: boolean
+}
+
 type VoicePanelProps = {
   channelId: string
   socket: Socket | null
@@ -82,11 +89,14 @@ export default function VoicePanel({
     if (typeof window === 'undefined') return 'default'
     return window.localStorage.getItem('voice-output-device') || 'default'
   })
+  const [screenShares, setScreenShares] = useState<ScreenShareTile[]>([])
   const forcedHeadsetRef = useRef(false)
   const micBeforeForceRef = useRef(false)
   const headsetBeforeForceRef = useRef(false)
   const localStreamRef = useRef<MediaStream | null>(null)
   const rawStreamRef = useRef<MediaStream | null>(null)
+  const screenShareStreamRef = useRef<MediaStream | null>(null)
+  const screenShareSendersRef = useRef<Map<string, RTCRtpSender>>(new Map())
   const micContextRef = useRef<AudioContext | null>(null)
   const micGainRef = useRef<GainNode | null>(null)
   const micDestinationRef = useRef<MediaStreamAudioDestinationNode | null>(null)
@@ -138,6 +148,10 @@ export default function VoicePanel({
       audio.srcObject = null
       audio.remove()
     }
+    if (screenShareSendersRef.current.has(peerId)) {
+      screenShareSendersRef.current.delete(peerId)
+    }
+    setScreenShares((prev) => prev.filter((share) => share.id !== peerId))
   }
 
   const startSpeakingMonitor = (peerId: string, stream: MediaStream, threshold?: number) => {
@@ -180,6 +194,9 @@ export default function VoicePanel({
   const leaveVoice = () => {
     if (socket && joined) {
       socket.emit('voice:leave', { channelId })
+    }
+    if (screenShareStreamRef.current) {
+      stopScreenShare()
     }
     peersRef.current.forEach((_, peerId) => cleanupPeer(peerId))
     if (socket?.id) {
@@ -252,9 +269,23 @@ export default function VoicePanel({
   }, [])
 
   useEffect(() => {
+    const handler = () => {
+      if (!joined) return
+      if (screenShareStreamRef.current) {
+        stopScreenShare()
+      } else {
+        void startScreenShare()
+      }
+    }
+    window.addEventListener('voice-screen-share-toggle', handler as EventListener)
+    return () => window.removeEventListener('voice-screen-share-toggle', handler as EventListener)
+  }, [joined])
+
+  useEffect(() => {
     if (!socket?.id) return
     speakingThresholdRef.current.set(socket.id, micSensitivity)
   }, [micSensitivity, socket?.id])
+
 
   const createPeer = async (peerId: string, initiate: boolean) => {
     if (!socket) return
@@ -265,6 +296,11 @@ export default function VoicePanel({
     localStreamRef.current?.getTracks().forEach((track) => {
       peer.addTrack(track, localStreamRef.current as MediaStream)
     })
+    const screenTrack = screenShareStreamRef.current?.getVideoTracks()[0]
+    if (screenTrack && screenShareStreamRef.current) {
+      const sender = peer.addTrack(screenTrack, screenShareStreamRef.current)
+      screenShareSendersRef.current.set(peerId, sender)
+    }
 
     peer.onicecandidate = (event) => {
       if (event.candidate) {
@@ -273,20 +309,27 @@ export default function VoicePanel({
     }
 
     peer.ontrack = (event) => {
-      const audioId = `voice-audio-${peerId}`
-      let audio = document.getElementById(audioId) as HTMLAudioElement | null
-      if (!audio) {
-        audio = document.createElement('audio')
-        audio.id = audioId
-        audio.autoplay = true
-        audio.setAttribute('playsinline', 'true')
-        document.body.appendChild(audio)
-      }
-      applyOutputDevice(audio, outputDeviceId)
       const [stream] = event.streams
       if (stream) {
-        audio.srcObject = stream
-        startSpeakingMonitor(peerId, stream)
+        if (event.track.kind === 'video') {
+          setScreenShares((prev) => {
+            const next = prev.filter((share) => share.id !== peerId)
+            return [...next, { id: peerId, stream, label: getMemberLabel(members.find((m) => m.id === peerId) || { id: peerId, username: peerId }) }]
+          })
+        } else {
+          const audioId = `voice-audio-${peerId}`
+          let audio = document.getElementById(audioId) as HTMLAudioElement | null
+          if (!audio) {
+            audio = document.createElement('audio')
+            audio.id = audioId
+            audio.autoplay = true
+            audio.setAttribute('playsinline', 'true')
+            document.body.appendChild(audio)
+          }
+          applyOutputDevice(audio, outputDeviceId)
+          audio.srcObject = stream
+          startSpeakingMonitor(peerId, stream)
+        }
       }
     }
 
@@ -313,6 +356,59 @@ export default function VoicePanel({
   const resolveInputConstraints = () => {
     if (!inputDeviceId || inputDeviceId === 'default') return {}
     return { deviceId: { exact: inputDeviceId } }
+  }
+
+  const renegotiatePeer = async (peerId: string) => {
+    if (!socket) return
+    const peer = peersRef.current.get(peerId)
+    if (!peer) return
+    const offer = await peer.createOffer()
+    await peer.setLocalDescription(offer)
+    socket.emit('voice:offer', { channelId, targetId: peerId, sdp: offer })
+  }
+
+  const startScreenShare = async () => {
+    if (!joined) return
+    if (screenShareStreamRef.current) return
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false })
+      screenShareStreamRef.current = stream
+      const track = stream.getVideoTracks()[0]
+      if (track) {
+        track.onended = () => {
+          stopScreenShare()
+        }
+      }
+      setScreenShares((prev) => {
+        const next = prev.filter((share) => share.id !== 'local')
+        return [...next, { id: 'local', stream, label: t.voice.screenShareYou, isLocal: true }]
+      })
+      peersRef.current.forEach((peer, peerId) => {
+        if (!track) return
+        const sender = peer.addTrack(track, stream)
+        screenShareSendersRef.current.set(peerId, sender)
+        void renegotiatePeer(peerId)
+      })
+      window.dispatchEvent(new CustomEvent('voice-screen-share-state', { detail: true }))
+    } catch (error) {
+      console.error('[voice] failed to start screen share', error)
+    }
+  }
+
+  const stopScreenShare = () => {
+    const stream = screenShareStreamRef.current
+    if (!stream) return
+    stream.getTracks().forEach((track) => track.stop())
+    screenShareStreamRef.current = null
+    peersRef.current.forEach((peer, peerId) => {
+      const sender = screenShareSendersRef.current.get(peerId)
+      if (!sender) return
+      peer.removeTrack(sender)
+      screenShareSendersRef.current.delete(peerId)
+      void renegotiatePeer(peerId)
+    })
+    setScreenShares((prev) => prev.filter((share) => share.id !== 'local'))
+    window.dispatchEvent(new CustomEvent('voice-screen-share-state', { detail: false }))
   }
 
   const joinVoice = async () => {
@@ -571,6 +667,13 @@ export default function VoicePanel({
           </div>
         </div>
       </div>
+      {screenShares.length > 0 ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          {screenShares.map((share) => (
+            <ScreenShareCard key={share.id} stream={share.stream} label={share.label} isLocal={share.isLocal} />
+          ))}
+        </div>
+      ) : null}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
         {(members.length > 1 ? sortMembersByName(members) : members).map((member) => {
           const isSpeaking = speakingIds.includes(member.id) && !member.muted && !member.deafened
@@ -611,6 +714,26 @@ export default function VoicePanel({
             </div>
           )
         })}
+      </div>
+    </div>
+  )
+}
+
+function ScreenShareCard({ stream, label, isLocal }: { stream: MediaStream; label: string; isLocal?: boolean }) {
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+
+  useEffect(() => {
+    if (!videoRef.current) return
+    videoRef.current.srcObject = stream
+  }, [stream])
+
+  return (
+    <div className="rounded-lg overflow-hidden" style={{ background: 'var(--panel)', border: '1px solid var(--border)' }}>
+      <div className="px-3 py-2 text-xs" style={{ color: 'var(--text-muted)' }}>
+        {label}
+      </div>
+      <div className="bg-black/60">
+        <video ref={videoRef} autoPlay playsInline muted={isLocal} className="w-full h-[220px] object-contain" />
       </div>
     </div>
   )
