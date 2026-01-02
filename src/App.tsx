@@ -326,6 +326,19 @@ function App() {
 
   useEffect(() => {
     const handler = (event: Event) => {
+      const detail = (event as CustomEvent<string>).detail
+      if (detail === 'unsupported') {
+        window.alert(t.voice.screenShareUnsupported)
+        return
+      }
+      window.alert(t.voice.screenShareFailed)
+    }
+    window.addEventListener('voice-screen-share-error', handler as EventListener)
+    return () => window.removeEventListener('voice-screen-share-error', handler as EventListener)
+  }, [t])
+
+  useEffect(() => {
+    const handler = (event: Event) => {
       const detail = (event as CustomEvent<boolean>).detail
       setIsScreenSharing(Boolean(detail))
     }

@@ -370,6 +370,10 @@ export default function VoicePanel({
   const startScreenShare = async () => {
     if (!joined) return
     if (screenShareStreamRef.current) return
+    if (!navigator.mediaDevices?.getDisplayMedia) {
+      window.dispatchEvent(new CustomEvent('voice-screen-share-error', { detail: 'unsupported' }))
+      return
+    }
     try {
       const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false })
       screenShareStreamRef.current = stream
@@ -391,6 +395,7 @@ export default function VoicePanel({
       })
       window.dispatchEvent(new CustomEvent('voice-screen-share-state', { detail: true }))
     } catch (error) {
+      window.dispatchEvent(new CustomEvent('voice-screen-share-error', { detail: 'failed' }))
       console.error('[voice] failed to start screen share', error)
     }
   }

@@ -97,6 +97,8 @@ export type UiText = {
     screenShare: string
     stopShare: string
     screenShareYou: string
+    screenShareUnsupported: string
+    screenShareFailed: string
     micOn: string
     micOff: string
     headsetOn: string
@@ -259,6 +261,8 @@ const translations: TranslationMap = {
       screenShare: 'Share screen',
       stopShare: 'Stop sharing',
       screenShareYou: 'Your screen',
+      screenShareUnsupported: 'Screen share is not supported in this environment.',
+      screenShareFailed: 'Failed to start screen sharing.',
       micOn: 'Unmute mic',
       micOff: 'Mute mic',
       headsetOn: 'Unmute headset',
@@ -416,9 +420,11 @@ const translations: TranslationMap = {
       leave: '나가기',
       disconnect: '연결 끊기',
       join: '입장하기',
-      screenShare: '?? ??',
-      stopShare: '?? ??',
-      screenShareYou: '? ??',
+      screenShare: '화면 공유',
+      stopShare: '화면 공유 중지',
+      screenShareYou: '내 화면',
+      screenShareUnsupported: '?? ??? ???? ???.',
+      screenShareFailed: '?? ??? ??? ? ????.',
       micOn: '음소거 해제',
       micOff: '음소거',
       headsetOn: '헤드셋 음소거 해제',
@@ -579,6 +585,8 @@ const translations: TranslationMap = {
       screenShare: '????',
       stopShare: '????',
       screenShareYou: '????',
+      screenShareUnsupported: '????????????',
+      screenShareFailed: '?????????',
       micOn: '开启麦克风',
       micOff: '关闭麦克风',
       headsetOn: '开启耳机',
@@ -739,6 +747,8 @@ const translations: TranslationMap = {
       screenShare: '????',
       stopShare: '????',
       screenShareYou: '????',
+      screenShareUnsupported: '????????????',
+      screenShareFailed: '?????????',
       micOn: '開啟麥克風',
       micOff: '關閉麥克風',
       headsetOn: '開啟耳機',
