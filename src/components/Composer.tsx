@@ -71,6 +71,23 @@ export default function Composer({
       observer?.disconnect()
     }
   }, [])
+
+  useEffect(() => {
+    const handleKeydown = (event: KeyboardEvent) => {
+      if (disabled) return
+      if (event.defaultPrevented) return
+      if (event.ctrlKey || event.metaKey || event.altKey) return
+      const target = event.target as HTMLElement | null
+      if (target) {
+        const tag = target.tagName?.toLowerCase()
+        if (tag === 'input' || tag === 'textarea' || target.isContentEditable) return
+      }
+      if (!taRef.current) return
+      taRef.current.focus()
+    }
+    window.addEventListener('keydown', handleKeydown)
+    return () => window.removeEventListener('keydown', handleKeydown)
+  }, [disabled])
   return (
     <div className="px-4 pb-4">
       <div className={`rounded-[10px] ${disabled ? 'cursor-not-allowed opacity-90' : ''}`} style={{ background: 'var(--input-bg)', color: 'var(--text-primary)' }}>
