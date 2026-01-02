@@ -63,6 +63,7 @@ export default function SidebarChannels({
     y: 0,
     channel: null,
   })
+  const [dragOverId, setDragOverId] = useState<string | null>(null)
   const [serverMenuPos, setServerMenuPos] = useState<{ top: number; left: number; width: number } | null>(null)
   const wrapRef = useRef<HTMLDivElement | null>(null)
   const serverMenuRef = useRef<HTMLDivElement | null>(null)
@@ -236,6 +237,7 @@ export default function SidebarChannels({
                 background: c.id === activeId ? 'color-mix(in oklch, var(--accent) 14%, transparent)' : 'transparent',
                 opacity: c.hidden ? 0.6 : 1,
                 userSelect: 'none',
+                position: 'relative',
               }}
               draggable={canManage}
               onClick={() => onSelect?.(c.id)}
@@ -248,6 +250,7 @@ export default function SidebarChannels({
               onDragStart={(event) => {
                 if (!canManage) return
                 dragIdRef.current = c.id
+                setDragOverId(null)
                 if (event.dataTransfer) {
                   event.dataTransfer.setData('text/plain', c.id)
                   event.dataTransfer.effectAllowed = 'move'
@@ -255,16 +258,19 @@ export default function SidebarChannels({
               }}
               onDragEnd={() => {
                 dragIdRef.current = null
+                setDragOverId(null)
               }}
               onDragOver={(e) => {
                 if (!canManage || !dragIdRef.current) return
                 e.preventDefault()
+                setDragOverId(c.id)
               }}
               onDrop={(e) => {
                 if (!canManage) return
                 e.preventDefault()
                 const draggedId = dragIdRef.current
                 dragIdRef.current = null
+                setDragOverId(null)
                 if (!draggedId || draggedId === c.id) return
                 const updated = [...channels]
                 const fromIndex = updated.findIndex((channel) => channel.id === draggedId)
@@ -274,6 +280,10 @@ export default function SidebarChannels({
                 updated.splice(toIndex, 0, moved)
                 onReorderChannels?.(updated.map((channel) => channel.id))
               }}
+              onDragLeave={() => {
+                if (!canManage) return
+                setDragOverId((prev) => (prev === c.id ? null : prev))
+              }}
               onContextMenu={(e) => {
                 if (!canManage) return
                 e.preventDefault()
@@ -281,6 +291,20 @@ export default function SidebarChannels({
                 setChannelMenu({ visible: true, x: e.clientX, y: e.clientY, channel: c })
               }}
             >
+              {canManage && dragOverId === c.id ? (
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: 8,
+                    right: 8,
+                    bottom: -2,
+                    height: 3,
+                    borderRadius: 999,
+                    background: 'var(--accent)',
+                    boxShadow: '0 0 6px color-mix(in oklch, var(--accent) 60%, transparent)',
+                  }}
+                />
+              ) : null}
               <span style={{ color: 'var(--text-muted)' }}>#</span>
               <span
                 className="truncate"
@@ -333,6 +357,7 @@ export default function SidebarChannels({
                     background: c.id === activeId ? 'color-mix(in oklch, var(--accent) 14%, transparent)' : 'transparent',
                     opacity: c.hidden ? 0.6 : 1,
                     userSelect: 'none',
+                    position: 'relative',
                   }}
                   draggable={canManage}
                   onClick={() => onSelect?.(c.id)}
@@ -345,6 +370,7 @@ export default function SidebarChannels({
                   onDragStart={(event) => {
                     if (!canManage) return
                     dragIdRef.current = c.id
+                    setDragOverId(null)
                     if (event.dataTransfer) {
                       event.dataTransfer.setData('text/plain', c.id)
                       event.dataTransfer.effectAllowed = 'move'
@@ -352,16 +378,19 @@ export default function SidebarChannels({
                   }}
                   onDragEnd={() => {
                     dragIdRef.current = null
+                    setDragOverId(null)
                   }}
                   onDragOver={(e) => {
                     if (!canManage || !dragIdRef.current) return
                     e.preventDefault()
+                    setDragOverId(c.id)
                   }}
                   onDrop={(e) => {
                     if (!canManage) return
                     e.preventDefault()
                     const draggedId = dragIdRef.current
                     dragIdRef.current = null
+                    setDragOverId(null)
                     if (!draggedId || draggedId === c.id) return
                     const updated = [...channels]
                     const fromIndex = updated.findIndex((channel) => channel.id === draggedId)
@@ -371,6 +400,10 @@ export default function SidebarChannels({
                     updated.splice(toIndex, 0, moved)
                     onReorderChannels?.(updated.map((channel) => channel.id))
                   }}
+                  onDragLeave={() => {
+                    if (!canManage) return
+                    setDragOverId((prev) => (prev === c.id ? null : prev))
+                  }}
                   onContextMenu={(e) => {
                     if (!canManage) return
                     e.preventDefault()
@@ -378,6 +411,20 @@ export default function SidebarChannels({
                     setChannelMenu({ visible: true, x: e.clientX, y: e.clientY, channel: c })
                   }}
                 >
+                  {canManage && dragOverId === c.id ? (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: 8,
+                        right: 8,
+                        bottom: -2,
+                        height: 3,
+                        borderRadius: 999,
+                        background: 'var(--accent)',
+                        boxShadow: '0 0 6px color-mix(in oklch, var(--accent) 60%, transparent)',
+                      }}
+                    />
+                  ) : null}
                   <span style={{ color: 'var(--text-muted)' }}>
                     <VolumeIcon size={16} />
                   </span>
