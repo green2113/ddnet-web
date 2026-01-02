@@ -602,7 +602,7 @@ function App() {
       style={{ background: 'var(--bg-app)', color: 'var(--text-primary)' }}
       onContextMenu={(event) => event.preventDefault()}
     >
-      <div className="h-8 w-full relative flex items-center no-select app-drag z-[120]" style={{ background: 'var(--topbar-bg)' }}>
+      <div className="h-8 w-full relative flex items-center no-select app-drag z-10" style={{ background: 'var(--topbar-bg)' }}>
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="flex items-center gap-2 app-no-drag pointer-events-auto">
             <div className="w-6 h-6 rounded-2xl overflow-hidden flex items-center justify-center" style={{ background: 'var(--input-bg)', color: 'var(--text-primary)' }}>
@@ -612,7 +612,7 @@ function App() {
           </div>
         </div>
         {(window as any)?.electronAPI ? (
-          <div className="absolute right-0 top-0 h-full flex items-center app-no-drag">
+          <div className="fixed right-0 top-0 h-8 z-[1000] flex items-center app-no-drag pointer-events-auto">
             <button
               type="button"
               className="h-full w-10 grid place-items-center hover-surface cursor-pointer"
@@ -900,6 +900,7 @@ function App() {
                 onRemoveAttachment={removeAttachment}
                 uploading={uploading}
                 attachments={attachments}
+                channelName={activeChannel?.name || 'general'}
                 t={t}
               />
             </>

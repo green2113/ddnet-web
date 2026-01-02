@@ -32,6 +32,7 @@ export type UiText = {
   composer: {
     placeholderLogin: string
     placeholderMessage: string
+    placeholderMessageWithChannel: string
     send: string
   }
   messageList: {
@@ -174,6 +175,7 @@ const translations: TranslationMap = {
     composer: {
       placeholderLogin: 'Please log in.',
       placeholderMessage: 'Send a message',
+      placeholderMessageWithChannel: 'Message # {channel}',
       send: 'Send',
     },
     messageList: {
@@ -314,6 +316,7 @@ const translations: TranslationMap = {
     composer: {
       placeholderLogin: '로그인을 해주세요.',
       placeholderMessage: '메시지 보내기',
+      placeholderMessageWithChannel: '# {channel}에 메시지 보내기',
       send: '보내기',
     },
     messageList: {
@@ -454,6 +457,7 @@ const translations: TranslationMap = {
     composer: {
       placeholderLogin: '请先登录。',
       placeholderMessage: '发送消息',
+      placeholderMessageWithChannel: '在 # {channel} 中发送消息',
       send: '发送',
     },
     messageList: {
@@ -594,6 +598,7 @@ const translations: TranslationMap = {
     composer: {
       placeholderLogin: '請先登入。',
       placeholderMessage: '傳送訊息',
+      placeholderMessageWithChannel: '在 # {channel} 中傳送訊息',
       send: '傳送',
     },
     messageList: {

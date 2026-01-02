@@ -9,10 +9,12 @@ type Props = {
   uploading?: boolean
   attachments?: Array<{ id: string; name: string; isImage: boolean; previewUrl?: string }>
   disabled?: boolean
+  channelName: string
   t: {
     composer: {
       placeholderLogin: string
       placeholderMessage: string
+      placeholderMessageWithChannel: string
       send: string
     }
   }
@@ -27,9 +29,13 @@ export default function Composer({
   uploading = false,
   attachments = [],
   disabled = false,
+  channelName,
   t,
 }: Props) {
   const isEnabled = !disabled && (value.trim().length > 0 || attachments.length > 0)
+  const placeholder = disabled
+    ? t.composer.placeholderLogin
+    : t.composer.placeholderMessageWithChannel.replace('{channel}', channelName || 'general')
   const taRef = useRef<HTMLTextAreaElement | null>(null)
   const fileRef = useRef<HTMLInputElement | null>(null)
 
@@ -176,7 +182,7 @@ export default function Composer({
                 if (isEnabled) onSend()
               }
             }}
-            placeholder={disabled ? t.composer.placeholderLogin : t.composer.placeholderMessage}
+            placeholder={placeholder}
             disabled={disabled}
             className={`flex-1 bg-transparent outline-none resize-none leading-6 text-[14px] ${disabled ? 'cursor-not-allowed' : ''}`}
             rows={1}
