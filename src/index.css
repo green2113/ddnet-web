@@ -426,3 +426,8 @@ body {
   from { opacity: 1; }
   to { opacity: 0; }
 }
+
+.channel-name-field:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--accent) 60%, transparent);
+}

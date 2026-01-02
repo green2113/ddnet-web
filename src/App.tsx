@@ -1296,8 +1296,10 @@ function App() {
                   })}
                 </div>
                 <div className="text-sm font-semibold mb-2">{t.sidebarChannels.channelNameLabel}</div>
-                <div className="flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: 'var(--panel)', border: '1px solid var(--border)' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>{createChannelType === 'text' ? '#' : ''}</span>
+                <div className="flex items-center gap-2 rounded-lg px-3 py-2 channel-name-field" style={{ background: 'var(--panel)', border: '1px solid var(--border)' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>
+                    {createChannelType === 'text' ? '#' : <VolumeIcon size={16} />}
+                  </span>
                   <input
                     value={createChannelName}
                     onChange={(event) => setCreateChannelName(event.target.value)}
@@ -1309,7 +1311,7 @@ function App() {
                 <div className="mt-6 flex justify-end gap-3">
                   <button
                     type="button"
-                    className="px-4 h-10 rounded-md"
+                    className="flex-1 h-10 rounded-md"
                     style={{ background: 'rgba(127,127,127,0.2)', color: 'var(--text-primary)' }}
                     onClick={closeCreateChannel}
                   >
@@ -1317,7 +1319,7 @@ function App() {
                   </button>
                   <button
                     type="button"
-                    className="px-4 h-10 rounded-md text-white disabled:opacity-50"
+                    className="flex-1 h-10 rounded-md text-white disabled:opacity-50"
                     style={{ background: 'var(--accent)' }}
                     onClick={() => {
                       if (!canManageChannels) return
