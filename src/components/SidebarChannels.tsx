@@ -281,6 +281,9 @@ export default function SidebarChannels({
               onDragOver={(e) => {
                 if (!canManage || !dragIdRef.current) return
                 e.preventDefault()
+                if (e.dataTransfer) {
+                  e.dataTransfer.dropEffect = 'move'
+                }
                 const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect()
                 const position = e.clientY < rect.top + rect.height / 2 ? 'above' : 'below'
                 const nextOrder = computeReorder(dragIdRef.current, c.id, position)
@@ -408,6 +411,9 @@ export default function SidebarChannels({
                   onDragOver={(e) => {
                     if (!canManage || !dragIdRef.current) return
                     e.preventDefault()
+                    if (e.dataTransfer) {
+                      e.dataTransfer.dropEffect = 'move'
+                    }
                     const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect()
                     const position = e.clientY < rect.top + rect.height / 2 ? 'above' : 'below'
                     const nextOrder = computeReorder(dragIdRef.current, c.id, position)
