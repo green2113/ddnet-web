@@ -34,6 +34,49 @@ const createWindow = () => {
 
 app.whenReady().then(createWindow)
 
+ipcMain.handle('auth:open', (event, payload) => {
+  const url = payload?.url
+  if (!url) return false
+  const parent = BrowserWindow.fromWebContents(event.sender)
+  if (!parent) return false
+
+  const authWin = new BrowserWindow({
+    width: 520,
+    height: 720,
+    parent,
+    modal: true,
+    show: true,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    autoHideMenuBar: true,
+  })
+
+  const parentUrl = parent.webContents.getURL()
+  const parentOrigin = parentUrl ? new URL(parentUrl).origin : null
+  let completed = false
+
+  const handleNav = (_event, nextUrl) => {
+    if (!parentOrigin) return
+    if (!nextUrl || typeof nextUrl !== 'string') return
+    if (!nextUrl.startsWith(parentOrigin)) return
+    if (completed) return
+    completed = true
+    parent.webContents.send('auth:complete')
+    authWin.close()
+  }
+
+  authWin.webContents.on('will-redirect', handleNav)
+  authWin.webContents.on('will-navigate', handleNav)
+  authWin.on('closed', () => {
+    authWin.webContents.removeListener('will-redirect', handleNav)
+    authWin.webContents.removeListener('will-navigate', handleNav)
+  })
+
+  authWin.loadURL(url)
+  return true
+})
+
 ipcMain.handle('window:minimize', () => {
   const win = BrowserWindow.getFocusedWindow()
   if (win) win.minimize()

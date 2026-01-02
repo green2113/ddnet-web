@@ -4,6 +4,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   minimize: () => ipcRenderer.invoke('window:minimize'),
   toggleMaximize: () => ipcRenderer.invoke('window:toggle-maximize'),
   close: () => ipcRenderer.invoke('window:close'),
+  openAuth: (url) => ipcRenderer.invoke('auth:open', { url }),
   getDesktopSources: async () => {
     const sources = await desktopCapturer.getSources({
       types: ['window', 'screen'],
@@ -17,4 +18,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     }))
   },
   hasNativeControls: true,
+})
+
+ipcRenderer.on('auth:complete', () => {
+  window.dispatchEvent(new Event('auth-complete'))
 })

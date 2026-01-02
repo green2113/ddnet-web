@@ -253,6 +253,7 @@ function App() {
     }
   }, [])
 
+
   useEffect(() => {
     if (!channels.length) return
     const requested = routeChannelId && channels.find((channel) => channel.id === routeChannelId)
@@ -528,8 +529,43 @@ function App() {
     if (el) el.scrollTop = el.scrollHeight
   }, [messages])
 
+  const buildAuthUrl = (returnTo: string) => {
+    const apiBase = (import.meta as any).env?.VITE_API_BASE as string | undefined
+    const authPath = apiBase ? `${apiBase.replace(/\/$/, '')}/auth/discord` : '/auth/discord'
+    const params = new URLSearchParams({ return_to: returnTo })
+    const authUrl = `${authPath}?${params.toString()}`
+    if (authUrl.startsWith('/')) {
+      return `${window.location.origin}${authUrl}`
+    }
+    return authUrl
+  }
+
+  const refreshMe = () => {
+    axios
+      .get(`${serverBase}/api/me`, { withCredentials: true })
+      .then((res) => setUser(res.data || null))
+      .catch(() => {
+        setUser(null)
+      })
+  }
+
+  useEffect(() => {
+    const handler = () => {
+      refreshMe()
+      fetchAdmins()
+    }
+    window.addEventListener('auth-complete', handler as EventListener)
+    return () => window.removeEventListener('auth-complete', handler as EventListener)
+  }, [serverBase])
+
   const login = () => {
-    localStorage.setItem('return_to', window.location.pathname + window.location.search)
+    const returnTo = window.location.pathname + window.location.search
+    localStorage.setItem('return_to', returnTo)
+    const electronAPI = (window as any).electronAPI
+    if (electronAPI?.openAuth) {
+      electronAPI.openAuth(buildAuthUrl(returnTo))
+      return
+    }
     window.location.href = '/login'
   }
 

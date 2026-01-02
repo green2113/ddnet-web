@@ -13,8 +13,15 @@ export default function Login() {
     const authPath = apiBase ? `${apiBase.replace(/\/$/, '')}/auth/discord` : '/auth/discord'
     const params = new URLSearchParams({ return_to: returnTo })
     const authUrl = `${authPath}?${params.toString()}`
-    
-    window.location.href = authUrl
+    const electronAPI = (window as any).electronAPI
+    const absoluteUrl = authUrl.startsWith('/') ? `${window.location.origin}${authUrl}` : authUrl
+
+    if (electronAPI?.openAuth) {
+      electronAPI.openAuth(absoluteUrl)
+      return
+    }
+
+    window.location.href = absoluteUrl
     
   }, [])
 
