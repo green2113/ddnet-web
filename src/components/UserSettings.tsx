@@ -122,9 +122,8 @@ export default function UserSettings({
                 style={{ background: settingsTab === 'profile' ? 'rgba(255,255,255,0.12)' : 'transparent' }}
                 onClick={() => onSetTab('profile')}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-                  <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                  <path d="M4 20a8 8 0 0 1 16 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                  <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm0 2c-4.418 0-8 2.239-8 5v1h16v-1c0-2.761-3.582-5-8-5Z" />
                 </svg>
                 <span>{t.userSettings.account}</span>
               </button>
@@ -134,10 +133,8 @@ export default function UserSettings({
                 style={{ background: settingsTab === 'voice' ? 'rgba(255,255,255,0.12)' : 'transparent' }}
                 onClick={() => onSetTab('voice')}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-                  <path d="M12 15a3 3 0 0 0 3-3V7a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                  <path d="M6 11a6 6 0 0 0 12 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                  <path d="M12 17v3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                  <path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V20h2v-2.08A7 7 0 0 0 19 11h-2Z" />
                 </svg>
                 <span>{t.userSettings.voiceVideo}</span>
               </button>
@@ -147,10 +144,8 @@ export default function UserSettings({
                 style={{ background: settingsTab === 'language' ? 'rgba(255,255,255,0.12)' : 'transparent' }}
                 onClick={() => onSetTab('language')}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-                  <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
-                  <path d="M3 12h18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                  <path d="M12 3a14 14 0 0 0 0 18a14 14 0 0 0 0-18Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                  <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm0 2c1.9 0 3.63 1.03 4.58 2.71H7.42A5.24 5.24 0 0 1 12 4Zm-6.92 4H18.92a8.09 8.09 0 0 1 0 8H5.08a8.09 8.09 0 0 1 0-8Zm2.34 10h9.16A5.24 5.24 0 0 1 12 20a5.24 5.24 0 0 1-4.58-2Z" />
                 </svg>
                 <span>{t.userSettings.language}</span>
               </button>
@@ -164,9 +159,8 @@ export default function UserSettings({
                   onCloseUserSettings()
                 }}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-                  <path d="M10 7V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6a2 2 0 0 1-2-2v-2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M3 12h12m0 0-3-3m3 3-3 3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                  <path d="M10 5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6a2 2 0 0 1-2-2v-2h2v2h6V5h-6v2h-2Zm-1.5 4.5 3-3 1.4 1.4-1.6 1.6H15v2h-4.7l1.6 1.6-1.4 1.4-3-3a1 1 0 0 1 0-1.4Z" />
                 </svg>
                 <span>{t.userSettings.logout}</span>
               </button>
