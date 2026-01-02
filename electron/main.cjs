@@ -21,11 +21,24 @@ const createWindow = () => {
   })
 
   const appUrl = 'https://ddnet.under1111.com'
+  const appOrigin = (() => {
+    try {
+      return new URL(appUrl).origin
+    } catch {
+      return null
+    }
+  })()
   win.loadURL(appUrl)
   win.maximize()
   win.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url)
+    if (url) shell.openExternal(url)
     return { action: 'deny' }
+  })
+  win.webContents.on('will-navigate', (event, url) => {
+    if (!url) return
+    if (appOrigin && url.startsWith(appOrigin)) return
+    event.preventDefault()
+    shell.openExternal(url)
   })
   if (isDev) {
     win.webContents.openDevTools()
