@@ -78,21 +78,21 @@ export default function Composer({
           <div className="px-3 pt-3">
             <div className="flex flex-wrap gap-3">
             {attachments.map((item) => (
-              <div key={item.id} className="relative w-48 p-2">
+              <div key={item.id} className="relative w-48 h-48">
                 <div
-                  className="w-48 rounded-md overflow-hidden"
+                  className="w-48 h-48 rounded-md overflow-hidden flex flex-col"
                   style={{ background: 'var(--input-bg)', border: '1px solid rgba(255,255,255,0.2)' }}
                 >
                   {item.isImage && item.previewUrl ? (
-                    <div className="w-48 h-48 flex items-center justify-center">
+                    <div className="flex-1 flex items-center justify-center">
                       <img src={item.previewUrl} alt={item.name} className="max-w-full max-h-full object-contain" />
                     </div>
                   ) : (
-                    <div className="w-48 h-48 grid place-items-center" style={{ color: 'var(--text-muted)' }}>
+                    <div className="flex-1 grid place-items-center" style={{ color: 'var(--text-muted)' }}>
                       <span className="text-[11px]">FILE</span>
                     </div>
                   )}
-                  <div className="text-[11px] truncate" style={{ color: 'var(--text-primary)' }}>
+                  <div className="px-2 py-1 text-[11px] truncate" style={{ color: 'var(--text-primary)' }}>
                     {item.name}
                   </div>
                 </div>
@@ -189,5 +189,4 @@ export default function Composer({
     </div>
   )
 }
-
 

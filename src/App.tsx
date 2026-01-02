@@ -602,13 +602,41 @@ function App() {
       style={{ background: 'var(--bg-app)', color: 'var(--text-primary)' }}
       onContextMenu={(event) => event.preventDefault()}
     >
-      <div className="h-9 flex items-center justify-center no-select" style={{ background: 'var(--topbar-bg)' }}>
-        <div className="flex items-center gap-2">
+      <div className="h-9 flex items-center justify-center no-select app-drag" style={{ background: 'var(--topbar-bg)' }}>
+        <div className="flex items-center gap-2 app-no-drag">
           <div className="w-6 h-6 rounded-2xl overflow-hidden flex items-center justify-center" style={{ background: 'var(--input-bg)', color: 'var(--text-primary)' }}>
             <span className="text-xs font-semibold">{serverLabel.slice(0, 1)}</span>
           </div>
           <span className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{serverLabel}</span>
         </div>
+        {(window as any)?.electronAPI ? (
+          <div className="ml-auto h-full flex items-center app-no-drag">
+            <button
+              type="button"
+              className="h-full w-10 grid place-items-center hover-surface cursor-pointer"
+              aria-label="Minimize"
+              onClick={() => (window as any).electronAPI.minimize()}
+            >
+              <span className="text-xs">ㅡ</span>
+            </button>
+            <button
+              type="button"
+              className="h-full w-10 grid place-items-center hover-surface cursor-pointer"
+              aria-label="Maximize"
+              onClick={() => (window as any).electronAPI.toggleMaximize()}
+            >
+              <span className="text-xs">ㅁ</span>
+            </button>
+            <button
+              type="button"
+              className="h-full w-10 grid place-items-center hover-surface cursor-pointer"
+              aria-label="Close"
+              onClick={() => (window as any).electronAPI.close()}
+            >
+              <span className="text-xs">x</span>
+            </button>
+          </div>
+        ) : null}
       </div>
       <div className="flex-1 flex min-h-0">
         <div className="hidden md:flex flex-col w-[320px] h-full" style={{ background: 'var(--rail-bg)' }}>
