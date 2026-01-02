@@ -64,6 +64,7 @@ export default function SidebarChannels({
     channel: null,
   })
   const [dragOverId, setDragOverId] = useState<string | null>(null)
+  const [dragOverPos, setDragOverPos] = useState<'above' | 'below' | null>(null)
   const [serverMenuPos, setServerMenuPos] = useState<{ top: number; left: number; width: number } | null>(null)
   const wrapRef = useRef<HTMLDivElement | null>(null)
   const serverMenuRef = useRef<HTMLDivElement | null>(null)
@@ -118,7 +119,7 @@ export default function SidebarChannels({
   })
   const textChannels = visibleChannels.filter((channel) => channel.type !== 'voice')
   const voiceChannels = visibleChannels.filter((channel) => channel.type === 'voice')
-  const computeReorder = (draggedId: string, targetId: string) => {
+  const computeReorder = (draggedId: string, targetId: string, position: 'above' | 'below') => {
     if (!draggedId || !targetId || draggedId === targetId) return null
     const ids = channels.map((channel) => channel.id)
     const fromIndex = ids.indexOf(draggedId)
@@ -126,10 +127,8 @@ export default function SidebarChannels({
     if (fromIndex === -1 || toIndex === -1) return null
     ids.splice(fromIndex, 1)
     let adjustedToIndex = toIndex
-    if (fromIndex < toIndex) {
-      adjustedToIndex = toIndex - 1
-    }
-    const insertIndex = adjustedToIndex + 1
+    if (fromIndex < toIndex) adjustedToIndex = toIndex - 1
+    const insertIndex = position === 'above' ? adjustedToIndex : adjustedToIndex + 1
     ids.splice(insertIndex, 0, draggedId)
     const isSameOrder = channels.every((channel, index) => channel.id === ids[index])
     if (isSameOrder) return null
@@ -268,6 +267,7 @@ export default function SidebarChannels({
                 if (!canManage) return
                 dragIdRef.current = c.id
                 setDragOverId(null)
+                setDragOverPos(null)
                 if (event.dataTransfer) {
                   event.dataTransfer.setData('text/plain', c.id)
                   event.dataTransfer.effectAllowed = 'move'
@@ -276,12 +276,16 @@ export default function SidebarChannels({
               onDragEnd={() => {
                 dragIdRef.current = null
                 setDragOverId(null)
+                setDragOverPos(null)
               }}
               onDragOver={(e) => {
                 if (!canManage || !dragIdRef.current) return
                 e.preventDefault()
-                const nextOrder = computeReorder(dragIdRef.current, c.id)
+                const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect()
+                const position = e.clientY < rect.top + rect.height / 2 ? 'above' : 'below'
+                const nextOrder = computeReorder(dragIdRef.current, c.id, position)
                 setDragOverId(nextOrder ? c.id : null)
+                setDragOverPos(nextOrder ? position : null)
               }}
               onDrop={(e) => {
                 if (!canManage) return
@@ -289,14 +293,18 @@ export default function SidebarChannels({
                 const draggedId = dragIdRef.current
                 dragIdRef.current = null
                 setDragOverId(null)
+                setDragOverPos(null)
                 if (!draggedId || draggedId === c.id) return
-                const nextOrder = computeReorder(draggedId, c.id)
+                const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect()
+                const position = e.clientY < rect.top + rect.height / 2 ? 'above' : 'below'
+                const nextOrder = computeReorder(draggedId, c.id, position)
                 if (!nextOrder) return
                 onReorderChannels?.(nextOrder)
               }}
               onDragLeave={() => {
                 if (!canManage) return
                 setDragOverId((prev) => (prev === c.id ? null : prev))
+                setDragOverPos((prev) => (dragOverId === c.id ? null : prev))
               }}
               onContextMenu={(e) => {
                 if (!canManage) return
@@ -305,13 +313,14 @@ export default function SidebarChannels({
                 setChannelMenu({ visible: true, x: e.clientX, y: e.clientY, channel: c })
               }}
             >
-              {canManage && dragOverId === c.id ? (
+              {canManage && dragOverId === c.id && dragOverPos ? (
                 <div
                   style={{
                     position: 'absolute',
                     left: 8,
                     right: 8,
-                    bottom: -2,
+                    top: dragOverPos === 'above' ? -2 : 'auto',
+                    bottom: dragOverPos === 'below' ? -2 : 'auto',
                     height: 3,
                     borderRadius: 999,
                     background: 'var(--accent)',
@@ -385,6 +394,7 @@ export default function SidebarChannels({
                     if (!canManage) return
                     dragIdRef.current = c.id
                     setDragOverId(null)
+                    setDragOverPos(null)
                     if (event.dataTransfer) {
                       event.dataTransfer.setData('text/plain', c.id)
                       event.dataTransfer.effectAllowed = 'move'
@@ -393,12 +403,16 @@ export default function SidebarChannels({
                   onDragEnd={() => {
                     dragIdRef.current = null
                     setDragOverId(null)
+                    setDragOverPos(null)
                   }}
                   onDragOver={(e) => {
                     if (!canManage || !dragIdRef.current) return
                     e.preventDefault()
-                    const nextOrder = computeReorder(dragIdRef.current, c.id)
+                    const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect()
+                    const position = e.clientY < rect.top + rect.height / 2 ? 'above' : 'below'
+                    const nextOrder = computeReorder(dragIdRef.current, c.id, position)
                     setDragOverId(nextOrder ? c.id : null)
+                    setDragOverPos(nextOrder ? position : null)
                   }}
                   onDrop={(e) => {
                     if (!canManage) return
@@ -406,14 +420,18 @@ export default function SidebarChannels({
                     const draggedId = dragIdRef.current
                     dragIdRef.current = null
                     setDragOverId(null)
+                    setDragOverPos(null)
                     if (!draggedId || draggedId === c.id) return
-                    const nextOrder = computeReorder(draggedId, c.id)
+                    const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect()
+                    const position = e.clientY < rect.top + rect.height / 2 ? 'above' : 'below'
+                    const nextOrder = computeReorder(draggedId, c.id, position)
                     if (!nextOrder) return
                     onReorderChannels?.(nextOrder)
                   }}
                   onDragLeave={() => {
                     if (!canManage) return
                     setDragOverId((prev) => (prev === c.id ? null : prev))
+                    setDragOverPos((prev) => (dragOverId === c.id ? null : prev))
                   }}
                   onContextMenu={(e) => {
                     if (!canManage) return
@@ -422,13 +440,14 @@ export default function SidebarChannels({
                     setChannelMenu({ visible: true, x: e.clientX, y: e.clientY, channel: c })
                   }}
                 >
-                  {canManage && dragOverId === c.id ? (
+                  {canManage && dragOverId === c.id && dragOverPos ? (
                     <div
                       style={{
                         position: 'absolute',
                         left: 8,
                         right: 8,
-                        bottom: -2,
+                        top: dragOverPos === 'above' ? -2 : 'auto',
+                        bottom: dragOverPos === 'below' ? -2 : 'auto',
                         height: 3,
                         borderRadius: 999,
                         background: 'var(--accent)',
