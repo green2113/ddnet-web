@@ -636,7 +636,13 @@ function App() {
   const hasNativeControls = !!(window as any)?.electronAPI?.hasNativeControls
   const headerTitle = (
     <div className="flex items-center gap-2 min-w-0">
-      {isVoiceChannel ? <VolumeIcon size={16} /> : <span style={{ color: 'var(--text-muted)' }}>#</span>}
+      {isVoiceChannel ? (
+        <span style={{ color: 'var(--text-muted)' }}>
+          <VolumeIcon size={16} />
+        </span>
+      ) : (
+        <span style={{ color: 'var(--text-muted)' }}>#</span>
+      )}
       <span className="truncate">{activeChannel?.name || 'general'}</span>
     </div>
   )
