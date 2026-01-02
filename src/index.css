@@ -310,6 +310,27 @@ body {
   animation-fill-mode: both;
 }
 
+.modal-panel {
+  animation: modal-pop 180ms cubic-bezier(0.2, 0.9, 0.2, 1.2);
+  animation-fill-mode: both;
+  transform-origin: center;
+}
+
+.modal-panel.is-exiting {
+  animation: modal-pop-out 180ms ease-in;
+  animation-fill-mode: both;
+}
+
+.modal-overlay {
+  animation: modal-fade 180ms ease-out;
+  animation-fill-mode: both;
+}
+
+.modal-overlay.is-exiting {
+  animation: modal-fade-out 180ms ease-in;
+  animation-fill-mode: both;
+}
+
 @keyframes user-settings-pop {
   from {
     transform: scale(0.94);
@@ -370,6 +391,38 @@ body {
 }
 
 @keyframes voice-switch-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes modal-pop {
+  from {
+    transform: scale(0.94);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes modal-pop-out {
+  from {
+    transform: scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: scale(0.96);
+    opacity: 0;
+  }
+}
+
+@keyframes modal-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modal-fade-out {
   from { opacity: 1; }
   to { opacity: 0; }
 }

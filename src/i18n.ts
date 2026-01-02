@@ -58,6 +58,18 @@ export type UiText = {
     channelDelete: string
     addTextChannel: string
     addVoiceChannel: string
+    createTitle: string
+    createSubtitle: string
+    channelType: string
+    textOption: string
+    textOptionDesc: string
+    voiceOption: string
+    voiceOptionDesc: string
+    channelNameLabel: string
+    channelNamePlaceholder: string
+    cancelCreate: string
+    confirmCreate: string
+    closeCreate: string
   }
   sidebarGuilds: {
     add: string
@@ -202,6 +214,18 @@ const translations: TranslationMap = {
       channelDelete: 'Delete channel',
       addTextChannel: 'Add text channel',
       addVoiceChannel: 'Add voice channel',
+      createTitle: 'Create channel',
+      createSubtitle: 'Create a new channel in this server.',
+      channelType: 'Channel type',
+      textOption: 'Text',
+      textOptionDesc: 'Send messages, images, GIFs, and more.',
+      voiceOption: 'Voice',
+      voiceOptionDesc: 'Hang out with voice and screen share.',
+      channelNameLabel: 'Channel name',
+      channelNamePlaceholder: 'new-channel',
+      cancelCreate: 'Cancel',
+      confirmCreate: 'Create channel',
+      closeCreate: 'Close',
     },
     sidebarGuilds: {
       add: 'Add',
@@ -344,6 +368,18 @@ const translations: TranslationMap = {
       channelDelete: '채널 삭제',
       addTextChannel: '텍스트 채널 추가',
       addVoiceChannel: '음성 채널 추가',
+      createTitle: '채널 만들기',
+      createSubtitle: '이 서버에 새 채널을 만드세요.',
+      channelType: '채널 유형',
+      textOption: '텍스트',
+      textOptionDesc: '메시지, 이미지, GIF 등을 전송하세요.',
+      voiceOption: '음성',
+      voiceOptionDesc: '음성 채팅과 화면 공유로 함께하세요.',
+      channelNameLabel: '채널 이름',
+      channelNamePlaceholder: '새로운-채널',
+      cancelCreate: '취소',
+      confirmCreate: '채널 만들기',
+      closeCreate: '닫기',
     },
     sidebarGuilds: {
       add: '추가',
@@ -486,6 +522,18 @@ const translations: TranslationMap = {
       channelDelete: '删除频道',
       addTextChannel: '新增文字频道',
       addVoiceChannel: '新增语音频道',
+      createTitle: '????',
+      createSubtitle: '????????????',
+      channelType: '????',
+      textOption: '??',
+      textOptionDesc: '????????GIF ????',
+      voiceOption: '??',
+      voiceOptionDesc: '????????????',
+      channelNameLabel: '????',
+      channelNamePlaceholder: '????',
+      cancelCreate: '??',
+      confirmCreate: '????',
+      closeCreate: '??',
     },
     sidebarGuilds: {
       add: '新增',
@@ -628,6 +676,18 @@ const translations: TranslationMap = {
       channelDelete: '刪除頻道',
       addTextChannel: '新增文字頻道',
       addVoiceChannel: '新增語音頻道',
+      createTitle: '????',
+      createSubtitle: '????????????',
+      channelType: '????',
+      textOption: '??',
+      textOptionDesc: '????????GIF ????',
+      voiceOption: '??',
+      voiceOptionDesc: '????????????',
+      channelNameLabel: '????',
+      channelNamePlaceholder: '????',
+      cancelCreate: '??',
+      confirmCreate: '????',
+      closeCreate: '??',
     },
     sidebarGuilds: {
       add: '新增',

@@ -29,7 +29,7 @@ export type SidebarChannelsProps = {
   unreadByChannel?: Record<string, boolean>
   t: UiText
   onSelect?: (channelId: string) => void
-  onCreateChannel?: (type: 'text' | 'voice') => void
+  onCreateChannel?: () => void
   onDeleteChannel?: (channelId: string) => void
   onToggleChannelHidden?: (channelId: string, hidden: boolean) => void
   onRenameChannel?: (channelId: string, name: string) => void
@@ -213,15 +213,15 @@ export default function SidebarChannels({
         <div className="flex items-center justify-between text-[11px] uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
           <span>{t.sidebarChannels.textChannels}</span>
           {canManage ? (
-            <Tooltip label={t.sidebarChannels.addTextChannel} side="top">
+            <Tooltip label={t.sidebarChannels.createTitle} side="top">
               <button
                 type="button"
-                aria-label={t.sidebarChannels.addTextChannel}
+                aria-label={t.sidebarChannels.createTitle}
                 className="rounded-md p-1 cursor-pointer hover-surface"
                 style={{ color: 'var(--text-muted)' }}
                 onClick={(e) => {
                   e.stopPropagation()
-                  onCreateChannel?.('text')
+                  onCreateChannel?.()
                 }}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -259,7 +259,7 @@ export default function SidebarChannels({
               className="px-2 py-1 rounded cursor-pointer flex items-center gap-2 hover:opacity-90"
               style={{
                 color: 'var(--text-primary)',
-                background: c.id === activeId ? 'color-mix(in oklch, var(--accent) 14%, transparent)' : 'transparent',
+                background: c.id === activeId ? 'rgba(255,255,255,0.12)' : 'transparent',
                 opacity: c.hidden ? 0.6 : 1,
                 userSelect: 'none',
                 position: 'relative',
@@ -367,24 +367,6 @@ export default function SidebarChannels({
         </div>
         <div className="mt-4 flex items-center justify-between text-[11px] uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
           <span>{t.sidebarChannels.voiceChannels}</span>
-          {canManage ? (
-            <Tooltip label={t.sidebarChannels.addVoiceChannel} side="top">
-              <button
-                type="button"
-                aria-label={t.sidebarChannels.addVoiceChannel}
-                className="rounded-md p-1 cursor-pointer hover-surface"
-                style={{ color: 'var(--text-muted)' }}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onCreateChannel?.('voice')
-                }}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
-                  <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                </svg>
-              </button>
-            </Tooltip>
-          ) : null}
         </div>
         <div
           className="flex-1 space-y-1"
@@ -406,7 +388,7 @@ export default function SidebarChannels({
                   className="px-2 py-1 rounded cursor-pointer flex items-center gap-2 hover:opacity-90"
                   style={{
                     color: 'var(--text-primary)',
-                    background: c.id === activeId ? 'color-mix(in oklch, var(--accent) 14%, transparent)' : 'transparent',
+                    background: c.id === activeId ? 'rgba(255,255,255,0.12)' : 'transparent',
                     opacity: c.hidden ? 0.6 : 1,
                     userSelect: 'none',
                     position: 'relative',

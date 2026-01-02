@@ -87,6 +87,11 @@ function App() {
   const [showMobileChannels, setShowMobileChannels] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showUserSettings, setShowUserSettings] = useState(false)
+  const [showCreateChannel, setShowCreateChannel] = useState(false)
+  const [createChannelClosing, setCreateChannelClosing] = useState(false)
+  const createChannelCloseTimerRef = useRef<number | null>(null)
+  const [createChannelType, setCreateChannelType] = useState<'text' | 'voice'>('text')
+  const [createChannelName, setCreateChannelName] = useState('')
   const [settingsTab, setSettingsTab] = useState<'profile' | 'voice' | 'language'>('profile')
   const [voiceSwitchTargetId, setVoiceSwitchTargetId] = useState<string | null>(null)
   const [voiceSwitchClosing, setVoiceSwitchClosing] = useState(false)
@@ -475,6 +480,15 @@ function App() {
     })
   }, [channels])
 
+  useEffect(
+    () => () => {
+      if (createChannelCloseTimerRef.current) {
+        window.clearTimeout(createChannelCloseTimerRef.current)
+      }
+    },
+    []
+  )
+
   useEffect(() => {
     const el = document.getElementById('messages-scroll')
     if (el) el.scrollTop = el.scrollHeight
@@ -636,6 +650,16 @@ function App() {
 
   const isElectronApp = typeof window !== 'undefined' && (window as any).electronAPI
   const hasNativeControls = !!(window as any)?.electronAPI?.hasNativeControls
+
+  const closeCreateChannel = () => {
+    if (createChannelClosing) return
+    setCreateChannelClosing(true)
+    createChannelCloseTimerRef.current = window.setTimeout(() => {
+      setShowCreateChannel(false)
+      setCreateChannelClosing(false)
+      createChannelCloseTimerRef.current = null
+    }, 180)
+  }
   const headerTitle = (
     <div className="flex items-center gap-2 min-w-0">
       {isVoiceChannel ? (
@@ -726,18 +750,22 @@ function App() {
                 handleSelectChannel(channelId)
               }}
                 onOpenServerSettings={() => setShowSettings(true)}
+                onCreateChannel={() => {
+                  setCreateChannelType('text')
+                  setCreateChannelName('')
+                  setShowCreateChannel(true)
+                  setCreateChannelClosing(false)
+                  if (createChannelCloseTimerRef.current) {
+                    window.clearTimeout(createChannelCloseTimerRef.current)
+                    createChannelCloseTimerRef.current = null
+                  }
+                }}
                 onRenameChannel={(channelId, name) => {
                   if (!canManageChannels) return
                   axios
                     .patch(`${serverBase}/api/channels/${channelId}/name`, { name }, { withCredentials: true })
                     .then(fetchChannels)
                     .catch(() => {})
-                }}
-                onCreateChannel={(type) => {
-                  if (!canManageChannels) return
-                  const name = window.prompt(t.sidebarChannels.channelNamePrompt)
-                  if (!name) return
-                  axios.post(`${serverBase}/api/channels`, { name, type }, { withCredentials: true }).then(fetchChannels).catch(() => {})
                 }}
                 onDeleteChannel={(channelId) => {
                   if (!canManageChannels) return
@@ -869,18 +897,22 @@ function App() {
                   handleSelectChannel(channelId)
                 }}
                 onOpenServerSettings={() => setShowSettings(true)}
+                onCreateChannel={() => {
+                  setCreateChannelType('text')
+                  setCreateChannelName('')
+                  setShowCreateChannel(true)
+                  setCreateChannelClosing(false)
+                  if (createChannelCloseTimerRef.current) {
+                    window.clearTimeout(createChannelCloseTimerRef.current)
+                    createChannelCloseTimerRef.current = null
+                  }
+                }}
                 onRenameChannel={(channelId, name) => {
                   if (!canManageChannels) return
                   axios
                     .patch(`${serverBase}/api/channels/${channelId}/name`, { name }, { withCredentials: true })
                     .then(fetchChannels)
                     .catch(() => {})
-                }}
-                onCreateChannel={(type) => {
-                  if (!canManageChannels) return
-                  const name = window.prompt(t.sidebarChannels.channelNamePrompt)
-                  if (!name) return
-                  axios.post(`${serverBase}/api/channels`, { name, type }, { withCredentials: true }).then(fetchChannels).catch(() => {})
                 }}
                 onDeleteChannel={(channelId) => {
                   if (!canManageChannels) return
@@ -1198,6 +1230,113 @@ function App() {
               </div>
             </div>
           )}
+          {showCreateChannel ? (
+            <div
+              className={`fixed inset-0 z-50 grid place-items-center modal-overlay${createChannelClosing ? ' is-exiting' : ''}`}
+              style={{ background: 'rgba(0,0,0,0.6)' }}
+              onMouseDown={closeCreateChannel}
+            >
+              <div
+                className={`w-[520px] max-w-[92vw] rounded-2xl p-6 modal-panel${createChannelClosing ? ' is-exiting' : ''}`}
+                style={{ background: 'var(--header-bg)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                onMouseDown={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="text-lg font-semibold">{t.sidebarChannels.createTitle}</div>
+                  <button
+                    type="button"
+                    className="h-8 w-8 rounded-full grid place-items-center hover-surface cursor-pointer"
+                    aria-label={t.sidebarChannels.closeCreate}
+                    onClick={closeCreateChannel}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                      <path d="M6 6l12 12M18 6l-12 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>
+                  {t.sidebarChannels.createSubtitle}
+                </div>
+                <div className="text-sm font-semibold mb-2">{t.sidebarChannels.channelType}</div>
+                <div className="space-y-2 mb-5">
+                  {(['text', 'voice'] as const).map((option) => {
+                    const isSelected = createChannelType === option
+                    const icon = option === 'text' ? <span style={{ color: 'var(--text-muted)' }}>#</span> : <VolumeIcon size={18} />
+                    return (
+                      <button
+                        key={option}
+                        type="button"
+                        className="w-full text-left px-4 py-3 rounded-lg flex items-center gap-3"
+                        style={{
+                          background: isSelected ? 'color-mix(in oklch, var(--accent) 18%, transparent)' : 'var(--panel)',
+                          border: isSelected ? '1px solid color-mix(in oklch, var(--accent) 60%, transparent)' : '1px solid var(--border)',
+                        }}
+                        onClick={() => setCreateChannelType(option)}
+                      >
+                        <div className="h-9 w-9 rounded-full grid place-items-center" style={{ background: 'rgba(255,255,255,0.08)' }}>
+                          {icon}
+                        </div>
+                        <div className="flex-1">
+                          <div className="text-sm font-semibold">{option === 'text' ? t.sidebarChannels.textOption : t.sidebarChannels.voiceOption}</div>
+                          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                            {option === 'text' ? t.sidebarChannels.textOptionDesc : t.sidebarChannels.voiceOptionDesc}
+                          </div>
+                        </div>
+                        <div
+                          className="h-5 w-5 rounded-full border grid place-items-center"
+                          style={{
+                            borderColor: isSelected ? 'var(--accent)' : 'rgba(255,255,255,0.2)',
+                            background: isSelected ? 'var(--accent)' : 'transparent',
+                          }}
+                        >
+                          {isSelected ? <div className="h-2.5 w-2.5 rounded-full" style={{ background: '#fff' }} /> : null}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+                <div className="text-sm font-semibold mb-2">{t.sidebarChannels.channelNameLabel}</div>
+                <div className="flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: 'var(--panel)', border: '1px solid var(--border)' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>{createChannelType === 'text' ? '#' : ''}</span>
+                  <input
+                    value={createChannelName}
+                    onChange={(event) => setCreateChannelName(event.target.value)}
+                    placeholder={t.sidebarChannels.channelNamePlaceholder}
+                    className="flex-1 bg-transparent outline-none text-sm"
+                    style={{ color: 'var(--text-primary)' }}
+                  />
+                </div>
+                <div className="mt-6 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    className="px-4 h-10 rounded-md"
+                    style={{ background: 'rgba(127,127,127,0.2)', color: 'var(--text-primary)' }}
+                    onClick={closeCreateChannel}
+                  >
+                    {t.sidebarChannels.cancelCreate}
+                  </button>
+                  <button
+                    type="button"
+                    className="px-4 h-10 rounded-md text-white disabled:opacity-50"
+                    style={{ background: 'var(--accent)' }}
+                    onClick={() => {
+                      if (!canManageChannels) return
+                      const name = createChannelName.trim()
+                      if (!name) return
+                      axios
+                        .post(`${serverBase}/api/channels`, { name, type: createChannelType }, { withCredentials: true })
+                        .then(fetchChannels)
+                        .catch(() => {})
+                      closeCreateChannel()
+                    }}
+                    disabled={!createChannelName.trim()}
+                  >
+                    {t.sidebarChannels.confirmCreate}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </main>
       </div>
     </div>
