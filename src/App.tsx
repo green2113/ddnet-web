@@ -602,22 +602,26 @@ function App() {
       style={{ background: 'var(--bg-app)', color: 'var(--text-primary)' }}
       onContextMenu={(event) => event.preventDefault()}
     >
-      <div className="h-9 flex items-center justify-center no-select app-drag" style={{ background: 'var(--topbar-bg)' }}>
-        <div className="flex items-center gap-2 app-no-drag">
-          <div className="w-6 h-6 rounded-2xl overflow-hidden flex items-center justify-center" style={{ background: 'var(--input-bg)', color: 'var(--text-primary)' }}>
-            <span className="text-xs font-semibold">{serverLabel.slice(0, 1)}</span>
+      <div className="h-9 w-full relative flex items-center no-select app-drag z-[120]" style={{ background: 'var(--topbar-bg)' }}>
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="flex items-center gap-2 app-no-drag pointer-events-auto">
+            <div className="w-6 h-6 rounded-2xl overflow-hidden flex items-center justify-center" style={{ background: 'var(--input-bg)', color: 'var(--text-primary)' }}>
+              <span className="text-xs font-semibold">{serverLabel.slice(0, 1)}</span>
+            </div>
+            <span className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{serverLabel}</span>
           </div>
-          <span className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{serverLabel}</span>
         </div>
         {(window as any)?.electronAPI ? (
-          <div className="ml-auto h-full flex items-center app-no-drag">
+          <div className="absolute right-0 top-0 h-full flex items-center app-no-drag">
             <button
               type="button"
               className="h-full w-10 grid place-items-center hover-surface cursor-pointer"
               aria-label="Minimize"
               onClick={() => (window as any).electronAPI.minimize()}
             >
-              <span className="text-xs">ㅡ</span>
+              <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden>
+                <path d="M1 5h8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+              </svg>
             </button>
             <button
               type="button"
@@ -625,15 +629,19 @@ function App() {
               aria-label="Maximize"
               onClick={() => (window as any).electronAPI.toggleMaximize()}
             >
-              <span className="text-xs">ㅁ</span>
+              <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden>
+                <rect x="1.5" y="1.5" width="7" height="7" fill="none" stroke="currentColor" strokeWidth="1.2" />
+              </svg>
             </button>
             <button
               type="button"
-              className="h-full w-10 grid place-items-center hover-surface cursor-pointer"
+              className="h-full w-10 grid place-items-center cursor-pointer hover:bg-[#ef4444] hover:text-white"
               aria-label="Close"
               onClick={() => (window as any).electronAPI.close()}
             >
-              <span className="text-xs">x</span>
+              <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden>
+                <path d="M2 2l6 6M8 2L2 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+              </svg>
             </button>
           </div>
         ) : null}

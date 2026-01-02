@@ -197,9 +197,6 @@ export default function MessageList({ messages, adminIds = [], loading = false, 
                         <span className="text-xs cursor-default" style={{ color: 'var(--text-muted)' }}>
                           {formatTime(m.timestamp)}
                         </span>
-                        <span className="text-[10px] uppercase cursor-default no-select" style={{ color: 'var(--text-muted)' }}>
-                          {m.source}
-                        </span>
                       </div>
                     )}
                     <div className="whitespace-pre-wrap break-words">
