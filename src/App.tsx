@@ -69,6 +69,7 @@ function App() {
   const [autoJoinVoiceChannelId, setAutoJoinVoiceChannelId] = useState<string | null>(null)
   const [input, setInput] = useState('')
   const [uploading, setUploading] = useState(false)
+  const [attachments, setAttachments] = useState<Array<{ id: string; file: File; name: string; isImage: boolean; previewUrl?: string }>>([])
   const socketRef = useRef<Socket | null>(null)
   const activeChannelRef = useRef('')
   const lastHistoryChannelIdRef = useRef('')
@@ -471,12 +472,46 @@ function App() {
     setShowEntryModal(true)
   }
 
-  const sendMessage = () => {
-    if (!input.trim()) return
+  const sendMessage = async () => {
+    if (!input.trim() && attachments.length === 0) return
     if (!activeChannelId) return
     if (!user) {
       setEntryStep('choice')
       setShowEntryModal(true)
+      return
+    }
+    if (attachments.length > 0) {
+      const uploadedUrls: string[] = []
+      setUploading(true)
+      try {
+        for (const item of attachments) {
+          const form = new FormData()
+          form.append('file', item.file)
+          form.append('channelId', activeChannelId)
+          const res = await axios.post(`${serverBase}/api/upload`, form, { withCredentials: true })
+          const url = res.data?.url as string | undefined
+          if (url) uploadedUrls.push(url)
+        }
+        const parts = []
+        if (input.trim()) parts.push(input.trim())
+        if (uploadedUrls.length) parts.push(uploadedUrls.join('\n'))
+        socketRef.current?.emit('chat:send', {
+          content: parts.join('\n'),
+          channelId: activeChannelId,
+          source: 'web',
+        })
+        setInput('')
+        setAttachments((prev) => {
+          prev.forEach((item) => {
+            if (item.previewUrl) URL.revokeObjectURL(item.previewUrl)
+          })
+          return []
+        })
+      } catch (error) {
+        window.alert('업로드에 실패했습니다.')
+      } finally {
+        setUploading(false)
+      }
       return
     }
     socketRef.current?.emit('chat:send', {
@@ -487,14 +522,10 @@ function App() {
     setInput('')
   }
 
-  const uploadFile = async (file: File) => {
+  const addAttachment = (file: File) => {
     if (!activeChannelId) return
     if (file.size > 50 * 1024 * 1024) {
       window.alert('파일 크기가 50MB를 초과합니다.')
-      return
-    }
-    if (file.type.startsWith('video/')) {
-      window.alert('영상 파일은 아직 지원하지 않습니다.')
       return
     }
     if (!user) {
@@ -502,26 +533,19 @@ function App() {
       setShowEntryModal(true)
       return
     }
-    const form = new FormData()
-    form.append('file', file)
-    form.append('channelId', activeChannelId)
-    setUploading(true)
-    try {
-      const res = await axios.post(`${serverBase}/api/upload`, form, { withCredentials: true })
-      const url = res.data?.url as string | undefined
-      if (!url) return
-      const content = input.trim() ? `${input.trim()}\n${url}` : url
-      socketRef.current?.emit('chat:send', {
-        content,
-        channelId: activeChannelId,
-        source: 'web',
-      })
-      setInput('')
-    } catch (error) {
-      window.alert('업로드에 실패했습니다.')
-    } finally {
-      setUploading(false)
-    }
+    const isImage = file.type.startsWith('image/')
+    const previewUrl = isImage ? URL.createObjectURL(file) : undefined
+    const id = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now()}${Math.random()}`
+    setAttachments((prev) => [...prev, { id, file, name: file.name, isImage, previewUrl }])
+  }
+
+  const removeAttachment = (id: string) => {
+    setAttachments((prev) => {
+      const next = prev.filter((item) => item.id !== id)
+      const removed = prev.find((item) => item.id === id)
+      if (removed?.previewUrl) URL.revokeObjectURL(removed.previewUrl)
+      return next
+    })
   }
 
   const activeChannel = channels.find((channel) => channel.id === activeChannelId)
@@ -836,8 +860,10 @@ function App() {
                 value={input}
                 onChange={setInput}
                 onSend={sendMessage}
-                onUpload={uploadFile}
+                onAddAttachment={addAttachment}
+                onRemoveAttachment={removeAttachment}
                 uploading={uploading}
+                attachments={attachments}
                 t={t}
               />
             </>

@@ -4,8 +4,10 @@ type Props = {
   value: string
   onChange: (v: string) => void
   onSend: () => void
-  onUpload?: (file: File) => void
+  onAddAttachment?: (file: File) => void
+  onRemoveAttachment?: (id: string) => void
   uploading?: boolean
+  attachments?: Array<{ id: string; name: string; isImage: boolean; previewUrl?: string }>
   disabled?: boolean
   t: {
     composer: {
@@ -16,8 +18,18 @@ type Props = {
   }
 }
 
-export default function Composer({ value, onChange, onSend, onUpload, uploading = false, disabled = false, t }: Props) {
-  const isEnabled = !disabled && value.trim().length > 0
+export default function Composer({
+  value,
+  onChange,
+  onSend,
+  onAddAttachment,
+  onRemoveAttachment,
+  uploading = false,
+  attachments = [],
+  disabled = false,
+  t,
+}: Props) {
+  const isEnabled = !disabled && (value.trim().length > 0 || attachments.length > 0)
   const taRef = useRef<HTMLTextAreaElement | null>(null)
   const fileRef = useRef<HTMLInputElement | null>(null)
 
@@ -61,6 +73,37 @@ export default function Composer({ value, onChange, onSend, onUpload, uploading 
   }, [])
   return (
     <div className="px-4 pb-4">
+      {attachments.length > 0 ? (
+        <div className="mb-3 rounded-lg p-3" style={{ background: 'var(--panel)', border: '1px solid var(--border)' }}>
+          <div className="flex flex-wrap gap-3">
+            {attachments.map((item) => (
+              <div key={item.id} className="relative w-20">
+                <div className="w-20 h-20 rounded-md overflow-hidden" style={{ background: 'var(--input-bg)' }}>
+                  {item.isImage && item.previewUrl ? (
+                    <img src={item.previewUrl} alt={item.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full grid place-items-center" style={{ color: 'var(--text-muted)' }}>
+                      <span className="text-[11px]">FILE</span>
+                    </div>
+                  )}
+                </div>
+                <div className="mt-2 text-[11px] truncate" style={{ color: 'var(--text-primary)' }}>{item.name}</div>
+                <button
+                  type="button"
+                  aria-label="Remove attachment"
+                  className="absolute -top-2 -right-2 h-5 w-5 rounded-full grid place-items-center"
+                  style={{ background: 'rgba(0,0,0,0.6)', color: '#fff' }}
+                  onClick={() => onRemoveAttachment?.(item.id)}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <path d="M6 6l12 12M18 6l-12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
       <div className="flex items-center gap-2">
         <div className={`flex w-full items-center rounded-[10px] px-3 py-3 ${disabled ? 'cursor-not-allowed opacity-90' : ''}`} style={{ background: 'var(--input-bg)', color: 'var(--text-primary)' }}>
           <input
@@ -69,7 +112,7 @@ export default function Composer({ value, onChange, onSend, onUpload, uploading 
             className="hidden"
             onChange={(event) => {
               const file = event.target.files?.[0]
-              if (file) onUpload?.(file)
+              if (file) onAddAttachment?.(file)
               if (event.target) event.target.value = ''
             }}
             accept="image/*,application/pdf,text/plain,application/zip,application/x-zip-compressed"
@@ -92,6 +135,17 @@ export default function Composer({ value, onChange, onSend, onUpload, uploading 
             ref={taRef}
             value={value}
             onChange={(e) => !disabled && onChange(e.target.value)}
+            onPaste={(event) => {
+              if (!onAddAttachment || disabled || uploading) return
+              const items = event.clipboardData?.items
+              if (!items) return
+              const fileItem = Array.from(items).find((item) => item.kind === 'file')
+              if (!fileItem) return
+              const file = fileItem.getAsFile()
+              if (!file) return
+              event.preventDefault()
+              onAddAttachment(file)
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault()
