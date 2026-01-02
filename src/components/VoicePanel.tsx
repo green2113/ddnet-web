@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { Socket } from 'socket.io-client'
 import { formatText, type UiText } from '../i18n'
 import { HeadsetIcon, MicIcon } from './icons/VoiceIcons'
@@ -24,6 +25,12 @@ type ScreenShareTile = {
   stream: MediaStream
   label: string
   isLocal?: boolean
+}
+
+type DesktopSource = {
+  id: string
+  name: string
+  thumbnail: string
 }
 
 type VoicePanelProps = {
@@ -90,6 +97,8 @@ export default function VoicePanel({
     return window.localStorage.getItem('voice-output-device') || 'default'
   })
   const [screenShares, setScreenShares] = useState<ScreenShareTile[]>([])
+  const [screenShareSources, setScreenShareSources] = useState<DesktopSource[]>([])
+  const [showScreenSharePicker, setShowScreenSharePicker] = useState(false)
   const forcedHeadsetRef = useRef(false)
   const micBeforeForceRef = useRef(false)
   const headsetBeforeForceRef = useRef(false)
@@ -353,6 +362,66 @@ export default function VoicePanel({
     setSinkId.call(audio, deviceId).catch(() => {})
   }
 
+  const attachScreenShareStream = (stream: MediaStream) => {
+    screenShareStreamRef.current = stream
+    const track = stream.getVideoTracks()[0]
+    if (track) {
+      track.onended = () => {
+        stopScreenShare()
+      }
+    }
+    setScreenShares((prev) => {
+      const next = prev.filter((share) => share.id !== 'local')
+      return [...next, { id: 'local', stream, label: t.voice.screenShareYou, isLocal: true }]
+    })
+    peersRef.current.forEach((peer, peerId) => {
+      if (!track) return
+      const sender = peer.addTrack(track, stream)
+      screenShareSendersRef.current.set(peerId, sender)
+      void renegotiatePeer(peerId)
+    })
+    window.dispatchEvent(new CustomEvent('voice-screen-share-state', { detail: true }))
+  }
+
+  const requestScreenShareSources = async () => {
+    const electronAPI = (window as any)?.electronAPI
+    if (!electronAPI?.getDesktopSources) return false
+    try {
+      const sources = await electronAPI.getDesktopSources()
+      if (!Array.isArray(sources) || sources.length === 0) {
+        window.dispatchEvent(new CustomEvent('voice-screen-share-error', { detail: 'failed' }))
+        return true
+      }
+      setScreenShareSources(sources)
+      setShowScreenSharePicker(true)
+      return true
+    } catch (error) {
+      console.error('[voice] failed to get desktop sources', error)
+      window.dispatchEvent(new CustomEvent('voice-screen-share-error', { detail: 'failed' }))
+      return true
+    }
+  }
+
+  const startElectronScreenShare = async (sourceId: string) => {
+    setShowScreenSharePicker(false)
+    setScreenShareSources([])
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: {
+          mandatory: {
+            chromeMediaSource: 'desktop',
+            chromeMediaSourceId: sourceId,
+          },
+        },
+      } as any)
+      attachScreenShareStream(stream)
+    } catch (error) {
+      console.error('[voice] failed to start electron screen share', error)
+      window.dispatchEvent(new CustomEvent('voice-screen-share-error', { detail: 'failed' }))
+    }
+  }
+
   const resolveInputConstraints = () => {
     if (!inputDeviceId || inputDeviceId === 'default') return {}
     return { deviceId: { exact: inputDeviceId } }
@@ -370,30 +439,14 @@ export default function VoicePanel({
   const startScreenShare = async () => {
     if (!joined) return
     if (screenShareStreamRef.current) return
+    if (await requestScreenShareSources()) return
     if (!navigator.mediaDevices?.getDisplayMedia) {
       window.dispatchEvent(new CustomEvent('voice-screen-share-error', { detail: 'unsupported' }))
       return
     }
     try {
       const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false })
-      screenShareStreamRef.current = stream
-      const track = stream.getVideoTracks()[0]
-      if (track) {
-        track.onended = () => {
-          stopScreenShare()
-        }
-      }
-      setScreenShares((prev) => {
-        const next = prev.filter((share) => share.id !== 'local')
-        return [...next, { id: 'local', stream, label: t.voice.screenShareYou, isLocal: true }]
-      })
-      peersRef.current.forEach((peer, peerId) => {
-        if (!track) return
-        const sender = peer.addTrack(track, stream)
-        screenShareSendersRef.current.set(peerId, sender)
-        void renegotiatePeer(peerId)
-      })
-      window.dispatchEvent(new CustomEvent('voice-screen-share-state', { detail: true }))
+      attachScreenShareStream(stream)
     } catch (error) {
       window.dispatchEvent(new CustomEvent('voice-screen-share-error', { detail: 'failed' }))
       console.error('[voice] failed to start screen share', error)
@@ -664,6 +717,62 @@ export default function VoicePanel({
 
   return (
     <div className="flex-1 flex flex-col p-6 gap-4">
+      {showScreenSharePicker
+        ? createPortal(
+            <>
+              <div
+                className="fixed inset-0 z-50 modal-overlay"
+                style={{ background: 'rgba(0,0,0,0.55)' }}
+                onClick={() => {
+                  setShowScreenSharePicker(false)
+                  setScreenShareSources([])
+                }}
+              />
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div
+                  className="w-full max-w-3xl rounded-2xl p-6 modal-panel"
+                  style={{ background: 'var(--header-bg)', border: '1px solid var(--border)' }}
+                >
+                  <div className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+                    {t.voice.screenShareSelectTitle}
+                  </div>
+                  <div className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
+                    {t.voice.screenShareSelectHint}
+                  </div>
+                  <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[50vh] overflow-y-auto pr-1">
+                    {screenShareSources.map((source) => (
+                      <button
+                        key={source.id}
+                        type="button"
+                        className="screen-share-source"
+                        onClick={() => startElectronScreenShare(source.id)}
+                      >
+                        <img src={source.thumbnail} alt="" />
+                        <div className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
+                          {source.name}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="mt-4">
+                    <button
+                      type="button"
+                      className="w-full h-11 rounded-lg font-semibold hover-surface"
+                      style={{ background: 'var(--input-bg)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
+                      onClick={() => {
+                        setShowScreenSharePicker(false)
+                        setScreenShareSources([])
+                      }}
+                    >
+                      {t.voice.screenShareSelectCancel}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </>,
+            document.body
+          )
+        : null}
       <div className="flex items-center justify-between">
         <div>
           <div className="text-lg font-semibold">{t.voice.title}</div>

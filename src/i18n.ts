@@ -99,6 +99,9 @@ export type UiText = {
     screenShareYou: string
     screenShareUnsupported: string
     screenShareFailed: string
+    screenShareSelectTitle: string
+    screenShareSelectHint: string
+    screenShareSelectCancel: string
     micOn: string
     micOff: string
     headsetOn: string
@@ -263,6 +266,9 @@ const translations: TranslationMap = {
       screenShareYou: 'Your screen',
       screenShareUnsupported: 'Screen share is not supported in this environment.',
       screenShareFailed: 'Failed to start screen sharing.',
+      screenShareSelectTitle: 'Select a screen',
+      screenShareSelectHint: 'Choose a screen or window to share.',
+      screenShareSelectCancel: 'Cancel',
       micOn: 'Unmute mic',
       micOff: 'Mute mic',
       headsetOn: 'Unmute headset',
@@ -425,6 +431,9 @@ const translations: TranslationMap = {
       screenShareYou: '내 화면',
       screenShareUnsupported: '?? ??? ???? ???.',
       screenShareFailed: '?? ??? ??? ? ????.',
+      screenShareSelectTitle: '?? ??',
+      screenShareSelectHint: '??? ???? ?? ?????.',
+      screenShareSelectCancel: '??',
       micOn: '음소거 해제',
       micOff: '음소거',
       headsetOn: '헤드셋 음소거 해제',
@@ -587,6 +596,9 @@ const translations: TranslationMap = {
       screenShareYou: '????',
       screenShareUnsupported: '????????????',
       screenShareFailed: '?????????',
+      screenShareSelectTitle: '????',
+      screenShareSelectHint: '?????????????',
+      screenShareSelectCancel: '??',
       micOn: '开启麦克风',
       micOff: '关闭麦克风',
       headsetOn: '开启耳机',
@@ -749,6 +761,9 @@ const translations: TranslationMap = {
       screenShareYou: '????',
       screenShareUnsupported: '????????????',
       screenShareFailed: '?????????',
+      screenShareSelectTitle: '????',
+      screenShareSelectHint: '?????????????',
+      screenShareSelectCancel: '??',
       micOn: '開啟麥克風',
       micOff: '關閉麥克風',
       headsetOn: '開啟耳機',
