@@ -118,6 +118,23 @@ export default function SidebarChannels({
   })
   const textChannels = visibleChannels.filter((channel) => channel.type !== 'voice')
   const voiceChannels = visibleChannels.filter((channel) => channel.type === 'voice')
+  const computeReorder = (draggedId: string, targetId: string) => {
+    if (!draggedId || !targetId || draggedId === targetId) return null
+    const ids = channels.map((channel) => channel.id)
+    const fromIndex = ids.indexOf(draggedId)
+    const toIndex = ids.indexOf(targetId)
+    if (fromIndex === -1 || toIndex === -1) return null
+    ids.splice(fromIndex, 1)
+    let adjustedToIndex = toIndex
+    if (fromIndex < toIndex) {
+      adjustedToIndex = toIndex - 1
+    }
+    const insertIndex = adjustedToIndex + 1
+    ids.splice(insertIndex, 0, draggedId)
+    const isSameOrder = channels.every((channel, index) => channel.id === ids[index])
+    if (isSameOrder) return null
+    return ids
+  }
 
   const resolvedServerName = serverName || t.sidebarChannels.serverName
   return (
@@ -263,7 +280,8 @@ export default function SidebarChannels({
               onDragOver={(e) => {
                 if (!canManage || !dragIdRef.current) return
                 e.preventDefault()
-                setDragOverId(c.id)
+                const nextOrder = computeReorder(dragIdRef.current, c.id)
+                setDragOverId(nextOrder ? c.id : null)
               }}
               onDrop={(e) => {
                 if (!canManage) return
@@ -272,13 +290,9 @@ export default function SidebarChannels({
                 dragIdRef.current = null
                 setDragOverId(null)
                 if (!draggedId || draggedId === c.id) return
-                const updated = [...channels]
-                const fromIndex = updated.findIndex((channel) => channel.id === draggedId)
-                const toIndex = updated.findIndex((channel) => channel.id === c.id)
-                if (fromIndex === -1 || toIndex === -1) return
-                const [moved] = updated.splice(fromIndex, 1)
-                updated.splice(toIndex, 0, moved)
-                onReorderChannels?.(updated.map((channel) => channel.id))
+                const nextOrder = computeReorder(draggedId, c.id)
+                if (!nextOrder) return
+                onReorderChannels?.(nextOrder)
               }}
               onDragLeave={() => {
                 if (!canManage) return
@@ -383,7 +397,8 @@ export default function SidebarChannels({
                   onDragOver={(e) => {
                     if (!canManage || !dragIdRef.current) return
                     e.preventDefault()
-                    setDragOverId(c.id)
+                    const nextOrder = computeReorder(dragIdRef.current, c.id)
+                    setDragOverId(nextOrder ? c.id : null)
                   }}
                   onDrop={(e) => {
                     if (!canManage) return
@@ -392,13 +407,9 @@ export default function SidebarChannels({
                     dragIdRef.current = null
                     setDragOverId(null)
                     if (!draggedId || draggedId === c.id) return
-                    const updated = [...channels]
-                    const fromIndex = updated.findIndex((channel) => channel.id === draggedId)
-                    const toIndex = updated.findIndex((channel) => channel.id === c.id)
-                    if (fromIndex === -1 || toIndex === -1) return
-                    const [moved] = updated.splice(fromIndex, 1)
-                    updated.splice(toIndex, 0, moved)
-                    onReorderChannels?.(updated.map((channel) => channel.id))
+                    const nextOrder = computeReorder(draggedId, c.id)
+                    if (!nextOrder) return
+                    onReorderChannels?.(nextOrder)
                   }}
                   onDragLeave={() => {
                     if (!canManage) return
