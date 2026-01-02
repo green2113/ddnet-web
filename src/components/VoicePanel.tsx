@@ -514,23 +514,6 @@ export default function VoicePanel({
             {formatText(t.voice.membersCount, { count: members.length })}
           </div>
         </div>
-        {joined ? (
-          <button
-            className="px-4 h-9 rounded-md text-white cursor-pointer"
-            style={{ background: '#ef4444' }}
-            onClick={leaveVoice}
-          >
-            {t.voice.leave}
-          </button>
-        ) : (
-          <button
-            className="px-4 h-9 rounded-md text-white cursor-pointer"
-            style={{ background: '#5865f2' }}
-            onClick={joinVoice}
-          >
-            {t.voice.join}
-          </button>
-        )}
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
         {(members.length > 1 ? sortMembersByName(members) : members).map((member) => {
