@@ -114,6 +114,7 @@ a:hover {
   color: var(--text-primary);
   white-space: pre-wrap;
   word-break: break-word;
+  box-sizing: border-box;
 }
 
 .composer-highlight-content {
@@ -129,6 +130,7 @@ a:hover {
 .composer-textarea {
   color: transparent;
   caret-color: var(--text-primary);
+  box-sizing: border-box;
 }
 
 .composer-textarea::placeholder {

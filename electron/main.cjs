@@ -3,6 +3,16 @@ const path = require('path')
 
 const isDev = !app.isPackaged
 
+const getAppUrl = () =>
+  isDev ? 'http://localhost:5173' : `file://${path.join(__dirname, '..', 'dist', 'index.html')}`
+
+let mainWindow
+let authState = {
+  inProgress: false,
+  allowedOrigins: new Set(),
+  expectedOrigin: null,
+}
+
 const createWindow = () => {
   const win = new BrowserWindow({
     width: 1200,
@@ -20,9 +30,7 @@ const createWindow = () => {
     },
   })
 
-  const appUrl = isDev
-    ? 'http://localhost:5173'
-    : `file://${path.join(__dirname, '..', 'dist', 'index.html')}`
+  const appUrl = getAppUrl()
   const appOrigin = (() => {
     try {
       return new URL(appUrl).origin
@@ -32,6 +40,7 @@ const createWindow = () => {
   })()
   win.loadURL(appUrl)
   win.maximize()
+  mainWindow = win
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (url) shell.openExternal(url)
     return { action: 'deny' }
@@ -39,6 +48,15 @@ const createWindow = () => {
   win.webContents.on('will-navigate', (event, url) => {
     if (!url) return
     if (appOrigin && url.startsWith(appOrigin)) return
+    let nextOrigin = null
+    try {
+      nextOrigin = new URL(url).origin
+    } catch {
+      nextOrigin = null
+    }
+    if (authState.inProgress && nextOrigin && authState.allowedOrigins.has(nextOrigin)) {
+      return
+    }
     event.preventDefault()
     shell.openExternal(url)
   })
@@ -56,26 +74,22 @@ ipcMain.handle('auth:open', (event, payload) => {
   const parent = BrowserWindow.fromWebContents(event.sender)
   if (!parent) return false
 
-  const authWin = new BrowserWindow({
-    width: 520,
-    height: 720,
-    parent,
-    modal: true,
-    show: true,
-    resizable: false,
-    minimizable: false,
-    maximizable: false,
-    autoHideMenuBar: true,
-  })
+  let authOrigin = null
+  try {
+    authOrigin = new URL(url).origin
+  } catch {
+    authOrigin = null
+  }
 
-  const parentUrl = parent.webContents.getURL()
-  const parentOrigin = parentUrl ? new URL(parentUrl).origin : null
-  const allowedOrigins = new Set(
-    [parentOrigin, expectedOrigin].filter((origin) => typeof origin === 'string' && origin.length > 0),
-  )
-  let completed = false
+  authState = {
+    inProgress: true,
+    allowedOrigins: new Set(
+      [authOrigin, expectedOrigin].filter((origin) => typeof origin === 'string' && origin.length > 0),
+    ),
+    expectedOrigin: expectedOrigin || null,
+  }
 
-  const handleNav = (_event, nextUrl) => {
+  const handleAuthComplete = (_event, nextUrl) => {
     if (!nextUrl || typeof nextUrl !== 'string') return
     let nextOrigin = null
     try {
@@ -83,27 +97,28 @@ ipcMain.handle('auth:open', (event, payload) => {
     } catch {
       nextOrigin = null
     }
-    if (!nextOrigin || !allowedOrigins.has(nextOrigin)) return
-    if (completed) return
-    completed = true
+    if (!nextOrigin || nextOrigin !== authState.expectedOrigin) return
+    authState.inProgress = false
+    authState.allowedOrigins.clear()
+    authState.expectedOrigin = null
+    cleanup()
     if (parent && !parent.isDestroyed() && !parent.webContents.isDestroyed()) {
       parent.webContents.send('auth:complete')
-    }
-    if (!authWin.isDestroyed()) {
-      authWin.close()
+      parent.webContents.loadURL(getAppUrl())
     }
   }
 
-  authWin.webContents.on('will-redirect', handleNav)
-  authWin.webContents.on('will-navigate', handleNav)
-  authWin.on('close', () => {
-    if (!authWin.webContents.isDestroyed()) {
-      authWin.webContents.removeListener('will-redirect', handleNav)
-      authWin.webContents.removeListener('will-navigate', handleNav)
-    }
-  })
+  const cleanup = () => {
+    if (parent.webContents.isDestroyed()) return
+    parent.webContents.removeListener('will-redirect', handleAuthComplete)
+    parent.webContents.removeListener('will-navigate', handleAuthComplete)
+  }
 
-  authWin.loadURL(url)
+  parent.webContents.on('will-redirect', handleAuthComplete)
+  parent.webContents.on('will-navigate', handleAuthComplete)
+  parent.once('closed', cleanup)
+
+  parent.webContents.loadURL(url)
   return true
 })
 
