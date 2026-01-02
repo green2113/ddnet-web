@@ -926,14 +926,8 @@ function App() {
                       style={{ color: '#f87171' }}
                       onClick={() => setVoiceLeaveSignal((prev) => prev + 1)}
                     >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-                        <path
-                          d="M2 15.5c2.2-2 4.6-3 7-3s4.8 1 7 3l-2 2a2 2 0 0 0 2.8 2.8l3.2-3.2a2 2 0 0 0 0-2.8c-2.9-2.9-6.7-4.5-11-4.5S7.9 10.6 5 13.5a2 2 0 0 0 0 2.8l3.2 3.2a2 2 0 1 0 2.8-2.8l-2-2Z"
-                          stroke="currentColor"
-                          strokeWidth="1.6"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                        <path d="M7 2a1 1 0 0 1 1 1v3a1 1 0 0 1-.293.707L6 8.414a14.927 14.927 0 0 0 9.586 9.586l1.707-1.707A1 1 0 0 1 18 16h3a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-2C9.82 21 3 14.18 3 6V4a1 1 0 0 1 1-1h3Z" />
                       </svg>
                     </button>
                   </div>
