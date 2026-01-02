@@ -559,6 +559,7 @@ function App() {
 
   const activeChannel = channels.find((channel) => channel.id === activeChannelId)
   const isVoiceChannel = activeChannel?.type === 'voice'
+  const voiceSidebarChannel = joinedVoiceChannelId ? channels.find((channel) => channel.id === joinedVoiceChannelId) : null
   const canManageChannels = Boolean(user?.id && adminIds.includes(user.id))
   const voiceSwitchTarget = voiceSwitchTargetId ? channels.find((channel) => channel.id === voiceSwitchTargetId) : null
 
@@ -724,6 +725,23 @@ function App() {
           className="px-3 pb-3 shrink-0"
           style={{ background: 'var(--sidebar-bg)', boxShadow: 'inset 1px 0 0 var(--topbar-divider)' }}
         >
+          {voiceSidebarChannel ? (
+            <div
+              className="border rounded-t-xl px-3 py-2"
+              style={{
+                borderColor: 'var(--border)',
+                background: 'var(--header-bg)',
+                boxShadow: '0 8px 18px rgba(0,0,0,0.35)',
+              }}
+            >
+              <div className="text-[11px] font-semibold" style={{ color: '#22c55e' }}>
+                {t.voice.title}
+              </div>
+              <div className="text-sm truncate" style={{ color: 'var(--text-primary)' }}>
+                {voiceSidebarChannel.name}
+              </div>
+            </div>
+          ) : null}
           <SidebarProfileBar
             user={user}
             showUserSettings={showUserSettings}
@@ -751,6 +769,7 @@ function App() {
               isTestingMic={isTestingMic}
               onToggleMicTest={() => setIsTestingMic((prev) => !prev)}
               micTestError={micTestError}
+              hasVoicePanel={!!voiceSidebarChannel}
             />
           </div>
         </div>
@@ -826,6 +845,23 @@ function App() {
               className="px-3 pb-3 shrink-0"
               style={{ background: 'var(--sidebar-bg)', boxShadow: 'inset 1px 0 0 var(--topbar-divider)' }}
             >
+              {voiceSidebarChannel ? (
+                <div
+                  className="border rounded-t-xl px-3 py-2"
+                  style={{
+                    borderColor: 'var(--border)',
+                    background: 'var(--header-bg)',
+                    boxShadow: '0 8px 18px rgba(0,0,0,0.35)',
+                  }}
+                >
+                  <div className="text-[11px] font-semibold" style={{ color: '#22c55e' }}>
+                    {t.voice.title}
+                  </div>
+                  <div className="text-sm truncate" style={{ color: 'var(--text-primary)' }}>
+                    {voiceSidebarChannel.name}
+                  </div>
+                </div>
+              ) : null}
               <SidebarProfileBar
                 user={user}
                 showUserSettings={showUserSettings}
@@ -854,6 +890,7 @@ function App() {
                 onToggleMicTest={() => setIsTestingMic((prev) => !prev)}
                 micTestError={micTestError}
                 renderSettings={false}
+                hasVoicePanel={!!voiceSidebarChannel}
               />
             </div>
           </div>

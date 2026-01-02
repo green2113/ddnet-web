@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron')
+const { app, BrowserWindow, ipcMain, shell } = require('electron')
 const path = require('path')
 
 const isDev = !app.isPackaged
@@ -7,8 +7,14 @@ const createWindow = () => {
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
-    frame: true,
+    frame: false,
     autoHideMenuBar: true,
+    titleBarStyle: 'hidden',
+    titleBarOverlay: {
+      color: '#1b1c20',
+      symbolColor: '#e5e7eb',
+      height: 32,
+    },
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
     },
@@ -17,6 +23,10 @@ const createWindow = () => {
   const appUrl = 'https://ddnet.under1111.com'
   win.loadURL(appUrl)
   win.maximize()
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url)
+    return { action: 'deny' }
+  })
   if (isDev) {
     win.webContents.openDevTools()
   }

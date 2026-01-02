@@ -25,6 +25,7 @@ type SidebarProfileBarProps = {
   onToggleMicTest: () => void
   micTestError: string
   renderSettings?: boolean
+  hasVoicePanel?: boolean
 }
 
 export default function SidebarProfileBar({
@@ -49,6 +50,7 @@ export default function SidebarProfileBar({
   onToggleMicTest,
   micTestError,
   renderSettings = true,
+  hasVoicePanel = false,
 }: SidebarProfileBarProps) {
   const [micMuted, setMicMuted] = useState(() => {
     if (typeof window === 'undefined') return false
@@ -91,7 +93,7 @@ export default function SidebarProfileBar({
   return (
     <>
       <div
-        className="border rounded-xl px-3 py-3"
+        className={`border px-3 py-3 ${hasVoicePanel ? 'rounded-b-xl border-t-0' : 'rounded-xl'}`}
         style={{
           borderColor: 'var(--border)',
           background: 'var(--header-bg)',
