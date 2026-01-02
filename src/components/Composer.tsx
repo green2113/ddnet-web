@@ -78,7 +78,7 @@ export default function Composer({
           <div className="px-3 pt-3">
             <div className="flex flex-wrap gap-3">
             {attachments.map((item) => (
-              <div key={item.id} className="relative w-48 px-2 py-3">
+              <div key={item.id} className="relative w-48 p-2">
                 <div
                   className="w-48 rounded-md overflow-hidden"
                   style={{ background: 'var(--input-bg)', border: '1px solid rgba(255,255,255,0.2)' }}
