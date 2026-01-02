@@ -7,8 +7,7 @@ const createWindow = () => {
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
-    fullscreen: true,
-    frame: false,
+    frame: true,
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
@@ -17,6 +16,7 @@ const createWindow = () => {
 
   const appUrl = 'https://ddnet.under1111.com'
   win.loadURL(appUrl)
+  win.maximize()
   if (isDev) {
     win.webContents.openDevTools()
   }

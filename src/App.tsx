@@ -606,6 +606,7 @@ function App() {
   }
 
   const isElectronApp = typeof window !== 'undefined' && (window as any).electronAPI
+  const hasNativeControls = !!(window as any)?.electronAPI?.hasNativeControls
 
   return (
     <div
@@ -623,7 +624,7 @@ function App() {
           </div>
         </div>
       </div>
-      {isElectronApp
+      {isElectronApp && !hasNativeControls
         ? createPortal(
             <div className="fixed right-0 top-0 h-8 z-[1000] flex items-center app-no-drag pointer-events-auto">
               <button
