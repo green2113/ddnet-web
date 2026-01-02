@@ -78,20 +78,24 @@ export default function Composer({
           <div className="flex flex-wrap gap-3">
             {attachments.map((item) => (
               <div key={item.id} className="relative w-20">
-                <div className="w-20 h-20 rounded-md overflow-hidden" style={{ background: 'var(--input-bg)' }}>
+                <div className="w-20 rounded-md overflow-hidden" style={{ background: 'var(--input-bg)' }}>
                   {item.isImage && item.previewUrl ? (
-                    <img src={item.previewUrl} alt={item.name} className="w-full h-full object-cover" />
+                    <div className="w-20 h-20 flex items-center justify-center">
+                      <img src={item.previewUrl} alt={item.name} className="max-w-full max-h-full object-contain" />
+                    </div>
                   ) : (
-                    <div className="w-full h-full grid place-items-center" style={{ color: 'var(--text-muted)' }}>
+                    <div className="w-20 h-20 grid place-items-center" style={{ color: 'var(--text-muted)' }}>
                       <span className="text-[11px]">FILE</span>
                     </div>
                   )}
+                  <div className="px-2 py-1 text-[11px] truncate" style={{ color: 'var(--text-primary)', background: 'rgba(0,0,0,0.15)' }}>
+                    {item.name}
+                  </div>
                 </div>
-                <div className="mt-2 text-[11px] truncate" style={{ color: 'var(--text-primary)' }}>{item.name}</div>
                 <button
                   type="button"
                   aria-label="Remove attachment"
-                  className="absolute -top-2 -right-2 h-5 w-5 rounded-full grid place-items-center"
+                  className="absolute -top-2 -right-2 h-5 w-5 rounded-full grid place-items-center cursor-pointer"
                   style={{ background: 'rgba(0,0,0,0.6)', color: '#fff' }}
                   onClick={() => onRemoveAttachment?.(item.id)}
                 >
