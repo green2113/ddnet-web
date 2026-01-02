@@ -17,7 +17,8 @@ export default function Login() {
     const absoluteUrl = authUrl.startsWith('/') ? `${window.location.origin}${authUrl}` : authUrl
 
     if (electronAPI?.openAuth) {
-      electronAPI.openAuth(absoluteUrl)
+      const expectedOrigin = (import.meta as any).env?.VITE_WEB_ORIGIN || window.location.origin
+      electronAPI.openAuth(absoluteUrl, expectedOrigin)
       return
     }
 

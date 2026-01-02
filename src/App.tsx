@@ -563,7 +563,8 @@ function App() {
     localStorage.setItem('return_to', returnTo)
     const electronAPI = (window as any).electronAPI
     if (electronAPI?.openAuth) {
-      electronAPI.openAuth(buildAuthUrl(returnTo))
+      const expectedOrigin = (import.meta as any).env?.VITE_WEB_ORIGIN || window.location.origin
+      electronAPI.openAuth(buildAuthUrl(returnTo), expectedOrigin)
       return
     }
     window.location.href = '/login'

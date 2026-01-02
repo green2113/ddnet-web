@@ -20,7 +20,9 @@ const createWindow = () => {
     },
   })
 
-  const appUrl = 'https://ddnet.under1111.com'
+  const appUrl = isDev
+    ? 'http://localhost:5173'
+    : `file://${path.join(__dirname, '..', 'dist', 'index.html')}`
   const appOrigin = (() => {
     try {
       return new URL(appUrl).origin
@@ -49,6 +51,7 @@ app.whenReady().then(createWindow)
 
 ipcMain.handle('auth:open', (event, payload) => {
   const url = payload?.url
+  const expectedOrigin = payload?.expectedOrigin
   if (!url) return false
   const parent = BrowserWindow.fromWebContents(event.sender)
   if (!parent) return false
@@ -67,23 +70,37 @@ ipcMain.handle('auth:open', (event, payload) => {
 
   const parentUrl = parent.webContents.getURL()
   const parentOrigin = parentUrl ? new URL(parentUrl).origin : null
+  const allowedOrigins = new Set(
+    [parentOrigin, expectedOrigin].filter((origin) => typeof origin === 'string' && origin.length > 0),
+  )
   let completed = false
 
   const handleNav = (_event, nextUrl) => {
-    if (!parentOrigin) return
     if (!nextUrl || typeof nextUrl !== 'string') return
-    if (!nextUrl.startsWith(parentOrigin)) return
+    let nextOrigin = null
+    try {
+      nextOrigin = new URL(nextUrl).origin
+    } catch {
+      nextOrigin = null
+    }
+    if (!nextOrigin || !allowedOrigins.has(nextOrigin)) return
     if (completed) return
     completed = true
-    parent.webContents.send('auth:complete')
-    authWin.close()
+    if (parent && !parent.isDestroyed() && !parent.webContents.isDestroyed()) {
+      parent.webContents.send('auth:complete')
+    }
+    if (!authWin.isDestroyed()) {
+      authWin.close()
+    }
   }
 
   authWin.webContents.on('will-redirect', handleNav)
   authWin.webContents.on('will-navigate', handleNav)
-  authWin.on('closed', () => {
-    authWin.webContents.removeListener('will-redirect', handleNav)
-    authWin.webContents.removeListener('will-navigate', handleNav)
+  authWin.on('close', () => {
+    if (!authWin.webContents.isDestroyed()) {
+      authWin.webContents.removeListener('will-redirect', handleNav)
+      authWin.webContents.removeListener('will-navigate', handleNav)
+    }
   })
 
   authWin.loadURL(url)
