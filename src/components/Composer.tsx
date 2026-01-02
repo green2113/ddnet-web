@@ -64,8 +64,7 @@ export default function Composer({
     const lineHeight = parseFloat(style.lineHeight) || fontSize * 1.4
     const padding = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0)
     const max = 180 // px, max height
-    const baselineOffset = 6
-    const minHeight = lineHeight + padding + baselineOffset
+    const minHeight = 36.5
     const threshold = minHeight + 2
     const next = el.scrollHeight <= threshold ? minHeight : Math.min(el.scrollHeight, max)
     el.style.height = `${Math.ceil(next)}px`
