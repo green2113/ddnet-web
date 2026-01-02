@@ -21,7 +21,7 @@
   --input-bg: #ffffff;
   --accent: #5865f2;
   --hover-bg: rgba(0,0,0,0.06);
-  --scroll-thumb: rgba(120, 124, 135, 0.6);
+  --scroll-thumb: #d7d9df;
   --divider: rgba(0,0,0,0.25);
   --tooltip-bg: #ffffff;
   --tooltip-border: rgba(0,0,0,0.12);
@@ -71,7 +71,7 @@ body {
   --input-bg: #383a40;  /* input surface */
   --accent: #5865f2;
   --hover-bg: rgba(255,255,255,0.08);
-  --scroll-thumb: rgba(168, 172, 186, 0.6);
+  --scroll-thumb: #2a2c31;
   --divider: rgba(255,255,255,0.18);
   --tooltip-bg: rgb(46, 46, 46);
   --tooltip-border: rgba(255,255,255,0.12);
@@ -129,19 +129,19 @@ body {
   -webkit-overflow-scrolling: touch;      /* iOS 부드러운 스크롤 */
 }
 .messages-scroll::-webkit-scrollbar {
-  width: 10px;
+  width: 8px;
 }
 .messages-scroll::-webkit-scrollbar-track {
   background: transparent;
 }
 .messages-scroll::-webkit-scrollbar-thumb {
   background-color: var(--scroll-thumb);
-  border-radius: 8px;
+  border-radius: 999px;
   border: 2px solid transparent;      /* create inset look */
   background-clip: padding-box;
 }
 .messages-scroll::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(168, 172, 186, 0.85);
+  background-color: var(--scroll-thumb);
 }
 
 /* Channel list scrollbars */
@@ -160,10 +160,10 @@ body {
   border-radius: 999px;
 }
 .channels-scroll:hover::-webkit-scrollbar-thumb {
-  background-color: rgba(255,255,255,0.08);
+  background-color: var(--scroll-thumb);
 }
 .channels-scroll:hover::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(255,255,255,0.08);
+  background-color: var(--scroll-thumb);
 }
 .channels-scroll::-webkit-scrollbar-button {
   width: 0;

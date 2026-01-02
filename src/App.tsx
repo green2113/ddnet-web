@@ -602,7 +602,7 @@ function App() {
       style={{ background: 'var(--bg-app)', color: 'var(--text-primary)' }}
       onContextMenu={(event) => event.preventDefault()}
     >
-      <div className="h-9 w-full relative flex items-center no-select app-drag z-[120]" style={{ background: 'var(--topbar-bg)' }}>
+      <div className="h-8 w-full relative flex items-center no-select app-drag z-[120]" style={{ background: 'var(--topbar-bg)' }}>
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="flex items-center gap-2 app-no-drag pointer-events-auto">
             <div className="w-6 h-6 rounded-2xl overflow-hidden flex items-center justify-center" style={{ background: 'var(--input-bg)', color: 'var(--text-primary)' }}>

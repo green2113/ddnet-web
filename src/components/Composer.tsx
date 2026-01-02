@@ -84,8 +84,8 @@ export default function Composer({
                   style={{ background: 'var(--input-bg)', border: '1px solid rgba(255,255,255,0.2)' }}
                 >
                   {item.isImage && item.previewUrl ? (
-                    <div className="flex-1 flex items-center justify-center">
-                      <img src={item.previewUrl} alt={item.name} className="max-w-full max-h-full object-contain" />
+                    <div className="flex-1 flex items-center justify-center p-2">
+                      <img src={item.previewUrl} alt={item.name} className="max-w-full max-h-full object-contain rounded-sm" />
                     </div>
                   ) : (
                     <div className="flex-1 grid place-items-center" style={{ color: 'var(--text-muted)' }}>
@@ -189,4 +189,3 @@ export default function Composer({
     </div>
   )
 }
-
