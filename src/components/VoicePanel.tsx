@@ -99,6 +99,8 @@ export default function VoicePanel({
   const [screenShares, setScreenShares] = useState<ScreenShareTile[]>([])
   const [screenShareSources, setScreenShareSources] = useState<DesktopSource[]>([])
   const [showScreenSharePicker, setShowScreenSharePicker] = useState(false)
+  const [selectedScreenSourceId, setSelectedScreenSourceId] = useState<string | null>(null)
+  const [selectedScreenSourceName, setSelectedScreenSourceName] = useState('')
   const forcedHeadsetRef = useRef(false)
   const micBeforeForceRef = useRef(false)
   const headsetBeforeForceRef = useRef(false)
@@ -392,6 +394,8 @@ export default function VoicePanel({
         window.dispatchEvent(new CustomEvent('voice-screen-share-error', { detail: 'failed' }))
         return true
       }
+      setSelectedScreenSourceId(null)
+      setSelectedScreenSourceName('')
       setScreenShareSources(sources)
       setShowScreenSharePicker(true)
       return true
@@ -726,6 +730,8 @@ export default function VoicePanel({
                 onClick={() => {
                   setShowScreenSharePicker(false)
                   setScreenShareSources([])
+                  setSelectedScreenSourceId(null)
+                  setSelectedScreenSourceName('')
                 }}
               />
               <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -733,38 +739,67 @@ export default function VoicePanel({
                   className="w-full max-w-3xl rounded-2xl p-6 modal-panel"
                   style={{ background: 'var(--header-bg)', border: '1px solid var(--border)' }}
                 >
-                  <div className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
-                    {t.voice.screenShareSelectTitle}
-                  </div>
-                  <div className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-                    {t.voice.screenShareSelectHint}
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <div className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+                        {t.voice.screenShareSelectTitle}
+                      </div>
+                      <div className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
+                        {t.voice.screenShareSelectHint}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="h-9 w-9 rounded-full grid place-items-center hover-surface"
+                      aria-label={t.voice.screenShareSelectCancel}
+                      onClick={() => {
+                        setShowScreenSharePicker(false)
+                        setScreenShareSources([])
+                        setSelectedScreenSourceId(null)
+                        setSelectedScreenSourceName('')
+                      }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden>
+                        <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                      </svg>
+                    </button>
                   </div>
                   <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[50vh] overflow-y-auto pr-1">
                     {screenShareSources.map((source) => (
                       <button
                         key={source.id}
                         type="button"
-                        className="screen-share-source"
-                        onClick={() => startElectronScreenShare(source.id)}
+                        className={`screen-share-source${selectedScreenSourceId === source.id ? ' is-selected' : ''}`}
+                        onClick={() => {
+                          setSelectedScreenSourceId(source.id)
+                          setSelectedScreenSourceName(source.name)
+                        }}
                       >
                         <img src={source.thumbnail} alt="" />
-                        <div className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
-                          {source.name}
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
+                            {source.name}
+                          </div>
+                          <span className="screen-share-radio" aria-hidden />
                         </div>
                       </button>
                     ))}
                   </div>
-                  <div className="mt-4">
+                  <div className="mt-5 flex items-center justify-between gap-3">
+                    <div className="text-sm truncate" style={{ color: 'var(--text-muted)' }}>
+                      {selectedScreenSourceName || t.voice.screenShareSelectNone}
+                    </div>
                     <button
                       type="button"
-                      className="w-full h-11 rounded-lg font-semibold hover-surface"
+                      className="h-11 px-5 rounded-lg font-semibold hover-surface disabled:opacity-60"
                       style={{ background: 'var(--input-bg)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
+                      disabled={!selectedScreenSourceId}
                       onClick={() => {
-                        setShowScreenSharePicker(false)
-                        setScreenShareSources([])
+                        if (!selectedScreenSourceId) return
+                        void startElectronScreenShare(selectedScreenSourceId)
                       }}
                     >
-                      {t.voice.screenShareSelectCancel}
+                      {t.voice.screenShareSelectConfirm}
                     </button>
                   </div>
                 </div>

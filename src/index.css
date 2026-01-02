@@ -392,6 +392,24 @@ a:hover {
   background: var(--hover-bg);
 }
 
+.screen-share-source.is-selected {
+  border-color: color-mix(in oklch, var(--accent) 70%, white);
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--accent) 40%, transparent);
+}
+
+.screen-share-radio {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 2px solid var(--border);
+  background: transparent;
+}
+
+.screen-share-source.is-selected .screen-share-radio {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 4px var(--accent);
+}
+
 .screen-share-source img {
   width: 100%;
   height: 140px;

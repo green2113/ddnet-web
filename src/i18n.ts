@@ -102,6 +102,8 @@ export type UiText = {
     screenShareSelectTitle: string
     screenShareSelectHint: string
     screenShareSelectCancel: string
+    screenShareSelectConfirm: string
+    screenShareSelectNone: string
     micOn: string
     micOff: string
     headsetOn: string
@@ -269,6 +271,8 @@ const translations: TranslationMap = {
       screenShareSelectTitle: 'Select a screen',
       screenShareSelectHint: 'Choose a screen or window to share.',
       screenShareSelectCancel: 'Cancel',
+      screenShareSelectConfirm: 'Share',
+      screenShareSelectNone: 'Select a screen to share.',
       micOn: 'Unmute mic',
       micOff: 'Mute mic',
       headsetOn: 'Unmute headset',
@@ -434,6 +438,8 @@ const translations: TranslationMap = {
       screenShareSelectTitle: '?? ??',
       screenShareSelectHint: '??? ???? ?? ?????.',
       screenShareSelectCancel: '??',
+      screenShareSelectConfirm: '?? ??',
+      screenShareSelectNone: '??? ??? ?????.',
       micOn: '음소거 해제',
       micOff: '음소거',
       headsetOn: '헤드셋 음소거 해제',
@@ -599,6 +605,8 @@ const translations: TranslationMap = {
       screenShareSelectTitle: '????',
       screenShareSelectHint: '?????????????',
       screenShareSelectCancel: '??',
+      screenShareSelectConfirm: '????',
+      screenShareSelectNone: '??????????',
       micOn: '开启麦克风',
       micOff: '关闭麦克风',
       headsetOn: '开启耳机',
@@ -764,6 +772,8 @@ const translations: TranslationMap = {
       screenShareSelectTitle: '????',
       screenShareSelectHint: '?????????????',
       screenShareSelectCancel: '??',
+      screenShareSelectConfirm: '????',
+      screenShareSelectNone: '??????????',
       micOn: '開啟麥克風',
       micOff: '關閉麥克風',
       headsetOn: '開啟耳機',
