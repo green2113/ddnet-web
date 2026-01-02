@@ -56,7 +56,7 @@ export default function MessageList({ messages, adminIds = [], loading = false, 
           )
         }
         return (
-          <a key={`${part}-${idx}`} href={part} target="_blank" rel="noreferrer" className="underline" style={{ color: 'var(--accent)' }}>
+          <a key={`${part}-${idx}`} href={part} target="_blank" rel="noreferrer" className="underline">
             {part}
           </a>
         )

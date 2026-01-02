@@ -20,6 +20,7 @@
   --border: rgba(0,0,0,0.04);
   --input-bg: #ffffff;
   --accent: #5865f2;
+  --link: #5db8ff;
   --hover-bg: rgba(0,0,0,0.06);
   --scroll-thumb: #d7d9df;
   --divider: rgba(0,0,0,0.25);
@@ -70,6 +71,7 @@ body {
   --border: rgba(255,255,255,0.06);
   --input-bg: #383a40;  /* input surface */
   --accent: #5865f2;
+  --link: #7cc9ff;
   --hover-bg: rgba(255,255,255,0.08);
   --scroll-thumb: #2a2c31;
   --divider: rgba(255,255,255,0.18);
@@ -96,6 +98,45 @@ body {
 }
 .hover-surface:hover {
   background: var(--hover-bg);
+}
+
+a {
+  color: var(--link);
+}
+a:hover {
+  color: color-mix(in oklch, var(--link) 85%, white);
+}
+
+.composer-highlight {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.composer-highlight-content {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.composer-link {
+  color: var(--link);
+  text-decoration: underline;
+}
+
+.composer-textarea {
+  color: transparent;
+  caret-color: var(--text-primary);
+}
+
+.composer-textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.composer-textarea::selection {
+  background: color-mix(in oklch, var(--accent) 35%, transparent);
 }
 
 .app-drag {
