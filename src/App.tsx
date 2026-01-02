@@ -11,6 +11,7 @@ import Header from './components/Header'
 import MessageList from './components/MessageList'
 import Composer from './components/Composer'
 import VoicePanel from './components/VoicePanel'
+import { VolumeIcon } from './components/icons/VoiceIcons'
 import { getStoredLanguage, getTranslations, type Language } from './i18n'
 
 type User = {
@@ -633,6 +634,12 @@ function App() {
 
   const isElectronApp = typeof window !== 'undefined' && (window as any).electronAPI
   const hasNativeControls = !!(window as any)?.electronAPI?.hasNativeControls
+  const headerTitle = (
+    <div className="flex items-center gap-2 min-w-0">
+      {isVoiceChannel ? <VolumeIcon size={16} /> : <span style={{ color: 'var(--text-muted)' }}>#</span>}
+      <span className="truncate">{activeChannel?.name || 'general'}</span>
+    </div>
+  )
 
   return (
     <div
@@ -962,7 +969,7 @@ function App() {
         </div>
         <main className="flex-1 flex flex-col min-w-0">
           <Header
-            title={`${isVoiceChannel ? '?��' : '#'} ${activeChannel?.name || 'general'}`}
+            title={headerTitle}
             isDark={isDark}
             onLight={() => setIsDark(false)}
             onDark={() => setIsDark(true)}

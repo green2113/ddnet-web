@@ -1,5 +1,7 @@
+import type { ReactNode } from 'react'
+
 type Props = {
-  title: string
+  title: ReactNode
   isDark: boolean
   onLight: () => void
   onDark: () => void
@@ -37,7 +39,9 @@ export default function Header({ title, isDark, onLight, onDark, user, onToggleC
           <path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
         </svg>
       </button>
-      <div className="min-w-0 flex-1 font-semibold truncate">{title}</div>
+      <div className="min-w-0 flex-1 font-semibold flex items-center gap-2">
+        {title}
+      </div>
       <div className="ml-auto flex items-center gap-2">
         <button
           aria-label={isDark ? t.header.light : t.header.dark}

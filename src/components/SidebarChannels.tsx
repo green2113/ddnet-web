@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { formatText, type UiText } from '../i18n'
 import Tooltip from './Tooltip'
-import { HeadsetIcon, MicIcon } from './icons/VoiceIcons'
+import { HeadsetIcon, MicIcon, VolumeIcon } from './icons/VoiceIcons'
 
 type VoiceMember = {
   id: string
@@ -379,13 +379,7 @@ export default function SidebarChannels({
                   }}
                 >
                   <span style={{ color: 'var(--text-muted)' }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-                      <path d="M5 9v6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                      <path d="M9 8v8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                      <path d="M13 6v12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                      <path d="M17 8c1.5 1.5 1.5 6 0 7.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                      <path d="M19.5 6c2.5 3 2.5 9 0 12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                    </svg>
+                    <VolumeIcon size={16} />
                   </span>
                   <span
                     className="truncate"
