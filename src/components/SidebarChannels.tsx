@@ -264,6 +264,14 @@ export default function SidebarChannels({
                 userSelect: 'none',
                 position: 'relative',
               }}
+              onMouseEnter={(e) => {
+                if (c.id === activeId) return
+                e.currentTarget.style.background = 'color-mix(in oklch, var(--text-primary) 8%, transparent)'
+              }}
+              onMouseLeave={(e) => {
+                if (c.id === activeId) return
+                e.currentTarget.style.background = 'transparent'
+              }}
               draggable={canManage}
               onClick={() => onSelect?.(c.id)}
               onDoubleClick={() => {
@@ -402,6 +410,14 @@ export default function SidebarChannels({
                     opacity: c.hidden ? 0.6 : 1,
                     userSelect: 'none',
                     position: 'relative',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (c.id === activeId) return
+                    e.currentTarget.style.background = 'color-mix(in oklch, var(--text-primary) 8%, transparent)'
+                  }}
+                  onMouseLeave={(e) => {
+                    if (c.id === activeId) return
+                    e.currentTarget.style.background = 'transparent'
                   }}
                   draggable={canManage}
                   onClick={() => onSelect?.(c.id)}
