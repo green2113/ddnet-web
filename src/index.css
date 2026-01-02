@@ -143,6 +143,14 @@ body {
 .messages-scroll::-webkit-scrollbar-thumb:hover {
   background-color: var(--scroll-thumb);
 }
+.messages-scroll::-webkit-scrollbar-button {
+  background-color: var(--bg-app);
+  width: 8px;
+  height: 8px;
+}
+.messages-scroll::-webkit-scrollbar-button:single-button {
+  background-color: var(--bg-app);
+}
 
 /* Channel list scrollbars */
 .channels-scroll {
@@ -166,14 +174,22 @@ body {
   background-color: var(--scroll-thumb);
 }
 .channels-scroll::-webkit-scrollbar-button {
-  width: 0;
-  height: 0;
-  display: none;
+  background-color: var(--sidebar-bg);
+  width: 4px;
+  height: 8px;
 }
 .channels-scroll::-webkit-scrollbar-button:single-button {
-  width: 0;
-  height: 0;
-  display: none;
+  background-color: var(--sidebar-bg);
+}
+
+.is-electron ::-webkit-scrollbar {
+  background-color: transparent;
+}
+.is-electron ::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+}
+.is-electron ::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 /* Skeleton (shimmer) for loading state */

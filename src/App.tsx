@@ -229,6 +229,15 @@ function App() {
   }, [authReady, user])
 
   useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (!(window as any).electronAPI) return
+    document.body.classList.add('is-electron')
+    return () => {
+      document.body.classList.remove('is-electron')
+    }
+  }, [])
+
+  useEffect(() => {
     if (!channels.length) return
     const requested = routeChannelId && channels.find((channel) => channel.id === routeChannelId)
     if (requested) {
