@@ -80,6 +80,7 @@ export type UiText = {
     title: string
     membersCount: string
     leave: string
+    disconnect: string
     join: string
     micOn: string
     micOff: string
@@ -223,6 +224,7 @@ const translations: TranslationMap = {
       title: 'Voice channel',
       membersCount: '{count} members in the channel',
       leave: 'Leave',
+      disconnect: 'Disconnect',
       join: 'Join',
       micOn: 'Unmute mic',
       micOff: 'Mute mic',
@@ -364,6 +366,7 @@ const translations: TranslationMap = {
       title: '음성 채널',
       membersCount: '현재 {count}명 참여 중',
       leave: '나가기',
+      disconnect: '연결 끊기',
       join: '입장하기',
       micOn: '음소거 해제',
       micOff: '음소거',
@@ -505,6 +508,7 @@ const translations: TranslationMap = {
       title: '语音频道',
       membersCount: '当前 {count} 人在线',
       leave: '退出',
+      disconnect: '断开连接',
       join: '加入',
       micOn: '开启麦克风',
       micOff: '关闭麦克风',
@@ -646,6 +650,7 @@ const translations: TranslationMap = {
       title: '語音頻道',
       membersCount: '目前 {count} 人在線',
       leave: '離開',
+      disconnect: '斷開連線',
       join: '加入',
       micOn: '開啟麥克風',
       micOff: '關閉麥克風',
