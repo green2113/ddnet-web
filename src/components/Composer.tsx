@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 type Props = {
   value: string
@@ -33,36 +33,104 @@ export default function Composer({
   t,
 }: Props) {
   const isEnabled = !disabled && (value.trim().length > 0 || attachments.length > 0)
+  const [isEmpty, setIsEmpty] = useState(value.length === 0)
   const placeholder = disabled
     ? t.composer.placeholderLogin
     : t.composer.placeholderMessageWithChannel.replace('{channel}', channelName || 'general')
-  const taRef = useRef<HTMLTextAreaElement | null>(null)
+  const editorRef = useRef<HTMLDivElement | null>(null)
   const fileRef = useRef<HTMLInputElement | null>(null)
+  const maxEditorHeight = 180
+
+  const highlightedHtml = useMemo(() => {
+    const escapeHtml = (input: string) =>
+      input
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+
+    const parts = value.split(/(https?:\/\/[^\s]+)/g)
+    return parts
+      .map((part) => {
+        if (/^https?:\/\//.test(part)) {
+          return `<span style="color: var(--link); text-decoration: none;">${escapeHtml(part)}</span>`
+        }
+        return escapeHtml(part)
+      })
+      .join('')
+      .replace(/\n/g, '<br />')
+  }, [value])
+
+  const getSelectionOffset = () => {
+    const editor = editorRef.current
+    if (!editor) return null
+    const selection = window.getSelection()
+    if (!selection || selection.rangeCount === 0) return null
+    const range = selection.getRangeAt(0)
+    if (!editor.contains(range.startContainer)) return null
+    const preRange = range.cloneRange()
+    preRange.selectNodeContents(editor)
+    preRange.setEnd(range.startContainer, range.startOffset)
+    return preRange.toString().length
+  }
+
+  const restoreSelection = (offset: number) => {
+    const editor = editorRef.current
+    if (!editor) return
+    const selection = window.getSelection()
+    if (!selection) return
+    let remaining = offset
+    const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT, null)
+    let node = walker.nextNode()
+    while (node) {
+      const textLength = node.textContent?.length ?? 0
+      if (remaining <= textLength) {
+        const range = document.createRange()
+        range.setStart(node, remaining)
+        range.collapse(true)
+        selection.removeAllRanges()
+        selection.addRange(range)
+        return
+      }
+      remaining -= textLength
+      node = walker.nextNode()
+    }
+    selection.selectAllChildren(editor)
+    selection.collapseToEnd()
+  }
 
   const adjustHeight = () => {
     if (typeof window === 'undefined') return
-    const el = taRef.current
+    const el = editorRef.current
     if (!el) return
     el.style.height = 'auto'
-    const style = window.getComputedStyle(el)
-    const fontSize = parseFloat(style.fontSize) || 14
-    const lineHeight = parseFloat(style.lineHeight) || fontSize * 1.4
-    const padding = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0)
-    const max = 180 // px, max height
-    const minHeight = lineHeight + padding
-    const threshold = minHeight + 2
-    const next = el.scrollHeight <= threshold ? minHeight : Math.min(el.scrollHeight, max)
+    const next = Math.min(el.scrollHeight, maxEditorHeight)
     el.style.height = `${Math.ceil(next)}px`
   }
 
+  const syncEditorHtml = () => {
+    const editor = editorRef.current
+    if (!editor) return
+    const desired = highlightedHtml || ''
+    if (editor.innerHTML === desired) return
+    const selectionOffset = getSelectionOffset()
+    editor.innerHTML = desired
+    if (selectionOffset !== null) {
+      restoreSelection(selectionOffset)
+    }
+    setIsEmpty((editor.textContent || '').length === 0)
+  }
+
   useEffect(() => {
+    syncEditorHtml()
     adjustHeight()
-  }, [value])
+  }, [highlightedHtml])
 
   useEffect(() => {
     const target: EventTarget | null = typeof window === 'undefined' ? null : window
     if (!target) return
-    const el = taRef.current
+    const el = editorRef.current
     if (!el) return
     let observer: ResizeObserver | null = null
     if (typeof ResizeObserver !== 'undefined') {
@@ -88,8 +156,8 @@ export default function Composer({
         const tag = target.tagName?.toLowerCase()
         if (tag === 'input' || tag === 'textarea' || target.isContentEditable) return
       }
-      if (!taRef.current) return
-      taRef.current.focus()
+      if (!editorRef.current) return
+      editorRef.current.focus()
     }
     window.addEventListener('keydown', handleKeydown)
     return () => window.removeEventListener('keydown', handleKeydown)
@@ -161,34 +229,90 @@ export default function Composer({
               <path d="M9 12v5a4 4 0 0 0 8 0v-4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
-          <textarea
-            ref={taRef}
-            value={value}
-            onChange={(e) => !disabled && onChange(e.target.value)}
-            onPaste={(event) => {
-              if (!onAddAttachment || disabled || uploading) return
-              const items = event.clipboardData?.items
-              if (!items) return
-              const fileItem = Array.from(items).find((item) => item.kind === 'file')
-              if (!fileItem) return
-              const file = fileItem.getAsFile()
-              if (!file) return
-              event.preventDefault()
-              onAddAttachment(file)
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault()
-                if (isEnabled) onSend()
-              }
-            }}
-            placeholder={placeholder}
-            disabled={disabled}
-            className={`flex-1 bg-transparent outline-none resize-none leading-6 text-[14px] ${disabled ? 'cursor-not-allowed' : ''}`}
-            rows={1}
-            style={{ maxHeight: 180 }}
-            maxLength={1000}
-          />
+          <div className="relative flex-1">
+            {isEmpty ? (
+              <div
+                className="pointer-events-none absolute inset-0"
+                style={{
+                  color: 'var(--text-muted)',
+                  padding: '8px 12px',
+                  fontSize: '14px',
+                  lineHeight: '22px',
+                }}
+              >
+                {placeholder}
+              </div>
+            ) : null}
+            <div
+              ref={editorRef}
+              className={`${disabled ? 'cursor-not-allowed' : ''}`}
+              contentEditable={!disabled}
+              role="textbox"
+              aria-label={placeholder}
+              style={{
+                minHeight: '36px',
+                maxHeight: `${maxEditorHeight}px`,
+                padding: '8px 12px',
+                fontSize: '14px',
+                lineHeight: '22px',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                outline: 'none',
+                overflow: 'hidden',
+                color: 'var(--text-primary)',
+                background: 'transparent',
+              }}
+              onInput={(event) => {
+                if (!editorRef.current || disabled) return
+                if ((event as InputEvent).inputType === 'insertLineBreak') {
+                  event.preventDefault()
+                  document.execCommand('insertHTML', false, '<br>')
+                }
+                const nextValue = editorRef.current.textContent || ''
+                if (nextValue !== value) {
+                  onChange(nextValue)
+                }
+                setIsEmpty(nextValue.length === 0)
+                adjustHeight()
+              }}
+              onPaste={(event) => {
+                if (disabled) return
+                if (!onAddAttachment || uploading) {
+                  event.preventDefault()
+                  const text = event.clipboardData?.getData('text/plain') || ''
+                  document.execCommand('insertText', false, text)
+                  return
+                }
+                const items = event.clipboardData?.items
+                if (!items) return
+                const fileItem = Array.from(items).find((item) => item.kind === 'file')
+                if (fileItem) {
+                  const file = fileItem.getAsFile()
+                  if (file) {
+                    event.preventDefault()
+                    onAddAttachment(file)
+                  }
+                  return
+                }
+                const text = event.clipboardData?.getData('text/plain')
+                if (text) {
+                  event.preventDefault()
+                  document.execCommand('insertText', false, text)
+                }
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' && event.shiftKey) {
+                  event.preventDefault()
+                  document.execCommand('insertHTML', false, '<br>')
+                  return
+                }
+                if (event.key === 'Enter') {
+                  event.preventDefault()
+                  if (isEnabled) onSend()
+                }
+              }}
+            />
+          </div>
           <div className="flex items-center gap-1 ml-2">
             <button
               type="button"

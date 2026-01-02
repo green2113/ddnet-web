@@ -20,6 +20,8 @@
   --border: rgba(0,0,0,0.04);
   --input-bg: #ffffff;
   --accent: #5865f2;
+  --link: oklab(0.670197 -0.038481 -0.141434);
+  --link: oklab(0.670197 -0.038481 -0.141434);
   --hover-bg: rgba(0,0,0,0.06);
   --scroll-thumb: #d7d9df;
   --divider: rgba(0,0,0,0.25);
@@ -96,6 +98,13 @@ body {
 }
 .hover-surface:hover {
   background: var(--hover-bg);
+}
+
+a {
+  color: var(--link);
+}
+a:hover {
+  color: color-mix(in oklch, var(--link) 85%, white);
 }
 
 .app-drag {
