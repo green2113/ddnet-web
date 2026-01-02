@@ -5,8 +5,8 @@ type VoiceIconProps = {
 }
 
 const getSlashWidths = (size: number) => {
-  const outlineWidth = Math.max(2.2, size * 0.18)
-  const lineWidth = Math.max(1.4, size * 0.09)
+  const outlineWidth = Math.max(3.2, size * 0.24)
+  const lineWidth = Math.max(2.0, size * 0.14)
   return { outlineWidth, lineWidth }
 }
 
