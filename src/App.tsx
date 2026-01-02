@@ -777,17 +777,11 @@ function App() {
                   type="button"
                   aria-label={t.voice.leave}
                   className="h-8 w-8 rounded-md grid place-items-center hover-surface cursor-pointer"
-                  style={{ color: '#f87171' }}
+                  style={{ color: '#cbd5e1' }}
                   onClick={() => setVoiceLeaveSignal((prev) => prev + 1)}
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-                    <path
-                      d="M2 15.5c2.2-2 4.6-3 7-3s4.8 1 7 3l-2 2a2 2 0 0 0 2.8 2.8l3.2-3.2a2 2 0 0 0 0-2.8c-2.9-2.9-6.7-4.5-11-4.5S7.9 10.6 5 13.5a2 2 0 0 0 0 2.8l3.2 3.2a2 2 0 1 0 2.8-2.8l-2-2Z"
-                      stroke="currentColor"
-                      strokeWidth="1.6"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                    <path d="M24,6.24c0,7.64-10.13,17.76-17.76,17.76-1.67,0-3.23-.63-4.38-1.78l-1-1.15c-1.16-1.16-1.16-3.12,.05-4.33,.03-.03,2.44-1.88,2.44-1.88,1.2-1.14,3.09-1.14,4.28,0l1.46,1.17c3.2-1.36,5.47-3.64,6.93-6.95l-1.16-1.46c-1.15-1.19-1.15-3.09,0-4.28,0,0,1.85-2.41,1.88-2.44,1.21-1.21,3.17-1.21,4.38,0l1.05,.91c1.2,1.19,1.83,2.75,1.83,4.42Z" />
                   </svg>
                 </button>
               </div>
@@ -923,11 +917,11 @@ function App() {
                       type="button"
                       aria-label={t.voice.leave}
                       className="h-8 w-8 rounded-md grid place-items-center hover-surface cursor-pointer"
-                      style={{ color: '#f87171' }}
+                      style={{ color: '#cbd5e1' }}
                       onClick={() => setVoiceLeaveSignal((prev) => prev + 1)}
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                        <path d="M7 2a1 1 0 0 1 1 1v3a1 1 0 0 1-.293.707L6 8.414a14.927 14.927 0 0 0 9.586 9.586l1.707-1.707A1 1 0 0 1 18 16h3a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-2C9.82 21 3 14.18 3 6V4a1 1 0 0 1 1-1h3Z" />
+                        <path d="M24,6.24c0,7.64-10.13,17.76-17.76,17.76-1.67,0-3.23-.63-4.38-1.78l-1-1.15c-1.16-1.16-1.16-3.12,.05-4.33,.03-.03,2.44-1.88,2.44-1.88,1.2-1.14,3.09-1.14,4.28,0l1.46,1.17c3.2-1.36,5.47-3.64,6.93-6.95l-1.16-1.46c-1.15-1.19-1.15-3.09,0-4.28,0,0,1.85-2.41,1.88-2.44,1.21-1.21,3.17-1.21,4.38,0l1.05,.91c1.2,1.19,1.83,2.75,1.83,4.42Z" />
                       </svg>
                     </button>
                   </div>
