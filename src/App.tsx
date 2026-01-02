@@ -78,6 +78,7 @@ function App() {
   const activeChannelRef = useRef('')
   const lastHistoryChannelIdRef = useRef('')
   const watchedVoiceRef = useRef<Set<string>>(new Set())
+  const channelsRef = useRef<Channel[]>([])
   const [isDark, setIsDark] = useState(true)
   const [authReady, setAuthReady] = useState(false)
   const [showEntryModal, setShowEntryModal] = useState(false)
@@ -268,6 +269,7 @@ function App() {
 
   useEffect(() => {
     if (!channels.length) return
+    channelsRef.current = channels
     const requested = routeChannelId && channels.find((channel) => channel.id === routeChannelId)
     if (requested) {
       setActiveChannelId(requested.id)
@@ -454,9 +456,24 @@ function App() {
   }, [])
 
   useEffect(() => {
-    const socket = io(serverBase, { withCredentials: true })
+    const socket = io(serverBase, {
+      withCredentials: true,
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 500,
+      reconnectionDelayMax: 5000,
+      timeout: 20000,
+    })
     socketRef.current = socket
-    socket.on('connect', () => {})
+    socket.on('connect', () => {
+      watchedVoiceRef.current.clear()
+      const voiceIds = channelsRef.current.filter((channel) => channel.type === 'voice').map((channel) => channel.id)
+      voiceIds.forEach((channelId) => {
+        watchedVoiceRef.current.add(channelId)
+        socket.emit('voice:watch', { channelId })
+      })
+    })
     socket.on('channels:update', () => {
       fetchChannels()
     })
