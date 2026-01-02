@@ -73,18 +73,19 @@ export default function Composer({
   }, [])
   return (
     <div className="px-4 pb-4">
-      {attachments.length > 0 ? (
-        <div className="mb-3 rounded-lg p-3" style={{ background: 'var(--panel)', border: '1px solid var(--border)' }}>
-          <div className="flex flex-wrap gap-3">
+      <div className={`rounded-[10px] ${disabled ? 'cursor-not-allowed opacity-90' : ''}`} style={{ background: 'var(--input-bg)', color: 'var(--text-primary)' }}>
+        {attachments.length > 0 ? (
+          <div className="px-3 pt-3">
+            <div className="flex flex-wrap gap-3">
             {attachments.map((item) => (
-              <div key={item.id} className="relative w-20">
-                <div className="w-20 rounded-md overflow-hidden" style={{ background: 'var(--input-bg)' }}>
+              <div key={item.id} className="relative w-28">
+                <div className="w-28 rounded-md overflow-hidden" style={{ background: 'var(--input-bg)' }}>
                   {item.isImage && item.previewUrl ? (
-                    <div className="w-20 h-20 flex items-center justify-center">
+                    <div className="w-28 h-28 flex items-center justify-center">
                       <img src={item.previewUrl} alt={item.name} className="max-w-full max-h-full object-contain" />
                     </div>
                   ) : (
-                    <div className="w-20 h-20 grid place-items-center" style={{ color: 'var(--text-muted)' }}>
+                    <div className="w-28 h-28 grid place-items-center" style={{ color: 'var(--text-muted)' }}>
                       <span className="text-[11px]">FILE</span>
                     </div>
                   )}
@@ -105,11 +106,10 @@ export default function Composer({
                 </button>
               </div>
             ))}
+            </div>
           </div>
-        </div>
-      ) : null}
-      <div className="flex items-center gap-2">
-        <div className={`flex w-full items-center rounded-[10px] px-3 py-3 ${disabled ? 'cursor-not-allowed opacity-90' : ''}`} style={{ background: 'var(--input-bg)', color: 'var(--text-primary)' }}>
+        ) : null}
+        <div className="flex items-center gap-2 px-3 py-3">
           <input
             ref={fileRef}
             type="file"
