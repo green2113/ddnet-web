@@ -23,6 +23,7 @@ const sortMembersByName = (members: VoiceMember[]) =>
 export type SidebarChannelsProps = {
   channels: Array<{ id: string; name: string; hidden?: boolean; type?: 'text' | 'voice' }>
   activeId?: string
+  joinedVoiceChannelId?: string
   serverName?: string
   voiceMembersByChannel?: Record<string, VoiceMember[]>
   voiceSpeakingByChannel?: Record<string, string[]>
@@ -41,6 +42,7 @@ export type SidebarChannelsProps = {
 export default function SidebarChannels({
   channels,
   activeId,
+  joinedVoiceChannelId,
   serverName,
   voiceMembersByChannel = {},
   voiceSpeakingByChannel = {},
@@ -348,7 +350,7 @@ export default function SidebarChannels({
                   }}
                 />
               ) : null}
-              <span style={{ color: 'var(--text-muted)' }}>#</span>
+              <span style={{ color: c.id === activeId ? '#ffffff' : 'var(--text-muted)' }}>#</span>
               <span
                 className="truncate"
                 style={{
@@ -477,13 +479,20 @@ export default function SidebarChannels({
                       }}
                     />
                   ) : null}
-                  <span style={{ color: 'var(--text-muted)' }}>
+                  <span style={{ color: c.id === activeId ? '#ffffff' : 'var(--text-muted)' }}>
                     <VolumeIcon size={16} />
                   </span>
                   <span
                     className="truncate"
                     style={{
-                      color: c.id === activeId ? 'var(--text-primary)' : unreadByChannel[c.id] ? 'var(--text-primary)' : 'var(--text-muted)',
+                      color:
+                        c.id === activeId
+                          ? 'var(--text-primary)'
+                          : joinedVoiceChannelId === c.id
+                            ? '#ffffff'
+                            : unreadByChannel[c.id]
+                              ? 'var(--text-primary)'
+                              : 'var(--text-muted)',
                     }}
                   >
                     {c.name}

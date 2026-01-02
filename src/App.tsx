@@ -742,6 +742,7 @@ function App() {
               <SidebarChannels
                 channels={channels}
                 activeId={activeChannelId}
+                joinedVoiceChannelId={joinedVoiceChannelId}
                 voiceMembersByChannel={voiceMembersByChannel}
                 voiceSpeakingByChannel={voiceSpeakingByChannel}
                 unreadByChannel={unreadByChannel}
@@ -889,6 +890,7 @@ function App() {
               <SidebarChannels
                 channels={channels}
                 activeId={activeChannelId}
+                joinedVoiceChannelId={joinedVoiceChannelId}
                 voiceMembersByChannel={voiceMembersByChannel}
                 voiceSpeakingByChannel={voiceSpeakingByChannel}
                 unreadByChannel={unreadByChannel}
