@@ -65,6 +65,7 @@ function App() {
   const [activeChannelId, setActiveChannelId] = useState('')
   const [voiceChannelId, setVoiceChannelId] = useState('')
   const [joinedVoiceChannelId, setJoinedVoiceChannelId] = useState('')
+  const [voiceLeaveSignal, setVoiceLeaveSignal] = useState(0)
   const [voiceSpeakingByChannel, setVoiceSpeakingByChannel] = useState<Record<string, string[]>>({})
   const [autoJoinVoiceChannelId, setAutoJoinVoiceChannelId] = useState<string | null>(null)
   const [input, setInput] = useState('')
@@ -86,6 +87,7 @@ function App() {
   const [showUserSettings, setShowUserSettings] = useState(false)
   const [settingsTab, setSettingsTab] = useState<'profile' | 'voice' | 'language'>('profile')
   const [voiceSwitchTargetId, setVoiceSwitchTargetId] = useState<string | null>(null)
+  const [voiceSwitchClosing, setVoiceSwitchClosing] = useState(false)
   const [language, setLanguage] = useState<Language>(() => getStoredLanguage())
   const [micSensitivity, setMicSensitivity] = useState(() => {
     if (typeof window === 'undefined') return -60
@@ -227,6 +229,12 @@ function App() {
       setShowEntryModal(true)
     }
   }, [authReady, user])
+
+  useEffect(() => {
+    if (voiceSwitchTargetId) {
+      setVoiceSwitchClosing(false)
+    }
+  }, [voiceSwitchTargetId])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -560,6 +568,23 @@ function App() {
   const activeChannel = channels.find((channel) => channel.id === activeChannelId)
   const isVoiceChannel = activeChannel?.type === 'voice'
   const voiceSidebarChannel = joinedVoiceChannelId ? channels.find((channel) => channel.id === joinedVoiceChannelId) : null
+
+  const closeVoiceSwitch = () => {
+    if (voiceSwitchClosing) return
+    setVoiceSwitchClosing(true)
+    window.setTimeout(() => {
+      setVoiceSwitchTargetId(null)
+      setVoiceSwitchClosing(false)
+    }, 180)
+  }
+
+  const confirmVoiceSwitch = () => {
+    if (!voiceSwitchTargetId) return
+    const targetId = voiceSwitchTargetId
+    setAutoJoinVoiceChannelId(targetId)
+    applyChannelSelect(targetId)
+    closeVoiceSwitch()
+  }
   const canManageChannels = Boolean(user?.id && adminIds.includes(user.id))
   const voiceSwitchTarget = voiceSwitchTargetId ? channels.find((channel) => channel.id === voiceSwitchTargetId) : null
 
@@ -734,11 +759,37 @@ function App() {
                 boxShadow: '0 8px 18px rgba(0,0,0,0.35)',
               }}
             >
-              <div className="text-[11px] font-semibold" style={{ color: '#22c55e' }}>
-                {t.voice.title}
-              </div>
-              <div className="text-sm truncate" style={{ color: 'var(--text-primary)' }}>
-                {voiceSidebarChannel.name}
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="text-[11px] font-semibold" style={{ color: '#22c55e' }}>
+                    {t.voice.title}
+                  </div>
+                  <button
+                    type="button"
+                    className="text-sm truncate text-left cursor-pointer hover:underline"
+                    style={{ color: 'var(--text-primary)' }}
+                    onClick={() => handleSelectChannel(voiceSidebarChannel.id)}
+                  >
+                    {voiceSidebarChannel.name}
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  aria-label={t.voice.leave}
+                  className="h-8 w-8 rounded-md grid place-items-center hover-surface cursor-pointer"
+                  style={{ color: '#f87171' }}
+                  onClick={() => setVoiceLeaveSignal((prev) => prev + 1)}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <path
+                      d="M2 15.5c2.2-2 4.6-3 7-3s4.8 1 7 3l-2 2a2 2 0 0 0 2.8 2.8l3.2-3.2a2 2 0 0 0 0-2.8c-2.9-2.9-6.7-4.5-11-4.5S7.9 10.6 5 13.5a2 2 0 0 0 0 2.8l3.2 3.2a2 2 0 1 0 2.8-2.8l-2-2Z"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
               </div>
             </div>
           ) : null}
@@ -854,11 +905,37 @@ function App() {
                     boxShadow: '0 8px 18px rgba(0,0,0,0.35)',
                   }}
                 >
-                  <div className="text-[11px] font-semibold" style={{ color: '#22c55e' }}>
-                    {t.voice.title}
-                  </div>
-                  <div className="text-sm truncate" style={{ color: 'var(--text-primary)' }}>
-                    {voiceSidebarChannel.name}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="text-[11px] font-semibold" style={{ color: '#22c55e' }}>
+                        {t.voice.title}
+                      </div>
+                      <button
+                        type="button"
+                        className="text-sm truncate text-left cursor-pointer hover:underline"
+                        style={{ color: 'var(--text-primary)' }}
+                        onClick={() => handleSelectChannel(voiceSidebarChannel.id)}
+                      >
+                        {voiceSidebarChannel.name}
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      aria-label={t.voice.leave}
+                      className="h-8 w-8 rounded-md grid place-items-center hover-surface cursor-pointer"
+                      style={{ color: '#f87171' }}
+                      onClick={() => setVoiceLeaveSignal((prev) => prev + 1)}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+                        <path
+                          d="M2 15.5c2.2-2 4.6-3 7-3s4.8 1 7 3l-2 2a2 2 0 0 0 2.8 2.8l3.2-3.2a2 2 0 0 0 0-2.8c-2.9-2.9-6.7-4.5-11-4.5S7.9 10.6 5 13.5a2 2 0 0 0 0 2.8l3.2 3.2a2 2 0 1 0 2.8-2.8l-2-2Z"
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </button>
                   </div>
                 </div>
               ) : null}
@@ -917,6 +994,7 @@ function App() {
                 onAutoJoinHandled={() => {
                   setAutoJoinVoiceChannelId(null)
                 }}
+                leaveSignal={voiceLeaveSignal}
                 onJoinStateChange={(channelId, joined) => {
                   setJoinedVoiceChannelId((prev) => {
                     if (joined) return channelId
@@ -1002,12 +1080,12 @@ function App() {
             : null}
           {voiceSwitchTarget ? (
             <div
-              className="fixed inset-0 z-50 grid place-items-center"
+              className={`fixed inset-0 z-50 grid place-items-center voice-switch-overlay${voiceSwitchClosing ? ' is-exiting' : ''}`}
               style={{ background: 'rgba(0,0,0,0.6)' }}
-              onMouseDown={() => setVoiceSwitchTargetId(null)}
+              onMouseDown={closeVoiceSwitch}
             >
               <div
-                className="w-[560px] max-w-[92vw] rounded-2xl p-6"
+                className={`w-[560px] max-w-[92vw] rounded-2xl p-6 voice-switch-panel${voiceSwitchClosing ? ' is-exiting' : ''}`}
                 style={{ background: 'var(--header-bg)', color: 'var(--text-primary)' }}
                 onMouseDown={(e) => e.stopPropagation()}
               >
@@ -1017,7 +1095,7 @@ function App() {
                     type="button"
                     className="h-8 w-8 rounded-full grid place-items-center hover-surface cursor-pointer"
                     aria-label="close"
-                    onClick={() => setVoiceSwitchTargetId(null)}
+                    onClick={closeVoiceSwitch}
                   >
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
                       <path d="M6 6l12 12M18 6l-12 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
@@ -1031,19 +1109,14 @@ function App() {
                   <button
                     className="px-5 h-10 rounded-md cursor-pointer"
                     style={{ background: 'rgba(127,127,127,0.2)', color: 'var(--text-primary)' }}
-                    onClick={() => setVoiceSwitchTargetId(null)}
+                    onClick={closeVoiceSwitch}
                   >
                     취소
                   </button>
                   <button
                     className="px-5 h-10 rounded-md text-white cursor-pointer"
                     style={{ background: '#5865f2' }}
-                    onClick={() => {
-                      if (!voiceSwitchTargetId) return
-                      setAutoJoinVoiceChannelId(voiceSwitchTargetId)
-                      applyChannelSelect(voiceSwitchTargetId)
-                      setVoiceSwitchTargetId(null)
-                    }}
+                    onClick={confirmVoiceSwitch}
                   >
                     확인
                   </button>

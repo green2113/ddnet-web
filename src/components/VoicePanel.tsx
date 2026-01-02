@@ -30,6 +30,7 @@ type VoicePanelProps = {
   onSpeakingChange?: (channelId: string, speakingIds: string[]) => void
   autoJoin?: boolean
   onAutoJoinHandled?: () => void
+  leaveSignal?: number
 }
 
 const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }]
@@ -55,10 +56,12 @@ export default function VoicePanel({
   onSpeakingChange,
   autoJoin = false,
   onAutoJoinHandled,
+  leaveSignal = 0,
 }: VoicePanelProps) {
   const [joined, setJoined] = useState(false)
   const [members, setMembers] = useState<VoiceMember[]>([])
   const [speakingIds, setSpeakingIds] = useState<string[]>([])
+  const lastLeaveSignalRef = useRef(leaveSignal)
   const [micMuted, setMicMuted] = useState(() => {
     if (typeof window === 'undefined') return false
     const storedMic = window.localStorage.getItem('voice-mic-muted') === 'true'
@@ -483,6 +486,16 @@ export default function VoicePanel({
       setMicMuted(micBeforeForceRef.current)
     }
   }, [forceHeadsetMuted, joined, headsetMuted, micMuted])
+
+  useEffect(() => {
+    if (!joined) {
+      lastLeaveSignalRef.current = leaveSignal
+      return
+    }
+    if (leaveSignal === lastLeaveSignalRef.current) return
+    lastLeaveSignalRef.current = leaveSignal
+    leaveVoice()
+  }, [joined, leaveSignal])
 
   return (
     <div className="flex-1 flex flex-col p-6 gap-4">
