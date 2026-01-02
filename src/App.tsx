@@ -280,6 +280,7 @@ function App() {
           setMessages(cached)
           scrollMessagesToBottom()
         } else {
+          setMessages([])
           fetchHistory(activeChannelId)
         }
       }

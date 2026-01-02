@@ -243,7 +243,16 @@ export default function SidebarChannels({
               : formatText(t.sidebarChannels.showHidden, { count: hiddenChannelsCount })}
           </button>
         ) : null}
-        <div className="flex-1 space-y-1">
+        <div
+          className="flex-1 space-y-1"
+          onDragOver={(event) => {
+            if (!canManage || !dragIdRef.current) return
+            event.preventDefault()
+            if (event.dataTransfer) {
+              event.dataTransfer.dropEffect = 'move'
+            }
+          }}
+        >
           {textChannels.map((c) => (
             <div
               key={c.id}
@@ -369,7 +378,16 @@ export default function SidebarChannels({
             </Tooltip>
           ) : null}
         </div>
-        <div className="flex-1 space-y-1">
+        <div
+          className="flex-1 space-y-1"
+          onDragOver={(event) => {
+            if (!canManage || !dragIdRef.current) return
+            event.preventDefault()
+            if (event.dataTransfer) {
+              event.dataTransfer.dropEffect = 'move'
+            }
+          }}
+        >
           {voiceChannels.map((c) => {
             const members = voiceMembersByChannel[c.id] || []
             const sortedMembers = members.length > 1 ? sortMembersByName(members) : members
