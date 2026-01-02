@@ -20,7 +20,7 @@
   --border: rgba(0,0,0,0.04);
   --input-bg: #ffffff;
   --accent: #5865f2;
-  --link: #5db8ff;
+  --link: #4aa3e6;
   --hover-bg: rgba(0,0,0,0.06);
   --scroll-thumb: #d7d9df;
   --divider: rgba(0,0,0,0.25);
@@ -71,7 +71,7 @@ body {
   --border: rgba(255,255,255,0.06);
   --input-bg: #383a40;  /* input surface */
   --accent: #5865f2;
-  --link: #7cc9ff;
+  --link: #6bb6e6;
   --hover-bg: rgba(255,255,255,0.08);
   --scroll-thumb: #2a2c31;
   --divider: rgba(255,255,255,0.18);
