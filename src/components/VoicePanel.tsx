@@ -361,11 +361,17 @@ export default function VoicePanel({
       cleanupPeer(payload.peerId)
     }
 
+    const handleForceLeave = (payload: { channelId: string }) => {
+      if (payload.channelId !== channelId) return
+      leaveVoice()
+    }
+
     socket.on('voice:members', handleMembers)
     socket.on('voice:offer', handleOffer)
     socket.on('voice:answer', handleAnswer)
     socket.on('voice:ice', handleIce)
     socket.on('voice:leave', handleLeave)
+    socket.on('voice:force-leave', handleForceLeave)
 
     return () => {
       socket.off('voice:members', handleMembers)
@@ -373,6 +379,7 @@ export default function VoicePanel({
       socket.off('voice:answer', handleAnswer)
       socket.off('voice:ice', handleIce)
       socket.off('voice:leave', handleLeave)
+      socket.off('voice:force-leave', handleForceLeave)
     }
   }, [channelId, joined, socket, user])
 
