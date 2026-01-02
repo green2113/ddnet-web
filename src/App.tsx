@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { io, Socket } from 'socket.io-client'
 import axios from 'axios'
@@ -123,6 +123,18 @@ function App() {
   const micTestAnimationRef = useRef<number | null>(null)
   const t = useMemo(() => getTranslations(language), [language])
   const serverLabel = t.sidebarChannels.serverName
+
+  const handleJoinStateChange = useCallback((channelId: string, joined: boolean) => {
+    setJoinedVoiceChannelId((prev) => {
+      if (joined) return channelId
+      if (prev === channelId) return ''
+      return prev
+    })
+  }, [])
+
+  const handleSpeakingChange = useCallback((channelId: string, speakingIds: string[]) => {
+    setVoiceSpeakingByChannel((prev) => ({ ...prev, [channelId]: speakingIds }))
+  }, [])
 
   const playNotificationSound = () => {
     const AudioCtx = window.AudioContext || (window as any).webkitAudioContext
@@ -1135,16 +1147,8 @@ function App() {
                   setAutoJoinVoiceChannelId(null)
                 }}
                 leaveSignal={voiceLeaveSignal}
-                onJoinStateChange={(channelId, joined) => {
-                  setJoinedVoiceChannelId((prev) => {
-                    if (joined) return channelId
-                    if (prev === channelId) return ''
-                    return prev
-                  })
-                }}
-                onSpeakingChange={(channelId, speakingIds) => {
-                  setVoiceSpeakingByChannel((prev) => ({ ...prev, [channelId]: speakingIds }))
-                }}
+                onJoinStateChange={handleJoinStateChange}
+                onSpeakingChange={handleSpeakingChange}
                 onRequireLogin={() => {
                   setEntryStep('choice')
                   setShowEntryModal(true)
