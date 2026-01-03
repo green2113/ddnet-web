@@ -167,6 +167,18 @@ export type UiText = {
     fallback: string
     clickHere: string
     pleaseDo: string
+    loginTab: string
+    signupTab: string
+    usernameLabel: string
+    usernamePlaceholder: string
+    emailLabel: string
+    emailPlaceholder: string
+    passwordLabel: string
+    passwordPlaceholder: string
+    loginAction: string
+    signupAction: string
+    discordAction: string
+    errorGeneric: string
   }
 }
 
@@ -336,6 +348,18 @@ const translations: TranslationMap = {
       fallback: 'If you are not redirected,',
       clickHere: 'click this text',
       pleaseDo: 'please.',
+      loginTab: 'Login',
+      signupTab: 'Sign up',
+      usernameLabel: 'Username',
+      usernamePlaceholder: 'Enter a username',
+      emailLabel: 'Email',
+      emailPlaceholder: 'you@example.com',
+      passwordLabel: 'Password',
+      passwordPlaceholder: 'Enter your password',
+      loginAction: 'Log in',
+      signupAction: 'Create account',
+      discordAction: 'Continue with Discord',
+      errorGeneric: 'Something went wrong. Please try again.',
     },
   },
   ko: {
@@ -503,6 +527,18 @@ const translations: TranslationMap = {
       fallback: '만약 이동이 되지 않는다면',
       clickHere: '이 글씨를 클릭',
       pleaseDo: '해 주세요.',
+      loginTab: '로그인',
+      signupTab: '회원가입',
+      usernameLabel: '이름',
+      usernamePlaceholder: '사용할 이름을 입력하세요',
+      emailLabel: '이메일',
+      emailPlaceholder: 'you@example.com',
+      passwordLabel: '비밀번호',
+      passwordPlaceholder: '비밀번호를 입력하세요',
+      loginAction: '로그인',
+      signupAction: '계정 만들기',
+      discordAction: 'Discord로 계속하기',
+      errorGeneric: '문제가 발생했습니다. 다시 시도해 주세요.',
     },
   },
   'zh-Hans': {
@@ -670,6 +706,18 @@ const translations: TranslationMap = {
       fallback: '如果未自动跳转，',
       clickHere: '点击此文字',
       pleaseDo: '即可。',
+      loginTab: '登录',
+      signupTab: '注册',
+      usernameLabel: '昵称',
+      usernamePlaceholder: '请输入昵称',
+      emailLabel: '邮箱',
+      emailPlaceholder: 'you@example.com',
+      passwordLabel: '密码',
+      passwordPlaceholder: '请输入密码',
+      loginAction: '登录',
+      signupAction: '创建账号',
+      discordAction: '使用 Discord 继续',
+      errorGeneric: '发生错误，请重试。',
     },
   },
   'zh-Hant': {
@@ -837,6 +885,18 @@ const translations: TranslationMap = {
       fallback: '如果沒有自動跳轉，',
       clickHere: '請點擊這段文字',
       pleaseDo: '。',
+      loginTab: '登入',
+      signupTab: '註冊',
+      usernameLabel: '名稱',
+      usernamePlaceholder: '請輸入名稱',
+      emailLabel: '電子郵件',
+      emailPlaceholder: 'you@example.com',
+      passwordLabel: '密碼',
+      passwordPlaceholder: '請輸入密碼',
+      loginAction: '登入',
+      signupAction: '建立帳號',
+      discordAction: '使用 Discord 繼續',
+      errorGeneric: '發生錯誤，請再試一次。',
     },
   },
 }

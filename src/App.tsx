@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { io, Socket } from 'socket.io-client'
 import axios from 'axios'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import SidebarGuilds from './components/SidebarGuilds'
 import SidebarChannels from './components/SidebarChannels'
 import SidebarProfileBar from './components/SidebarProfileBar'
@@ -81,10 +81,6 @@ function App() {
   const channelsRef = useRef<Channel[]>([])
   const [isDark, setIsDark] = useState(true)
   const [authReady, setAuthReady] = useState(false)
-  const [showEntryModal, setShowEntryModal] = useState(false)
-  const [entryStep, setEntryStep] = useState<'choice' | 'guest'>('choice')
-  const [guestName, setGuestName] = useState(() => localStorage.getItem('guest_name') || '')
-  const [guestSubmitting, setGuestSubmitting] = useState(false)
   const [menu, setMenu] = useState<{ visible: boolean; x: number; y: number; message: ChatMessage | null }>({ visible: false, x: 0, y: 0, message: null })
   const [showMobileChannels, setShowMobileChannels] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
@@ -118,6 +114,7 @@ function App() {
   const [micTestError, setMicTestError] = useState('')
   const [adminInput, setAdminInput] = useState('')
   const { channelId: routeChannelId } = useParams()
+  const location = useLocation()
   const navigate = useNavigate()
   const micTestStreamRef = useRef<MediaStream | null>(null)
   const micTestContextRef = useRef<AudioContext | null>(null)
@@ -170,6 +167,14 @@ function App() {
     const api = (import.meta as any).env?.VITE_API_BASE as string | undefined
     return api ? api.replace(/\/$/, '') : ''
   }, [])
+
+  const requireLogin = useCallback(() => {
+    if (location.pathname !== '/login') {
+      const returnTo = `${location.pathname}${location.search}${location.hash}`
+      localStorage.setItem('return_to', returnTo || '/')
+      navigate('/login', { replace: true, state: { from: returnTo } })
+    }
+  }, [location, navigate])
 
   const scrollMessagesToBottom = () => {
     requestAnimationFrame(() => {
@@ -245,11 +250,8 @@ function App() {
 
   useEffect(() => {
     if (!authReady) return
-    if (!user) {
-      setEntryStep('choice')
-      setShowEntryModal(true)
-    }
-  }, [authReady, user])
+    if (!user) requireLogin()
+  }, [authReady, user, requireLogin])
 
   useEffect(() => {
     if (voiceSwitchTargetId) {
@@ -558,17 +560,6 @@ function App() {
     if (el) el.scrollTop = el.scrollHeight
   }, [messages])
 
-  const buildAuthUrl = (returnTo: string) => {
-    const apiBase = (import.meta as any).env?.VITE_API_BASE as string | undefined
-    const authPath = apiBase ? `${apiBase.replace(/\/$/, '')}/auth/discord` : '/auth/discord'
-    const params = new URLSearchParams({ return_to: returnTo })
-    const authUrl = `${authPath}?${params.toString()}`
-    if (authUrl.startsWith('/')) {
-      return `${window.location.origin}${authUrl}`
-    }
-    return authUrl
-  }
-
   const refreshMe = () => {
     axios
       .get(`${serverBase}/api/me`, { withCredentials: true })
@@ -587,31 +578,17 @@ function App() {
     return () => window.removeEventListener('auth-complete', handler as EventListener)
   }, [serverBase])
 
-  const login = () => {
-    const returnTo = window.location.pathname + window.location.search
-    localStorage.setItem('return_to', returnTo)
-    const electronAPI = (window as any).electronAPI
-    if (electronAPI?.openAuth) {
-      const expectedOrigin = (import.meta as any).env?.VITE_WEB_ORIGIN || window.location.origin
-      electronAPI.openAuth(buildAuthUrl(returnTo), expectedOrigin)
-      return
-    }
-    window.location.href = '/login'
-  }
-
   const logout = async () => {
     await axios.post(`${serverBase}/auth/logout`, {}, { withCredentials: true })
     setUser(null)
-    setEntryStep('choice')
-    setShowEntryModal(true)
+    requireLogin()
   }
 
   const sendMessage = async () => {
     if (!input.trim() && attachments.length === 0) return
     if (!activeChannelId) return
     if (!user) {
-      setEntryStep('choice')
-      setShowEntryModal(true)
+      requireLogin()
       return
     }
     if (attachments.length > 0) {
@@ -663,8 +640,7 @@ function App() {
       return
     }
     if (!user) {
-      setEntryStep('choice')
-      setShowEntryModal(true)
+      requireLogin()
       return
     }
     const isImage = file.type.startsWith('image/')
@@ -724,28 +700,6 @@ function App() {
       setAutoJoinVoiceChannelId(channelId)
     }
     applyChannelSelect(channelId)
-  }
-
-  const createGuest = () => {
-    const name = guestName.trim()
-    if (!name || guestSubmitting) return
-    setGuestSubmitting(true)
-    axios
-      .post(
-        `${serverBase}/auth/guest`,
-        { name },
-        { withCredentials: true },
-      )
-      .then((res) => {
-        if (res.data) {
-          setUser(res.data)
-          localStorage.setItem('guest_name', res.data.displayName || name)
-          setShowEntryModal(false)
-        }
-      })
-      .finally(() => {
-        setGuestSubmitting(false)
-      })
   }
 
   const isElectronApp = typeof window !== 'undefined' && (window as any).electronAPI
@@ -1167,8 +1121,7 @@ function App() {
                 onJoinStateChange={handleJoinStateChange}
                 onSpeakingChange={handleSpeakingChange}
                 onRequireLogin={() => {
-                  setEntryStep('choice')
-                  setShowEntryModal(true)
+                  requireLogin()
                 }}
               />
             </div>
@@ -1285,73 +1238,6 @@ function App() {
               </div>
             </div>
           ) : null}
-          {showEntryModal && (
-            <div className="fixed inset-0 z-50 grid place-items-center" style={{ background: 'rgba(0,0,0,0.4)' }}>
-              <div className="w-[520px] max-w-[90vw] rounded-lg" style={{ background: 'var(--header-bg)', border: '1px solid var(--border)' }}>
-                {entryStep === 'choice' ? (
-                  <>
-                    <div className="px-5 pt-4 pb-2 text-base" style={{ color: 'var(--text-primary)' }}>
-                      {t.app.loginTitle}
-                    </div>
-                    <div className="px-5 pb-2 text-sm" style={{ color: 'var(--text-muted)' }}>
-                      {t.app.loginSubtitle}
-                    </div>
-                    <div className="px-5 py-3 flex justify-end gap-2" style={{ background: 'var(--panel)', borderTop: '1px solid var(--border)' }}>
-                      <button
-                        className="px-3 h-9 rounded-md cursor-pointer"
-                        style={{ background: 'rgba(127,127,127,0.2)', color: 'var(--text-primary)' }}
-                        onClick={() => setEntryStep('guest')}
-                      >
-                        {t.app.loginWithout}
-                      </button>
-                      <button
-                        className="px-3 h-9 rounded-md text-white cursor-pointer"
-                        style={{ background: '#5865f2' }}
-                        onClick={() => {
-                          setShowEntryModal(false)
-                          login()
-                        }}
-                      >
-                        {t.app.loginDiscord}
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="px-5 py-4 text-base" style={{ color: 'var(--text-primary)' }}>
-                      {t.app.guestTitle}
-                    </div>
-                    <div className="px-5 pb-4">
-                      <input
-                        value={guestName}
-                        onChange={(event) => setGuestName(event.target.value)}
-                        placeholder={t.app.guestPlaceholder}
-                        className="w-full h-10 px-3 rounded-md"
-                        style={{ background: 'var(--input-bg)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
-                      />
-                    </div>
-                    <div className="px-5 py-3 flex justify-between gap-2" style={{ background: 'var(--panel)', borderTop: '1px solid var(--border)' }}>
-                      <button
-                        className="px-3 h-9 rounded-md cursor-pointer"
-                        style={{ background: 'rgba(127,127,127,0.2)', color: 'var(--text-primary)' }}
-                        onClick={() => setEntryStep('choice')}
-                      >
-                        {t.app.back}
-                      </button>
-                      <button
-                        className="px-3 h-9 rounded-md text-white cursor-pointer disabled:opacity-50"
-                        style={{ background: '#16a34a' }}
-                        onClick={createGuest}
-                        disabled={!guestName.trim() || guestSubmitting}
-                      >
-                        {t.app.confirm}
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
           {showCreateChannel ? (
             <div
               className={`fixed inset-0 z-50 grid place-items-center modal-overlay${createChannelClosing ? ' is-exiting' : ''}`}

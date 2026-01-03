@@ -258,7 +258,7 @@ export default function SidebarChannels({
           {textChannels.map((c) => (
             <div
               key={c.id}
-              className="px-2 py-1 rounded cursor-pointer flex items-center gap-2 hover:opacity-90"
+              className="px-2 py-1 rounded-md cursor-pointer flex items-center gap-2 hover:opacity-90"
               style={{
                 color: 'var(--text-primary)',
                 background: c.id === activeId ? 'rgba(255,255,255,0.12)' : 'transparent',
@@ -387,7 +387,7 @@ export default function SidebarChannels({
             return (
               <div key={c.id} className="space-y-1">
                 <div
-                  className="px-2 py-1 rounded cursor-pointer flex items-center gap-2 hover:opacity-90"
+                  className="px-2 py-1 rounded-md cursor-pointer flex items-center gap-2 hover:opacity-90"
                   style={{
                     color: 'var(--text-primary)',
                     background: c.id === activeId ? 'rgba(255,255,255,0.12)' : 'transparent',
