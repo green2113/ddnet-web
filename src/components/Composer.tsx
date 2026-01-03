@@ -264,7 +264,8 @@ export default function Composer({
               }}
               onInput={(event) => {
                 if (!editorRef.current || disabled) return
-                if ((event as InputEvent).inputType === 'insertLineBreak') {
+                const nativeEvent = event.nativeEvent
+                if ('inputType' in nativeEvent && nativeEvent.inputType === 'insertLineBreak') {
                   event.preventDefault()
                   document.execCommand('insertHTML', false, '<br>')
                 }

@@ -38,16 +38,16 @@ html, body, #root {
   height: 100%;
 }
 
-/* 모바?�에???�체 ?�이지가 ?�크롤되지 ?�게 고정 */
+/* 모바?�에???�체 ?�이지가 ?�크롤되지 ?�게 고정 */
 body {
   overflow: hidden;
   overscroll-behavior: none;
 }
 
-/* ??루트 ?? ?�드로이??모바?�에??주소�?변?�에???�확??뷰포???�이�?차�? */
+/* ??루트 ?? ?�드로이??모바?�에??주소�?변?�에???�확??뷰포???�이�?차�? */
 .app-shell {
   height: 100dvh;
-  height: 100svh; /* 지??브라?��??�서 ?�전 뷰포???�용 */
+  height: 100svh; /* 지??브라?��??�서 ?�전 뷰포???�용 */
   display: flex;
   width: 100%;
   overflow: hidden;
@@ -115,14 +115,14 @@ a:hover {
   -webkit-app-region: no-drag;
 }
 
-/* ?�짜 구분?????�래�??�택 방�???*/
+/* ?�짜 구분?????�래�??�택 방�???*/
 .no-select {
   user-select: none;
   -webkit-user-select: none;
   -ms-user-select: none;
 }
 
-/* 메시지 ???�버 ?�이?�이??*/
+/* 메시지 ???�버 ?�이?�이??*/
 .row-hover {
   border-radius: 5px;
 }
@@ -134,8 +134,8 @@ a:hover {
 .messages-scroll {
   scrollbar-width: initial;               /* Firefox */
   scrollbar-color: var(--scroll-thumb) transparent;
-  overscroll-behavior: contain;           /* 부모로 ?�크�??�파 방�? */
-  -webkit-overflow-scrolling: touch;      /* iOS 부?�러???�크�?*/
+  overscroll-behavior: contain;           /* 부모로 ?�크�??�파 방�? */
+  -webkit-overflow-scrolling: touch;      /* iOS 부?�러???�크�?*/
 }
 .messages-scroll::-webkit-scrollbar {
   width: 8px;
