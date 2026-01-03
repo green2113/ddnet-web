@@ -78,7 +78,10 @@ export default function Composer({
     const nextValue = toSlateValue(value)
     setEditorValue(nextValue)
     Editor.withoutNormalizing(editor, () => {
-      editor.children = nextValue
+      const start = Editor.start(editor, [])
+      const end = Editor.end(editor, [])
+      Transforms.delete(editor, { at: { anchor: start, focus: end } })
+      Transforms.insertNodes(editor, nextValue)
       const point = value.length === 0 ? Editor.start(editor, []) : Editor.end(editor, [])
       Transforms.select(editor, point)
     })
