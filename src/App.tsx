@@ -1286,7 +1286,7 @@ function App() {
             </div>
           ) : null}
           {showEntryModal && (
-            <div className="fixed inset-0 grid place-items-center" style={{ background: 'rgba(0,0,0,0.4)' }}>
+            <div className="fixed inset-0 z-50 grid place-items-center" style={{ background: 'rgba(0,0,0,0.4)' }}>
               <div className="w-[520px] max-w-[90vw] rounded-lg" style={{ background: 'var(--header-bg)', border: '1px solid var(--border)' }}>
                 {entryStep === 'choice' ? (
                   <>
