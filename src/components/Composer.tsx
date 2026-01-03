@@ -1,4 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createEditor, Editor, Node, Text, Transforms } from 'slate'
+import type { BaseRange, Descendant, NodeEntry } from 'slate'
+import { Editable, ReactEditor, Slate, withReact } from 'slate-react'
 
 type Props = {
   value: string
@@ -20,6 +23,30 @@ type Props = {
   }
 }
 
+type LinkRange = BaseRange & { link?: boolean }
+
+type CustomText = { text: string }
+type ParagraphElement = { type: 'paragraph'; children: CustomText[] }
+
+declare module 'slate' {
+  interface CustomTypes {
+    Element: ParagraphElement
+    Text: CustomText
+  }
+}
+
+const toSlateValue = (text: string): Descendant[] => {
+  if (!text) {
+    return [{ type: 'paragraph', children: [{ text: '' }] }]
+  }
+  return text.split('\n').map((line) => ({
+    type: 'paragraph',
+    children: [{ text: line }],
+  }))
+}
+
+const toPlainText = (nodes: Descendant[]) => nodes.map((node) => Node.string(node)).join('\n')
+
 export default function Composer({
   value,
   onChange,
@@ -37,114 +64,38 @@ export default function Composer({
   const placeholder = disabled
     ? t.composer.placeholderLogin
     : t.composer.placeholderMessageWithChannel.replace('{channel}', channelName || 'general')
-  const editorRef = useRef<HTMLDivElement | null>(null)
   const fileRef = useRef<HTMLInputElement | null>(null)
+  const editorRef = useRef<HTMLDivElement | null>(null)
+  const lastValueRef = useRef(value)
   const maxEditorHeight = 180
 
-  const highlightedHtml = useMemo(() => {
-    const escapeHtml = (input: string) =>
-      input
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;')
+  const editor = useMemo(() => withReact(createEditor()), [])
+  const [editorValue, setEditorValue] = useState<Descendant[]>(() => toSlateValue(value))
 
-    const parts = value.split(/(https?:\/\/[^\s]+)/g)
-    return parts
-      .map((part) => {
-        if (/^https?:\/\//.test(part)) {
-          return `<span style="color: var(--link); text-decoration: none;">${escapeHtml(part)}</span>`
-        }
-        return escapeHtml(part)
-      })
-      .join('')
-      .replace(/\n/g, '<br />')
-  }, [value])
+  useEffect(() => {
+    if (value === lastValueRef.current) return
+    lastValueRef.current = value
+    const nextValue = toSlateValue(value)
+    setEditorValue(nextValue)
+    Editor.withoutNormalizing(editor, () => {
+      editor.children = nextValue
+      const point = value.length === 0 ? Editor.start(editor, []) : Editor.end(editor, [])
+      Transforms.select(editor, point)
+    })
+    setIsEmpty(value.length === 0)
+  }, [value, editor])
 
-  const getSelectionOffset = () => {
-    const editor = editorRef.current
-    if (!editor) return null
-    const selection = window.getSelection()
-    if (!selection || selection.rangeCount === 0) return null
-    const range = selection.getRangeAt(0)
-    if (!editor.contains(range.startContainer)) return null
-    const preRange = range.cloneRange()
-    preRange.selectNodeContents(editor)
-    preRange.setEnd(range.startContainer, range.startOffset)
-    return preRange.toString().length
-  }
-
-  const restoreSelection = (offset: number) => {
-    const editor = editorRef.current
-    if (!editor) return
-    const selection = window.getSelection()
-    if (!selection) return
-    let remaining = offset
-    const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT, null)
-    let node = walker.nextNode()
-    while (node) {
-      const textLength = node.textContent?.length ?? 0
-      if (remaining <= textLength) {
-        const range = document.createRange()
-        range.setStart(node, remaining)
-        range.collapse(true)
-        selection.removeAllRanges()
-        selection.addRange(range)
-        return
-      }
-      remaining -= textLength
-      node = walker.nextNode()
-    }
-    selection.selectAllChildren(editor)
-    selection.collapseToEnd()
-  }
-
-  const adjustHeight = () => {
-    if (typeof window === 'undefined') return
+  const adjustHeight = useCallback(() => {
     const el = editorRef.current
     if (!el) return
     el.style.height = 'auto'
     const next = Math.min(el.scrollHeight, maxEditorHeight)
     el.style.height = `${Math.ceil(next)}px`
-  }
-
-  const syncEditorHtml = () => {
-    const editor = editorRef.current
-    if (!editor) return
-    const desired = highlightedHtml || ''
-    if (editor.innerHTML === desired) return
-    const selectionOffset = getSelectionOffset()
-    editor.innerHTML = desired
-    if (selectionOffset !== null) {
-      restoreSelection(selectionOffset)
-    }
-    setIsEmpty((editor.textContent || '').length === 0)
-  }
+  }, [maxEditorHeight])
 
   useEffect(() => {
-    syncEditorHtml()
     adjustHeight()
-  }, [highlightedHtml])
-
-  useEffect(() => {
-    const target: EventTarget | null = typeof window === 'undefined' ? null : window
-    if (!target) return
-    const el = editorRef.current
-    if (!el) return
-    let observer: ResizeObserver | null = null
-    if (typeof ResizeObserver !== 'undefined') {
-      observer = new ResizeObserver(() => adjustHeight())
-      observer.observe(el)
-    } else {
-      const onResize = () => adjustHeight()
-      target.addEventListener('resize', onResize)
-      return () => target.removeEventListener('resize', onResize)
-    }
-    return () => {
-      observer?.disconnect()
-    }
-  }, [])
+  }, [editorValue, adjustHeight])
 
   useEffect(() => {
     const handleKeydown = (event: KeyboardEvent) => {
@@ -156,12 +107,43 @@ export default function Composer({
         const tag = target.tagName?.toLowerCase()
         if (tag === 'input' || tag === 'textarea' || target.isContentEditable) return
       }
-      if (!editorRef.current) return
-      editorRef.current.focus()
+      ReactEditor.focus(editor)
     }
     window.addEventListener('keydown', handleKeydown)
     return () => window.removeEventListener('keydown', handleKeydown)
-  }, [disabled])
+  }, [disabled, editor])
+
+  const decorate = useCallback((entry: NodeEntry) => {
+    const [node, path] = entry
+    if (!Text.isText(node)) return []
+    const ranges: LinkRange[] = []
+    const regex = /https?:\/\/\S{2,}/g
+    let match: RegExpExecArray | null
+    while ((match = regex.exec(node.text)) !== null) {
+      ranges.push({
+        anchor: { path, offset: match.index },
+        focus: { path, offset: match.index + match[0].length },
+        link: true,
+      })
+    }
+    return ranges
+  }, [])
+
+  const renderElement = useCallback(({ attributes, children }: { attributes: any; children: any }) => {
+    return <div {...attributes}>{children}</div>
+  }, [])
+
+  const renderLeaf = useCallback(({ attributes, children, leaf }: { attributes: any; children: any; leaf: any }) => {
+    if (leaf.link) {
+      return (
+        <span {...attributes} className="link">
+          {children}
+        </span>
+      )
+    }
+    return <span {...attributes}>{children}</span>
+  }, [])
+
   return (
     <div className="px-4 pb-4">
       <div className={`rounded-[10px] ${disabled ? 'cursor-not-allowed opacity-90' : ''}`} style={{ background: 'var(--input-bg)', color: 'var(--text-primary)' }}>
@@ -203,7 +185,7 @@ export default function Composer({
             </div>
           </div>
         ) : null}
-        <div className="flex items-center gap-2 px-3 py-3">
+        <div className="flex items-center gap-2 px-3 py-2.5">
           <input
             ref={fileRef}
             type="file"
@@ -236,83 +218,83 @@ export default function Composer({
                 style={{
                   color: 'var(--text-muted)',
                   padding: '8px 12px',
-                  fontSize: '14px',
-                  lineHeight: '22px',
+                  fontSize: '15px',
+                  lineHeight: '23px',
                 }}
               >
                 {placeholder}
               </div>
             ) : null}
-            <div
-              ref={editorRef}
-              className={`${disabled ? 'cursor-not-allowed' : ''}`}
-              contentEditable={!disabled}
-              role="textbox"
-              aria-label={placeholder}
-              style={{
-                minHeight: '36px',
-                maxHeight: `${maxEditorHeight}px`,
-                padding: '8px 12px',
-                fontSize: '14px',
-                lineHeight: '22px',
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
-                outline: 'none',
-                overflow: 'hidden',
-                color: 'var(--text-primary)',
-                background: 'transparent',
+            <Slate
+              editor={editor}
+              initialValue={editorValue}
+              onChange={(nextValue) => {
+                setEditorValue(nextValue)
+                const nextText = toPlainText(nextValue)
+                setIsEmpty(nextText.length === 0)
+                if (nextText !== lastValueRef.current) {
+                  lastValueRef.current = nextText
+                  onChange(nextText)
+                }
               }}
-              onInput={(event) => {
-                if (!editorRef.current || disabled) return
-                const nativeEvent = event.nativeEvent
-                if ('inputType' in nativeEvent && nativeEvent.inputType === 'insertLineBreak') {
-                  event.preventDefault()
-                  document.execCommand('insertHTML', false, '<br>')
-                }
-                const nextValue = editorRef.current.textContent || ''
-                if (nextValue !== value) {
-                  onChange(nextValue)
-                }
-                setIsEmpty(nextValue.length === 0)
-                adjustHeight()
-              }}
-              onPaste={(event) => {
-                if (disabled) return
-                if (!onAddAttachment || uploading) {
-                  event.preventDefault()
-                  const text = event.clipboardData?.getData('text/plain') || ''
-                  document.execCommand('insertText', false, text)
-                  return
-                }
-                const items = event.clipboardData?.items
-                if (!items) return
-                const fileItem = Array.from(items).find((item) => item.kind === 'file')
-                if (fileItem) {
-                  const file = fileItem.getAsFile()
-                  if (file) {
-                    event.preventDefault()
-                    onAddAttachment(file)
+            >
+              <Editable
+                ref={editorRef}
+                className={`${disabled ? 'cursor-not-allowed' : ''}`}
+                readOnly={disabled}
+                role="textbox"
+                aria-label={placeholder}
+                renderElement={renderElement}
+                renderLeaf={renderLeaf}
+                decorate={decorate}
+                spellCheck={false}
+                style={{
+                  minHeight: '36px',
+                  maxHeight: `${maxEditorHeight}px`,
+                  padding: '8px 12px',
+                  fontSize: '15px',
+                  lineHeight: '23px',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                  outline: 'none',
+                  overflow: 'hidden',
+                  color: 'var(--text-primary)',
+                  background: 'transparent',
+                }}
+                onPaste={(event) => {
+                  if (disabled) return
+                  if (!onAddAttachment || uploading) return
+                  const items = event.clipboardData?.items
+                  if (!items) return
+                  const fileItem = Array.from(items).find((item) => item.kind === 'file')
+                  if (fileItem) {
+                    const file = fileItem.getAsFile()
+                    if (file) {
+                      event.preventDefault()
+                      onAddAttachment(file)
+                    }
                   }
-                  return
-                }
-                const text = event.clipboardData?.getData('text/plain')
-                if (text) {
-                  event.preventDefault()
-                  document.execCommand('insertText', false, text)
-                }
-              }}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' && event.shiftKey) {
-                  event.preventDefault()
-                  document.execCommand('insertHTML', false, '<br>')
-                  return
-                }
-                if (event.key === 'Enter') {
-                  event.preventDefault()
-                  if (isEnabled) onSend()
-                }
-              }}
-            />
+                }}
+                onCompositionStart={() => {
+                  setIsEmpty(false)
+                }}
+                onCompositionEnd={() => {
+                  const nextText = toPlainText(editor.children)
+                  setIsEmpty(nextText.length === 0)
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && event.shiftKey) {
+                    event.preventDefault()
+                    Transforms.insertText(editor, '\n')
+                    return
+                  }
+                  if (event.key === 'Enter') {
+                    event.preventDefault()
+                    if (isEnabled) onSend()
+                  }
+                }}
+              />
+            </Slate>
           </div>
           <div className="flex items-center gap-1 ml-2">
             <button
