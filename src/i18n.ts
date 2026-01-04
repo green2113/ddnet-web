@@ -47,6 +47,7 @@ export type UiText = {
   sidebarChannels: {
     serverName: string
     serverSettings: string
+    invite: string
     notifications: string
     textChannels: string
     voiceChannels: string
@@ -230,6 +231,7 @@ const translations: TranslationMap = {
     sidebarChannels: {
       serverName: 'Server',
       serverSettings: 'Server settings',
+      invite: 'Invite to server',
       notifications: 'Notification settings',
       textChannels: 'Text channels',
       voiceChannels: 'Voice channels',
@@ -411,6 +413,7 @@ const translations: TranslationMap = {
     sidebarChannels: {
       serverName: '서버',
       serverSettings: '서버 설정',
+      invite: '서버에 초대하기',
       notifications: '알림 설정',
       textChannels: '텍스트 채널',
       voiceChannels: '음성 채널',
@@ -592,6 +595,7 @@ const translations: TranslationMap = {
     sidebarChannels: {
       serverName: '服务器',
       serverSettings: '服务器设置',
+      invite: '邀请加入服务器',
       notifications: '通知设置',
       textChannels: '文字频道',
       voiceChannels: '语音频道',
@@ -773,6 +777,7 @@ const translations: TranslationMap = {
     sidebarChannels: {
       serverName: '伺服器',
       serverSettings: '伺服器設定',
+      invite: '邀請加入伺服器',
       notifications: '通知設定',
       textChannels: '文字頻道',
       voiceChannels: '語音頻道',

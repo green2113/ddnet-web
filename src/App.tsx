@@ -105,6 +105,13 @@ function App() {
   const [createServerClosing, setCreateServerClosing] = useState(false)
   const createServerCloseTimerRef = useRef<number | null>(null)
   const [createServerName, setCreateServerName] = useState('')
+  const [showInviteModal, setShowInviteModal] = useState(false)
+  const [inviteClosing, setInviteClosing] = useState(false)
+  const inviteCloseTimerRef = useRef<number | null>(null)
+  const [inviteLoading, setInviteLoading] = useState(false)
+  const [inviteUrl, setInviteUrl] = useState('')
+  const [inviteError, setInviteError] = useState('')
+  const [inviteCopied, setInviteCopied] = useState(false)
   const [settingsTab, setSettingsTab] = useState<'profile' | 'voice' | 'language'>('profile')
   const [voiceSwitchTargetId, setVoiceSwitchTargetId] = useState<string | null>(null)
   const [voiceSwitchClosing, setVoiceSwitchClosing] = useState(false)
@@ -793,6 +800,9 @@ function App() {
       if (createServerCloseTimerRef.current) {
         window.clearTimeout(createServerCloseTimerRef.current)
       }
+      if (inviteCloseTimerRef.current) {
+        window.clearTimeout(inviteCloseTimerRef.current)
+      }
     },
     []
   )
@@ -1026,6 +1036,47 @@ function App() {
     }, 180)
   }
 
+  const closeInviteModal = () => {
+    if (inviteClosing) return
+    setInviteClosing(true)
+    inviteCloseTimerRef.current = window.setTimeout(() => {
+      setShowInviteModal(false)
+      setInviteClosing(false)
+      inviteCloseTimerRef.current = null
+    }, 180)
+  }
+
+  const openInviteModal = async () => {
+    if (!activeServerId) return
+    setInviteError('')
+    setInviteUrl('')
+    setInviteCopied(false)
+    setInviteLoading(true)
+    setShowInviteModal(true)
+    setInviteClosing(false)
+    if (inviteCloseTimerRef.current) {
+      window.clearTimeout(inviteCloseTimerRef.current)
+      inviteCloseTimerRef.current = null
+    }
+    try {
+      const res = await axios.post(
+        `${serverBase}/api/servers/${activeServerId}/invites`,
+        {},
+        { withCredentials: true }
+      )
+      const url = res.data?.url as string | undefined
+      if (url) {
+        setInviteUrl(url)
+      } else {
+        setInviteError('초대 링크를 만들지 못했어요.')
+      }
+    } catch {
+      setInviteError('초대 링크를 만들지 못했어요.')
+    } finally {
+      setInviteLoading(false)
+    }
+  }
+
   return (
     <div
       className={(isDark ? 'theme-dark ' : '') + 'app-shell flex flex-col'}
@@ -1158,11 +1209,11 @@ function App() {
                   </div>
                 </div>
               ) : (
-                <SidebarChannels
-                  channels={channels}
-                  activeId={activeChannelId}
-                  joinedVoiceChannelId={joinedVoiceChannelId}
-                  serverName={activeServer?.name}
+            <SidebarChannels
+              channels={channels}
+              activeId={activeChannelId}
+              joinedVoiceChannelId={joinedVoiceChannelId}
+              serverName={activeServer?.name}
                   voiceMembersByChannel={voiceMembersByChannel}
                   voiceSpeakingByChannel={voiceSpeakingByChannel}
                   unreadByChannel={unreadByChannel}
@@ -1171,16 +1222,17 @@ function App() {
                     handleSelectChannel(channelId)
                   }}
                   onOpenServerSettings={() => setShowSettings(true)}
-                  onCreateChannel={() => {
-                    setCreateChannelType('text')
-                    setCreateChannelName('')
-                    setShowCreateChannel(true)
-                    setCreateChannelClosing(false)
-                    if (createChannelCloseTimerRef.current) {
-                      window.clearTimeout(createChannelCloseTimerRef.current)
-                      createChannelCloseTimerRef.current = null
-                    }
-                  }}
+              onCreateChannel={() => {
+                setCreateChannelType('text')
+                setCreateChannelName('')
+                setShowCreateChannel(true)
+                setCreateChannelClosing(false)
+                if (createChannelCloseTimerRef.current) {
+                  window.clearTimeout(createChannelCloseTimerRef.current)
+                  createChannelCloseTimerRef.current = null
+                }
+              }}
+              onCreateInvite={openInviteModal}
                   onRenameChannel={(channelId, name) => {
                     if (!canManageChannels) return
                     if (!activeServerId) return
@@ -1368,11 +1420,11 @@ function App() {
                   </div>
                 </div>
               ) : (
-                <SidebarChannels
-                  channels={channels}
-                  activeId={activeChannelId}
-                  joinedVoiceChannelId={joinedVoiceChannelId}
-                  serverName={activeServer?.name}
+            <SidebarChannels
+              channels={channels}
+              activeId={activeChannelId}
+              joinedVoiceChannelId={joinedVoiceChannelId}
+              serverName={activeServer?.name}
                   voiceMembersByChannel={voiceMembersByChannel}
                   voiceSpeakingByChannel={voiceSpeakingByChannel}
                   unreadByChannel={unreadByChannel}
@@ -1381,16 +1433,17 @@ function App() {
                     handleSelectChannel(channelId)
                   }}
                   onOpenServerSettings={() => setShowSettings(true)}
-                  onCreateChannel={() => {
-                    setCreateChannelType('text')
-                    setCreateChannelName('')
-                    setShowCreateChannel(true)
-                    setCreateChannelClosing(false)
-                    if (createChannelCloseTimerRef.current) {
-                      window.clearTimeout(createChannelCloseTimerRef.current)
-                      createChannelCloseTimerRef.current = null
-                    }
-                  }}
+              onCreateChannel={() => {
+                setCreateChannelType('text')
+                setCreateChannelName('')
+                setShowCreateChannel(true)
+                setCreateChannelClosing(false)
+                if (createChannelCloseTimerRef.current) {
+                  window.clearTimeout(createChannelCloseTimerRef.current)
+                  createChannelCloseTimerRef.current = null
+                }
+              }}
+              onCreateInvite={openInviteModal}
                   onRenameChannel={(channelId, name) => {
                     if (!canManageChannels) return
                     if (!activeServerId) return
@@ -1929,6 +1982,64 @@ function App() {
                     만들기
                   </button>
                 </div>
+              </div>
+            </div>
+          ) : null}
+          {showInviteModal ? (
+            <div
+              className={`fixed inset-0 z-50 grid place-items-center modal-overlay${inviteClosing ? ' is-exiting' : ''}`}
+              style={{ background: 'rgba(0,0,0,0.6)' }}
+              onMouseDown={closeInviteModal}
+            >
+              <div
+                className={`w-[520px] max-w-[92vw] rounded-2xl p-6 modal-panel${inviteClosing ? ' is-exiting' : ''}`}
+                style={{ background: 'var(--header-bg)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                onMouseDown={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="text-lg font-semibold">서버에 초대하기</div>
+                  <button
+                    type="button"
+                    className="h-8 w-8 rounded-full grid place-items-center hover-surface cursor-pointer"
+                    aria-label="close"
+                    onClick={closeInviteModal}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                      <path d="M6 6l12 12M18 6l-12 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>
+                  이 링크를 공유해서 서버에 초대할 수 있어요.
+                </div>
+                <div className="flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: 'var(--panel)', border: '1px solid var(--border)' }}>
+                  <input
+                    value={inviteUrl}
+                    readOnly
+                    className="flex-1 bg-transparent outline-none text-sm"
+                    style={{ color: 'var(--text-primary)' }}
+                    placeholder={inviteLoading ? '링크 만드는 중...' : '초대 링크를 생성하지 못했어요.'}
+                  />
+                  <button
+                    type="button"
+                    className="px-3 h-9 rounded-md text-white cursor-pointer hover-surface"
+                    style={{ background: 'var(--accent)' }}
+                    onClick={async () => {
+                      if (!inviteUrl) return
+                      try {
+                        await navigator.clipboard.writeText(inviteUrl)
+                        setInviteCopied(true)
+                        window.setTimeout(() => setInviteCopied(false), 1600)
+                      } catch {}
+                    }}
+                    disabled={!inviteUrl}
+                  >
+                    {inviteCopied ? '✓ 복사됨' : '복사'}
+                  </button>
+                </div>
+                {inviteError ? (
+                  <div className="text-xs mt-3" style={{ color: '#f87171' }}>{inviteError}</div>
+                ) : null}
               </div>
             </div>
           ) : null}

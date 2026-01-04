@@ -1,4 +1,5 @@
 import type React from 'react'
+import InviteCard from './InviteCard'
 
 export type ChatMessage = {
   id: string
@@ -70,6 +71,12 @@ export default function MessageList({ messages, adminIds = [], loading = false, 
       }
       return <span key={idx}>{part}</span>
     })
+  }
+
+  const getInvite = (content: string) => {
+    const match = content.match(/https?:\/\/\S*\/invite\/([A-Za-z0-9]{7,9})/i)
+    if (!match) return null
+    return { code: match[1], url: match[0] }
   }
 
   // 날짜별 그룹 전개
@@ -209,6 +216,11 @@ export default function MessageList({ messages, adminIds = [], loading = false, 
                     <div className="whitespace-pre-wrap break-words">
                       <span>{renderContent(m)}</span>
                     </div>
+                    {(() => {
+                      const invite = getInvite(m.content)
+                      if (!invite) return null
+                      return <InviteCard code={invite.code} url={invite.url} />
+                    })()}
                   </div>
                 </div>
               )

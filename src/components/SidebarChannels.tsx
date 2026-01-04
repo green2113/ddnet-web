@@ -37,6 +37,7 @@ export type SidebarChannelsProps = {
   onReorderChannels?: (orderedIds: string[]) => void
   canManage?: boolean
   onOpenServerSettings?: () => void
+  onCreateInvite?: () => void
 }
 
 export default function SidebarChannels({
@@ -56,6 +57,7 @@ export default function SidebarChannels({
   onReorderChannels,
   canManage = false,
   onOpenServerSettings,
+  onCreateInvite,
 }: SidebarChannelsProps) {
   const [open, setOpen] = useState(false)
   const [showHiddenChannels, setShowHiddenChannels] = useState(false)
@@ -207,6 +209,15 @@ export default function SidebarChannels({
                     <div className="m-2" style={{ height: '1px', background: 'var(--divider)', opacity: 0.25 }} />
                   </>
                 ) : null}
+                <MenuItem
+                  icon="invite"
+                  label={t.sidebarChannels.invite}
+                  bold
+                  onClick={() => {
+                    onCreateInvite?.()
+                    setOpen(false)
+                  }}
+                />
                 <MenuItem icon="bell" label={t.sidebarChannels.notifications} bold />
               </div>,
               document.getElementById('overlay-root') || document.body
@@ -623,6 +634,15 @@ function Icon({ name }: { name: string }) {
       return (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
           <path fill="currentColor" fillRule="evenodd" clipRule="evenodd" d="M12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2Zm6-6v-5a6 6 0 1 0-12 0v5l-2 2v1h16v-1l-2-2Z" />
+        </svg>
+      )
+    case 'invite':
+      return (
+        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
+          <path
+            fill="currentColor"
+            d="M15.5 12a3.5 3.5 0 1 0-3.3-4.8 5.5 5.5 0 0 1 0 9.6A3.5 3.5 0 1 0 15.5 12ZM7 13a4 4 0 1 0-3.8-5.5 4 4 0 0 0 0 9A4 4 0 0 0 7 13Zm9 5c-1.9 0-3.6.6-4.7 1.6-.4.3-.3.9.1 1.1.6.3 1.2.3 1.8 0 1-.5 2.1-.7 2.8-.7 2 0 4 1 4 2.5 0 .6.4 1.1 1 1.1s1-.5 1-1.1C22 19.1 19.2 18 16 18Zm-9 0c-2.6 0-6 1.2-6 3.6 0 .6.4 1.1 1 1.1s1-.5 1-1.1C3 20.4 5.2 19 7 19c1.4 0 2.8.4 3.9 1 .6.3 1.2.3 1.8 0 .4-.2.5-.8.1-1.1C11.6 18.6 9.6 18 7 18Z"
+          />
         </svg>
       )
     default:
