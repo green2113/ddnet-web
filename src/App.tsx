@@ -100,6 +100,10 @@ function App() {
   const createChannelCloseTimerRef = useRef<number | null>(null)
   const [createChannelType, setCreateChannelType] = useState<'text' | 'voice'>('text')
   const [createChannelName, setCreateChannelName] = useState('')
+  const [showCreateServer, setShowCreateServer] = useState(false)
+  const [createServerClosing, setCreateServerClosing] = useState(false)
+  const createServerCloseTimerRef = useRef<number | null>(null)
+  const [createServerName, setCreateServerName] = useState('')
   const [settingsTab, setSettingsTab] = useState<'profile' | 'voice' | 'language'>('profile')
   const [voiceSwitchTargetId, setVoiceSwitchTargetId] = useState<string | null>(null)
   const [voiceSwitchClosing, setVoiceSwitchClosing] = useState(false)
@@ -387,7 +391,8 @@ function App() {
   }, [authReady, user, location])
 
   useEffect(() => {
-    if (routeServerId === '@me') {
+    const isMeRoute = location.pathname === '/channels/@me' || location.pathname.startsWith('/channels/@me/')
+    if (isMeRoute) {
       setIsMeView(true)
       setActiveServerId('')
       setAdminIds([])
@@ -405,14 +410,14 @@ function App() {
     if (!activeServerId || !servers.find((server) => server.id === activeServerId)) {
       setActiveServerId(servers[0].id)
     }
-  }, [servers, routeServerId, activeServerId])
+  }, [servers, routeServerId, activeServerId, location.pathname])
 
   useEffect(() => {
     if (!authReady || !user) return
     if (servers.length > 0) return
-    if (routeServerId === '@me') return
+    if (location.pathname === '/channels/@me' || location.pathname.startsWith('/channels/@me/')) return
     navigate('/channels/@me', { replace: true })
-  }, [authReady, user, servers.length, routeServerId, navigate])
+  }, [authReady, user, servers.length, navigate, location.pathname])
 
   useEffect(() => {
     if (!activeServerId) return
@@ -736,6 +741,9 @@ function App() {
       if (createChannelCloseTimerRef.current) {
         window.clearTimeout(createChannelCloseTimerRef.current)
       }
+      if (createServerCloseTimerRef.current) {
+        window.clearTimeout(createServerCloseTimerRef.current)
+      }
     },
     []
   )
@@ -937,27 +945,29 @@ function App() {
     setActiveServerId(serverId)
   }
 
-  const handleCreateServer = async () => {
+  const handleCreateServer = () => {
     if (!user) {
       requireLogin()
       return
     }
-    const name = window.prompt('서버 이름을 입력하세요.')
-    if (!name || !name.trim()) return
-    try {
-      const res = await axios.post(
-        `${serverBase}/api/servers`,
-        { name: name.trim() },
-        { withCredentials: true }
-      )
-      const created = res.data as Server | null
-      await fetchServers()
-      if (created?.id) {
-        setActiveServerId(created.id)
-      }
-    } catch {
-      window.alert('서버 생성에 실패했습니다.')
+    const defaultName = `${user?.displayName || user?.username || '사용자'}님의 서버`
+    setCreateServerName(defaultName)
+    setShowCreateServer(true)
+    setCreateServerClosing(false)
+    if (createServerCloseTimerRef.current) {
+      window.clearTimeout(createServerCloseTimerRef.current)
+      createServerCloseTimerRef.current = null
     }
+  }
+
+  const closeCreateServer = () => {
+    if (createServerClosing) return
+    setCreateServerClosing(true)
+    createServerCloseTimerRef.current = window.setTimeout(() => {
+      setShowCreateServer(false)
+      setCreateServerClosing(false)
+      createServerCloseTimerRef.current = null
+    }, 180)
   }
 
   return (
@@ -968,11 +978,22 @@ function App() {
     >
       <div className="h-8 w-full relative flex items-center no-select app-drag z-10" style={{ background: 'var(--topbar-bg)' }}>
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="flex items-center gap-2 app-no-drag pointer-events-auto">
-            <div className="w-6 h-6 rounded-2xl overflow-hidden flex items-center justify-center" style={{ background: 'var(--input-bg)', color: 'var(--text-primary)' }}>
-              <span className="text-xs font-semibold">{serverLabel.slice(0, 1)}</span>
-            </div>
-            <span className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{serverLabel}</span>
+          <div className="flex items-center gap-2 app-no-drag pointer-events-auto text-sm">
+            {isMeView ? (
+              <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden style={{ color: 'var(--text-primary)' }}>
+                <path
+                  d="M4 11.5L12 5l8 6.5V20a1 1 0 0 1-1 1h-5.5v-6h-3v6H5a1 1 0 0 1-1-1v-8.5z"
+                  fill="currentColor"
+                />
+              </svg>
+            ) : (
+              <div className="w-7 h-7 rounded-2xl overflow-hidden flex items-center justify-center" style={{ background: 'var(--input-bg)', color: 'var(--text-primary)' }}>
+                <span className="text-sm font-semibold">{serverLabel.slice(0, 1)}</span>
+              </div>
+            )}
+            <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+              {isMeView ? '홈' : serverLabel}
+            </span>
           </div>
         </div>
       </div>
@@ -1469,17 +1490,17 @@ function App() {
                     <div className="text-lg font-semibold">친구</div>
                     <button
                       type="button"
-                      className="h-8 px-3 rounded-md text-sm font-semibold"
+                      className="h-8 px-3 rounded-md text-sm font-semibold cursor-pointer hover-surface"
                       style={{ background: 'var(--accent)', color: '#111' }}
                     >
                       친구 추가하기
                     </button>
                   </div>
                   <div className="mt-3 flex items-center gap-2 text-sm">
-                    <button className="px-3 h-8 rounded-md" style={{ background: 'var(--hover-bg)', color: 'var(--text-primary)' }}>온라인</button>
-                    <button className="px-3 h-8 rounded-md" style={{ color: 'var(--text-muted)' }}>모두</button>
-                    <button className="px-3 h-8 rounded-md" style={{ color: 'var(--text-muted)' }}>대기 중</button>
-                    <button className="px-3 h-8 rounded-md" style={{ color: 'var(--text-muted)' }}>차단됨</button>
+                    <button className="px-3 h-8 rounded-md cursor-pointer hover-surface" style={{ background: 'var(--hover-bg)', color: 'var(--text-primary)' }}>온라인</button>
+                    <button className="px-3 h-8 rounded-md cursor-pointer hover-surface" style={{ color: 'var(--text-muted)' }}>모두</button>
+                    <button className="px-3 h-8 rounded-md cursor-pointer hover-surface" style={{ color: 'var(--text-muted)' }}>대기 중</button>
+                    <button className="px-3 h-8 rounded-md cursor-pointer hover-surface" style={{ color: 'var(--text-muted)' }}>차단됨</button>
                   </div>
                 </div>
                 <div className="px-6 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
@@ -1490,7 +1511,7 @@ function App() {
                 </div>
                 <div className="px-6 py-4 flex-1 overflow-y-auto space-y-3">
                   {['Ari', 'B51', 'bigbeuro', 'chowondori', 'fwanny'].map((name) => (
-                    <div key={name} className="flex items-center justify-between rounded-xl px-4 py-3" style={{ background: 'var(--panel)', border: '1px solid var(--border)' }}>
+                    <div key={name} className="flex items-center justify-between rounded-xl px-4 py-3 hover-surface cursor-pointer" style={{ background: 'var(--panel)', border: '1px solid var(--border)' }}>
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="w-9 h-9 rounded-full" style={{ background: 'var(--input-bg)' }} />
                         <div className="min-w-0">
@@ -1498,7 +1519,7 @@ function App() {
                           <div className="text-xs" style={{ color: 'var(--text-muted)' }}>온라인</div>
                         </div>
                       </div>
-                      <button className="h-8 w-8 rounded-full" style={{ background: 'var(--hover-bg)' }}>💬</button>
+                      <button className="h-8 w-8 rounded-full cursor-pointer hover-surface" style={{ background: 'var(--hover-bg)' }}>💬</button>
                     </div>
                   ))}
                 </div>
@@ -1506,7 +1527,7 @@ function App() {
               <div className="w-[280px] shrink-0 p-4 space-y-3">
                 <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>현재 활동 중</div>
                 {[1, 2, 3].map((idx) => (
-                  <div key={idx} className="rounded-xl p-3" style={{ background: 'var(--panel)', border: '1px solid var(--border)' }}>
+                  <div key={idx} className="rounded-xl p-3 hover-surface cursor-pointer" style={{ background: 'var(--panel)', border: '1px solid var(--border)' }}>
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-lg" style={{ background: 'var(--input-bg)' }} />
                       <div>
@@ -1758,6 +1779,87 @@ function App() {
                     disabled={!createChannelName.trim()}
                   >
                     {t.sidebarChannels.confirmCreate}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
+          {showCreateServer ? (
+            <div
+              className={`fixed inset-0 z-50 grid place-items-center modal-overlay${createServerClosing ? ' is-exiting' : ''}`}
+              style={{ background: 'rgba(0,0,0,0.6)' }}
+              onMouseDown={closeCreateServer}
+            >
+              <div
+                className={`w-[520px] max-w-[92vw] rounded-2xl p-6 modal-panel${createServerClosing ? ' is-exiting' : ''}`}
+                style={{ background: 'var(--header-bg)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                onMouseDown={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="text-lg font-semibold">서버 만들기</div>
+                  <button
+                    type="button"
+                    className="h-8 w-8 rounded-full grid place-items-center hover-surface cursor-pointer"
+                    aria-label="close"
+                    onClick={closeCreateServer}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                      <path d="M6 6l12 12M18 6l-12 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>
+                  서버 이름은 언제든지 변경할 수 있어요.
+                </div>
+                <div className="text-sm font-semibold mb-2">서버 이름</div>
+                <div className="flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: 'var(--panel)', border: '1px solid var(--border)' }}>
+                  <input
+                    value={createServerName}
+                    onChange={(event) => setCreateServerName(event.target.value)}
+                    placeholder=""
+                    className="flex-1 bg-transparent outline-none text-sm"
+                    style={{ color: 'var(--text-primary)' }}
+                  />
+                </div>
+                <div className="mt-6 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    className="flex-1 h-10 rounded-md cursor-pointer hover-surface"
+                    style={{ background: 'rgba(127,127,127,0.2)', color: 'var(--text-primary)' }}
+                    onClick={closeCreateServer}
+                  >
+                    취소
+                  </button>
+                  <button
+                    type="button"
+                    className="flex-1 h-10 rounded-md text-white disabled:opacity-50 cursor-pointer hover-surface"
+                    style={{ background: 'var(--accent)' }}
+                    onClick={async () => {
+                      if (!user) {
+                        requireLogin()
+                        return
+                      }
+                      const name = createServerName.trim()
+                      if (!name) return
+                      try {
+                        const res = await axios.post(
+                          `${serverBase}/api/servers`,
+                          { name },
+                          { withCredentials: true }
+                        )
+                        const created = res.data as Server | null
+                        await fetchServers()
+                        if (created?.id) {
+                          setActiveServerId(created.id)
+                        }
+                        closeCreateServer()
+                      } catch {
+                        window.alert('서버 생성에 실패했습니다.')
+                      }
+                    }}
+                    disabled={!createServerName.trim()}
+                  >
+                    만들기
                   </button>
                 </div>
               </div>
