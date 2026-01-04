@@ -1,6 +1,8 @@
 const { app, BrowserWindow, clipboard, dialog, ipcMain, nativeImage, shell } = require('electron')
 const path = require('path')
 const fs = require('fs')
+const http = require('http')
+const https = require('https')
 
 const isDev = !app.isPackaged
 
@@ -150,11 +152,62 @@ ipcMain.handle('image:copy', (_event, payload) => {
   return true
 })
 
+const downloadImage = (url) =>
+  new Promise((resolve, reject) => {
+    let parsed
+    try {
+      parsed = new URL(url)
+    } catch {
+      reject(new Error('invalid url'))
+      return
+    }
+    const client = parsed.protocol === 'https:' ? https : parsed.protocol === 'http:' ? http : null
+    if (!client) {
+      reject(new Error('unsupported protocol'))
+      return
+    }
+    client
+      .get(parsed, (res) => {
+        if (res.statusCode && res.statusCode >= 400) {
+          reject(new Error(`status ${res.statusCode}`))
+          res.resume()
+          return
+        }
+        const chunks = []
+        res.on('data', (chunk) => chunks.push(chunk))
+        res.on('end', () => resolve(Buffer.concat(chunks)))
+      })
+      .on('error', reject)
+  })
+
+ipcMain.handle('image:copy-url', async (_event, payload) => {
+  const url = payload?.url
+  if (!url) return false
+  const buffer = await downloadImage(url)
+  const image = nativeImage.createFromBuffer(buffer)
+  clipboard.writeImage(image)
+  return true
+})
+
 ipcMain.handle('image:save', async (_event, payload) => {
   const bytes = payload?.data
   const filename = payload?.filename || 'image'
   if (!bytes) return false
   const buffer = Buffer.from(bytes)
+  const win = BrowserWindow.getFocusedWindow()
+  const { canceled, filePath } = await dialog.showSaveDialog(win || undefined, {
+    defaultPath: filename,
+  })
+  if (canceled || !filePath) return false
+  fs.writeFileSync(filePath, buffer)
+  return true
+})
+
+ipcMain.handle('image:save-url', async (_event, payload) => {
+  const url = payload?.url
+  const filename = payload?.filename || 'image'
+  if (!url) return false
+  const buffer = await downloadImage(url)
   const win = BrowserWindow.getFocusedWindow()
   const { canceled, filePath } = await dialog.showSaveDialog(win || undefined, {
     defaultPath: filename,

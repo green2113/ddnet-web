@@ -185,14 +185,13 @@ function App() {
 
   const copyImageToClipboard = async (url: string) => {
     try {
-      const res = await fetch(url)
-      const blob = await res.blob()
       const electronAPI = (window as any).electronAPI
-      if (electronAPI?.copyImage) {
-        const bytes = new Uint8Array(await blob.arrayBuffer())
-        await electronAPI.copyImage({ data: bytes, mime: blob.type })
+      if (electronAPI?.copyImageFromUrl) {
+        await electronAPI.copyImageFromUrl({ url })
         return
       }
+      const res = await fetch(url)
+      const blob = await res.blob()
       const ClipboardItemCtor = (window as any).ClipboardItem
       if (ClipboardItemCtor && navigator.clipboard?.write) {
         const item = new ClipboardItemCtor({ [blob.type]: blob })
@@ -209,8 +208,6 @@ function App() {
 
   const saveImageToDisk = async (url: string) => {
     try {
-      const res = await fetch(url)
-      const blob = await res.blob()
       const name = (() => {
         try {
           const u = new URL(url)
@@ -221,11 +218,12 @@ function App() {
         }
       })()
       const electronAPI = (window as any).electronAPI
-      if (electronAPI?.saveImage) {
-        const bytes = new Uint8Array(await blob.arrayBuffer())
-        await electronAPI.saveImage({ data: bytes, filename: name, mime: blob.type })
+      if (electronAPI?.saveImageFromUrl) {
+        await electronAPI.saveImageFromUrl({ url, filename: name })
         return
       }
+      const res = await fetch(url)
+      const blob = await res.blob()
       const savePicker = (window as any).showSaveFilePicker as
         | ((options: { suggestedName?: string; types?: Array<{ description: string; accept: Record<string, string[]> }> }) => Promise<any>)
         | undefined
