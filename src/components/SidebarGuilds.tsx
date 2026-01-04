@@ -32,15 +32,24 @@ export default function SidebarGuilds({
       <button
         type="button"
         onClick={() => onSelect?.('@me')}
-        className="w-12 h-12 rounded-2xl grid place-items-center text-white text-[18px] font-bold select-none cursor-pointer transition-all"
+        className="w-12 h-12 rounded-xl grid place-items-center text-white text-[18px] select-none cursor-pointer transition-all"
         style={{
           background: activeId === '@me' ? accent : 'var(--input-bg)',
-          transform: activeId === '@me' ? 'scale(1.04)' : 'scale(1)',
+          boxShadow: activeId === '@me' ? '0 10px 18px rgba(0,0,0,0.25)' : 'none',
         }}
-        title="메인 메뉴"
+        title="홈"
+        aria-label="홈"
       >
-        @
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+          <path
+            d="M4 11.5L12 5l8 6.5V20a1 1 0 0 1-1 1h-5.5v-6h-3v6H5a1 1 0 0 1-1-1v-8.5z"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinejoin="round"
+          />
+        </svg>
       </button>
+      <div className="w-8 h-[2px] rounded bg-black/15" />
       {servers.map((server) => {
         const isActive = server.id === activeId
         const label = server.name?.slice(0, 2).toUpperCase() || 'SV'
