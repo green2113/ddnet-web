@@ -30,7 +30,7 @@ export default function Login() {
         if (!res.ok) return
         const data = await res.json()
         if (!data) return
-        const returnTo = localStorage.getItem('return_to') || '/channels/general'
+        const returnTo = localStorage.getItem('return_to') || '/'
         localStorage.removeItem('return_to')
         navigate(returnTo, { replace: true })
       } catch {

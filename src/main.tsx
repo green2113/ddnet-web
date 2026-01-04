@@ -4,10 +4,13 @@ import './index.css'
 import App from './App.tsx'
 import { createBrowserRouter, createHashRouter, RouterProvider } from 'react-router-dom'
 import Login from './routes/Login.tsx'
+import Invite from './routes/Invite.tsx'
 
 const routes = [
   { path: '/', element: <App /> },
-  { path: '/channels/:channelId', element: <App /> },
+  { path: '/channels/:serverId', element: <App /> },
+  { path: '/channels/:serverId/:channelId', element: <App /> },
+  { path: '/invite/:code', element: <Invite /> },
   { path: '/login', element: <Login /> },
 ]
 const isFileProtocol = typeof window !== 'undefined' && window.location.protocol === 'file:'

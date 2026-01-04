@@ -54,6 +54,12 @@ type Channel = {
   type?: 'text' | 'voice'
 }
 
+type Server = {
+  id: string
+  name: string
+  ownerId?: string
+}
+
 function App() {
   const [user, setUser] = useState<User | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -64,6 +70,8 @@ function App() {
   const [loadError, setLoadError] = useState(false)
   const [channels, setChannels] = useState<Channel[]>([])
   const [adminIds, setAdminIds] = useState<string[]>([])
+  const [servers, setServers] = useState<Server[]>([])
+  const [activeServerId, setActiveServerId] = useState('')
   const [activeChannelId, setActiveChannelId] = useState('')
   const [voiceChannelId, setVoiceChannelId] = useState('')
   const [joinedVoiceChannelId, setJoinedVoiceChannelId] = useState('')
@@ -75,6 +83,7 @@ function App() {
   const [uploading, setUploading] = useState(false)
   const [attachments, setAttachments] = useState<Array<{ id: string; file: File; name: string; isImage: boolean; previewUrl?: string }>>([])
   const socketRef = useRef<Socket | null>(null)
+  const activeServerRef = useRef('')
   const activeChannelRef = useRef('')
   const lastHistoryChannelIdRef = useRef('')
   const watchedVoiceRef = useRef<Set<string>>(new Set())
@@ -113,14 +122,18 @@ function App() {
   const [micLevel, setMicLevel] = useState(-100)
   const [micTestError, setMicTestError] = useState('')
   const [adminInput, setAdminInput] = useState('')
-  const { channelId: routeChannelId } = useParams()
+  const { serverId: routeServerId, channelId: routeChannelId } = useParams()
   const location = useLocation()
   const navigate = useNavigate()
   const micTestStreamRef = useRef<MediaStream | null>(null)
   const micTestContextRef = useRef<AudioContext | null>(null)
   const micTestAnimationRef = useRef<number | null>(null)
   const t = useMemo(() => getTranslations(language), [language])
-  const serverLabel = t.sidebarChannels.serverName
+  const activeServer = useMemo(
+    () => servers.find((server) => server.id === activeServerId) || null,
+    [servers, activeServerId]
+  )
+  const serverLabel = activeServer?.name || t.sidebarChannels.serverName
 
   const handleJoinStateChange = useCallback((channelId: string, joined: boolean) => {
     setJoinedVoiceChannelId((prev) => {
@@ -291,27 +304,48 @@ function App() {
       })
   }
 
-  const fetchChannels = () => {
+  const fetchServers = useCallback(() => {
+    if (!user) return Promise.resolve([] as Server[])
+    return axios
+      .get(`${serverBase}/api/servers`, { withCredentials: true })
+      .then((res) => {
+        if (Array.isArray(res.data)) {
+          setServers(res.data)
+          return res.data as Server[]
+        }
+        return [] as Server[]
+      })
+      .catch(() => [] as Server[])
+  }, [serverBase, user, fetchChannels])
+
+  const fetchChannels = useCallback((serverId: string) => {
+    if (!serverId) return
     axios
-      .get(`${serverBase}/api/channels`, { withCredentials: true })
+      .get(`${serverBase}/api/servers/${serverId}/channels`, { withCredentials: true })
       .then((res) => {
         if (Array.isArray(res.data)) {
           setChannels(res.data)
         }
       })
       .catch(() => {})
-  }
+  }, [serverBase])
 
-  const fetchAdmins = () => {
+  const refreshChannels = useCallback(() => {
+    if (!activeServerId) return
+    fetchChannels(activeServerId)
+  }, [activeServerId, fetchChannels])
+
+  const fetchAdmins = useCallback((serverId: string) => {
+    if (!serverId) return
     axios
-      .get(`${serverBase}/api/admins`, { withCredentials: true })
+      .get(`${serverBase}/api/servers/${serverId}/admins`, { withCredentials: true })
       .then((res) => {
         if (Array.isArray(res.data)) {
           setAdminIds(res.data)
         }
       })
       .catch(() => {})
-  }
+  }, [serverBase])
 
   useEffect(() => {
     setLoadingMessages(true)
@@ -324,17 +358,19 @@ function App() {
       .finally(() => {
         setAuthReady(true)
       })
-
-    fetchChannels()
   }, [serverBase])
 
   useEffect(() => {
     if (!user) {
+      setServers([])
+      setActiveServerId('')
       setAdminIds([])
+      setChannels([])
+      setActiveChannelId('')
       return
     }
-    fetchAdmins()
-  }, [user, serverBase])
+    fetchServers()
+  }, [user, fetchServers])
 
   useEffect(() => {
     if (!authReady) return
@@ -347,6 +383,31 @@ function App() {
     const returnTo = `${location.pathname}${location.search}${location.hash}`
     localStorage.setItem('return_to', returnTo || '/')
   }, [authReady, user, location])
+
+  useEffect(() => {
+    if (!servers.length) return
+    const requested = routeServerId && servers.find((server) => server.id === routeServerId)
+    if (requested) {
+      setActiveServerId(requested.id)
+      return
+    }
+    if (!activeServerId || !servers.find((server) => server.id === activeServerId)) {
+      setActiveServerId(servers[0].id)
+    }
+  }, [servers, routeServerId, activeServerId])
+
+  useEffect(() => {
+    if (!activeServerId) return
+    setChannels([])
+    setActiveChannelId('')
+    setVoiceChannelId('')
+    setMessageCache({})
+    setMessages([])
+    setUnreadByChannel({})
+    lastHistoryChannelIdRef.current = ''
+    fetchChannels(activeServerId)
+    fetchAdmins(activeServerId)
+  }, [activeServerId, fetchChannels, fetchAdmins])
 
   useEffect(() => {
     if (voiceSwitchTargetId) {
@@ -367,7 +428,10 @@ function App() {
   useEffect(() => {
     if (!channels.length) return
     channelsRef.current = channels
-    const requested = routeChannelId && channels.find((channel) => channel.id === routeChannelId)
+    const requested =
+      routeChannelId &&
+      (!routeServerId || routeServerId === activeServerId) &&
+      channels.find((channel) => channel.id === routeChannelId)
     if (requested) {
       setActiveChannelId(requested.id)
       return
@@ -375,7 +439,7 @@ function App() {
     if (!activeChannelId || !channels.find((channel) => channel.id === activeChannelId)) {
       setActiveChannelId(channels[0].id)
     }
-  }, [channels, activeChannelId, routeChannelId])
+  }, [channels, activeChannelId, routeChannelId, routeServerId, activeServerId])
 
   useEffect(() => {
     const active = channels.find((channel) => channel.id === activeChannelId)
@@ -383,6 +447,10 @@ function App() {
       setVoiceChannelId(active.id)
     }
   }, [activeChannelId, channels])
+
+  useEffect(() => {
+    activeServerRef.current = activeServerId
+  }, [activeServerId])
 
   useEffect(() => {
     activeChannelRef.current = activeChannelId
@@ -408,11 +476,11 @@ function App() {
   }, [activeChannelId, channels, messageCache])
 
   useEffect(() => {
-    if (!activeChannelId) return
-    if (routeChannelId !== activeChannelId) {
-      navigate(`/channels/${activeChannelId}`, { replace: true })
+    if (!activeChannelId || !activeServerId) return
+    if (routeChannelId !== activeChannelId || routeServerId !== activeServerId) {
+      navigate(`/channels/${activeServerId}/${activeChannelId}`, { replace: true })
     }
-  }, [activeChannelId, navigate, routeChannelId])
+  }, [activeChannelId, activeServerId, navigate, routeChannelId, routeServerId])
 
   useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default') {
@@ -571,8 +639,11 @@ function App() {
         socket.emit('voice:watch', { channelId })
       })
     })
-    socket.on('channels:update', () => {
-      fetchChannels()
+    socket.on('channels:update', (payload?: { serverId?: string }) => {
+      const serverId = activeServerRef.current
+      if (!serverId) return
+      if (payload?.serverId && payload.serverId !== serverId) return
+      fetchChannels(serverId)
     })
     socket.on('chat:message', (msg: ChatMessage) => {
       const channelId = msg.channelId
@@ -667,11 +738,13 @@ function App() {
   useEffect(() => {
     const handler = () => {
       refreshMe()
-      fetchAdmins()
+      fetchServers()
+      const serverId = activeServerRef.current
+      if (serverId) fetchAdmins(serverId)
     }
     window.addEventListener('auth-complete', handler as EventListener)
     return () => window.removeEventListener('auth-complete', handler as EventListener)
-  }, [serverBase])
+  }, [serverBase, fetchServers, fetchAdmins])
 
   const logout = async () => {
     await axios.post(`${serverBase}/auth/logout`, {}, { withCredentials: true })
@@ -780,7 +853,11 @@ function App() {
     activeChannelRef.current = channelId
     setActiveChannelId(channelId)
     setUnreadByChannel((prev) => ({ ...prev, [channelId]: false }))
-    navigate(`/channels/${channelId}`)
+    if (activeServerId) {
+      navigate(`/channels/${activeServerId}/${channelId}`)
+    } else {
+      navigate(`/`)
+    }
     setShowMobileChannels(false)
   }
 
@@ -825,6 +902,33 @@ function App() {
   if (authReady && !user && location.pathname !== '/login') {
     const returnTo = `${location.pathname}${location.search}${location.hash}`
     return <Navigate to="/login" replace state={{ from: returnTo }} />
+  }
+  const handleSelectServer = (serverId: string) => {
+    if (!serverId || serverId === activeServerId) return
+    setActiveServerId(serverId)
+  }
+
+  const handleCreateServer = async () => {
+    if (!user) {
+      requireLogin()
+      return
+    }
+    const name = window.prompt('서버 이름을 입력하세요.')
+    if (!name || !name.trim()) return
+    try {
+      const res = await axios.post(
+        `${serverBase}/api/servers`,
+        { name: name.trim() },
+        { withCredentials: true }
+      )
+      const created = res.data as Server | null
+      await fetchServers()
+      if (created?.id) {
+        setActiveServerId(created.id)
+      }
+    } catch {
+      window.alert('서버 생성에 실패했습니다.')
+    }
   }
 
   return (
@@ -883,7 +987,13 @@ function App() {
       <div className="flex-1 flex min-h-0">
         <div className="hidden md:flex flex-col w-[320px] h-full" style={{ background: 'var(--rail-bg)' }}>
           <div className="flex flex-1 min-h-0">
-            <SidebarGuilds t={t} />
+            <SidebarGuilds
+              t={t}
+              servers={servers}
+              activeId={activeServerId}
+              onSelect={handleSelectServer}
+              onCreate={handleCreateServer}
+            />
           <div
             className="w-64 min-h-0 flex flex-col"
             style={{
@@ -897,6 +1007,7 @@ function App() {
                 channels={channels}
                 activeId={activeChannelId}
                 joinedVoiceChannelId={joinedVoiceChannelId}
+                serverName={activeServer?.name}
                 voiceMembersByChannel={voiceMembersByChannel}
                 voiceSpeakingByChannel={voiceSpeakingByChannel}
                 unreadByChannel={unreadByChannel}
@@ -917,27 +1028,34 @@ function App() {
                 }}
                 onRenameChannel={(channelId, name) => {
                   if (!canManageChannels) return
+                  if (!activeServerId) return
                   axios
-                    .patch(`${serverBase}/api/channels/${channelId}/name`, { name }, { withCredentials: true })
-                    .then(fetchChannels)
+                    .patch(`${serverBase}/api/servers/${activeServerId}/channels/${channelId}/name`, { name }, { withCredentials: true })
+                    .then(refreshChannels)
                     .catch(() => {})
                 }}
                 onDeleteChannel={(channelId) => {
                   if (!canManageChannels) return
-                  axios.delete(`${serverBase}/api/channels/${channelId}`, { withCredentials: true }).then(fetchChannels).catch(() => {})
+                  if (!activeServerId) return
+                  axios
+                    .delete(`${serverBase}/api/servers/${activeServerId}/channels/${channelId}`, { withCredentials: true })
+                    .then(refreshChannels)
+                    .catch(() => {})
                 }}
                 onToggleChannelHidden={(channelId, hidden) => {
                   if (!canManageChannels) return
+                  if (!activeServerId) return
                   axios
-                    .patch(`${serverBase}/api/channels/${channelId}/hidden`, { hidden }, { withCredentials: true })
-                    .then(fetchChannels)
+                    .patch(`${serverBase}/api/servers/${activeServerId}/channels/${channelId}/hidden`, { hidden }, { withCredentials: true })
+                    .then(refreshChannels)
                     .catch(() => {})
                 }}
                 onReorderChannels={(orderedIds) => {
                   if (!canManageChannels) return
+                  if (!activeServerId) return
                   axios
-                    .patch(`${serverBase}/api/channels/order`, { orderedIds }, { withCredentials: true })
-                    .then(fetchChannels)
+                    .patch(`${serverBase}/api/servers/${activeServerId}/channels/order`, { orderedIds }, { withCredentials: true })
+                    .then(refreshChannels)
                     .catch(() => {})
                 }}
                 canManage={canManageChannels}
@@ -1059,6 +1177,7 @@ function App() {
                 channels={channels}
                 activeId={activeChannelId}
                 joinedVoiceChannelId={joinedVoiceChannelId}
+                serverName={activeServer?.name}
                 voiceMembersByChannel={voiceMembersByChannel}
                 voiceSpeakingByChannel={voiceSpeakingByChannel}
                 unreadByChannel={unreadByChannel}
@@ -1079,27 +1198,34 @@ function App() {
                 }}
                 onRenameChannel={(channelId, name) => {
                   if (!canManageChannels) return
+                  if (!activeServerId) return
                   axios
-                    .patch(`${serverBase}/api/channels/${channelId}/name`, { name }, { withCredentials: true })
-                    .then(fetchChannels)
+                    .patch(`${serverBase}/api/servers/${activeServerId}/channels/${channelId}/name`, { name }, { withCredentials: true })
+                    .then(refreshChannels)
                     .catch(() => {})
                 }}
                 onDeleteChannel={(channelId) => {
                   if (!canManageChannels) return
-                  axios.delete(`${serverBase}/api/channels/${channelId}`, { withCredentials: true }).then(fetchChannels).catch(() => {})
+                  if (!activeServerId) return
+                  axios
+                    .delete(`${serverBase}/api/servers/${activeServerId}/channels/${channelId}`, { withCredentials: true })
+                    .then(refreshChannels)
+                    .catch(() => {})
                 }}
                 onToggleChannelHidden={(channelId, hidden) => {
                   if (!canManageChannels) return
+                  if (!activeServerId) return
                   axios
-                    .patch(`${serverBase}/api/channels/${channelId}/hidden`, { hidden }, { withCredentials: true })
-                    .then(fetchChannels)
+                    .patch(`${serverBase}/api/servers/${activeServerId}/channels/${channelId}/hidden`, { hidden }, { withCredentials: true })
+                    .then(refreshChannels)
                     .catch(() => {})
                 }}
                 onReorderChannels={(orderedIds) => {
                   if (!canManageChannels) return
+                  if (!activeServerId) return
                   axios
-                    .patch(`${serverBase}/api/channels/order`, { orderedIds }, { withCredentials: true })
-                    .then(fetchChannels)
+                    .patch(`${serverBase}/api/servers/${activeServerId}/channels/order`, { orderedIds }, { withCredentials: true })
+                    .then(refreshChannels)
                     .catch(() => {})
                 }}
                 canManage={canManageChannels}
@@ -1453,11 +1579,12 @@ function App() {
                     style={{ background: 'var(--accent)' }}
                     onClick={() => {
                       if (!canManageChannels) return
+                      if (!activeServerId) return
                       const name = createChannelName.trim()
                       if (!name) return
                       axios
-                        .post(`${serverBase}/api/channels`, { name, type: createChannelType }, { withCredentials: true })
-                        .then(fetchChannels)
+                        .post(`${serverBase}/api/servers/${activeServerId}/channels`, { name, type: createChannelType }, { withCredentials: true })
+                        .then(refreshChannels)
                         .catch(() => {})
                       closeCreateChannel()
                     }}
@@ -1481,8 +1608,9 @@ function App() {
         t={t}
         onAddAdmin={(id) => {
           if (!canManageChannels) return
+          if (!activeServerId) return
           axios
-            .post(`${serverBase}/api/admins`, { id }, { withCredentials: true })
+            .post(`${serverBase}/api/servers/${activeServerId}/admins`, { id }, { withCredentials: true })
             .then((res) => {
               if (Array.isArray(res.data)) setAdminIds(res.data)
             })
@@ -1490,8 +1618,9 @@ function App() {
         }}
         onRemoveAdmin={(id) => {
           if (!canManageChannels) return
+          if (!activeServerId) return
           axios
-            .delete(`${serverBase}/api/admins/${id}`, { withCredentials: true })
+            .delete(`${serverBase}/api/servers/${activeServerId}/admins/${id}`, { withCredentials: true })
             .then((res) => {
               if (Array.isArray(res.data)) setAdminIds(res.data)
             })
