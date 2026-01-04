@@ -494,11 +494,12 @@ function App() {
   }, [activeChannelId, channels, messageCache])
 
   useEffect(() => {
+    if (isMeView || routeServerId === '@me') return
     if (!activeChannelId || !activeServerId) return
     if (routeChannelId !== activeChannelId || routeServerId !== activeServerId) {
       navigate(`/channels/${activeServerId}/${activeChannelId}`, { replace: true })
     }
-  }, [activeChannelId, activeServerId, navigate, routeChannelId, routeServerId])
+  }, [activeChannelId, activeServerId, navigate, routeChannelId, routeServerId, isMeView])
 
   useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default') {
@@ -906,8 +907,8 @@ function App() {
   }
   const headerTitle = isMeView ? (
     <div className="flex items-center gap-2 min-w-0">
-      <span style={{ color: 'var(--text-muted)' }}>@</span>
-      <span className="truncate">메인 메뉴</span>
+      <span style={{ color: 'var(--text-muted)' }}>🏠</span>
+      <span className="truncate">홈</span>
     </div>
   ) : (
     <div className="flex items-center gap-2 min-w-0">
@@ -1022,78 +1023,118 @@ function App() {
               onSelect={handleSelectServer}
               onCreate={handleCreateServer}
             />
-          <div
-            className="w-64 min-h-0 flex flex-col"
-            style={{
-              background: 'var(--sidebar-bg)',
-              boxShadow: 'inset 1px 0 0 var(--topbar-divider), inset 0 1px 0 var(--topbar-divider)',
-              borderTopLeftRadius: 'var(--topbar-radius)',
-              overflow: 'hidden',
-            }}
-          >
-              <SidebarChannels
-                channels={channels}
-                activeId={activeChannelId}
-                joinedVoiceChannelId={joinedVoiceChannelId}
-                serverName={activeServer?.name}
-                voiceMembersByChannel={voiceMembersByChannel}
-                voiceSpeakingByChannel={voiceSpeakingByChannel}
-                unreadByChannel={unreadByChannel}
-                t={t}
-              onSelect={(channelId) => {
-                handleSelectChannel(channelId)
+            <div
+              className="w-64 min-h-0 flex flex-col"
+              style={{
+                background: 'var(--sidebar-bg)',
+                boxShadow: 'inset 1px 0 0 var(--topbar-divider), inset 0 1px 0 var(--topbar-divider)',
+                borderTopLeftRadius: 'var(--topbar-radius)',
+                overflow: 'hidden',
               }}
-                onOpenServerSettings={() => setShowSettings(true)}
-                onCreateChannel={() => {
-                  setCreateChannelType('text')
-                  setCreateChannelName('')
-                  setShowCreateChannel(true)
-                  setCreateChannelClosing(false)
-                  if (createChannelCloseTimerRef.current) {
-                    window.clearTimeout(createChannelCloseTimerRef.current)
-                    createChannelCloseTimerRef.current = null
-                  }
-                }}
-                onRenameChannel={(channelId, name) => {
-                  if (!canManageChannels) return
-                  if (!activeServerId) return
-                  axios
-                    .patch(`${serverBase}/api/servers/${activeServerId}/channels/${channelId}/name`, { name }, { withCredentials: true })
-                    .then(refreshChannels)
-                    .catch(() => {})
-                }}
-                onDeleteChannel={(channelId) => {
-                  if (!canManageChannels) return
-                  if (!activeServerId) return
-                  axios
-                    .delete(`${serverBase}/api/servers/${activeServerId}/channels/${channelId}`, { withCredentials: true })
-                    .then(refreshChannels)
-                    .catch(() => {})
-                }}
-                onToggleChannelHidden={(channelId, hidden) => {
-                  if (!canManageChannels) return
-                  if (!activeServerId) return
-                  axios
-                    .patch(`${serverBase}/api/servers/${activeServerId}/channels/${channelId}/hidden`, { hidden }, { withCredentials: true })
-                    .then(refreshChannels)
-                    .catch(() => {})
-                }}
-                onReorderChannels={(orderedIds) => {
-                  if (!canManageChannels) return
-                  if (!activeServerId) return
-                  axios
-                    .patch(`${serverBase}/api/servers/${activeServerId}/channels/order`, { orderedIds }, { withCredentials: true })
-                    .then(refreshChannels)
-                    .catch(() => {})
-                }}
-                canManage={canManageChannels}
-              />
+            >
+              {isMeView ? (
+                <div className="flex flex-col h-full">
+                  <div
+                    className="px-3 h-12 flex items-center"
+                    style={{
+                      color: 'var(--text-primary)',
+                      borderBottom: '1px solid var(--border)',
+                      borderTop: '1px solid var(--topbar-divider)',
+                      borderLeft: '1px solid var(--topbar-divider)',
+                      borderTopLeftRadius: 'var(--topbar-radius)',
+                    }}
+                  >
+                    <span className="font-medium">홈</span>
+                  </div>
+                  <div className="p-3 space-y-2">
+                    <button
+                      type="button"
+                      className="w-full text-left px-3 py-2 rounded-md"
+                      style={{ background: 'var(--hover-bg)', color: 'var(--text-primary)' }}
+                    >
+                      홈
+                    </button>
+                    <button
+                      type="button"
+                      className="w-full text-left px-3 py-2 rounded-md"
+                      style={{ color: 'var(--text-muted)' }}
+                    >
+                      친구
+                    </button>
+                    <button
+                      type="button"
+                      className="w-full text-left px-3 py-2 rounded-md"
+                      style={{ color: 'var(--text-muted)' }}
+                    >
+                      메시지 요청
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <SidebarChannels
+                  channels={channels}
+                  activeId={activeChannelId}
+                  joinedVoiceChannelId={joinedVoiceChannelId}
+                  serverName={activeServer?.name}
+                  voiceMembersByChannel={voiceMembersByChannel}
+                  voiceSpeakingByChannel={voiceSpeakingByChannel}
+                  unreadByChannel={unreadByChannel}
+                  t={t}
+                  onSelect={(channelId) => {
+                    handleSelectChannel(channelId)
+                  }}
+                  onOpenServerSettings={() => setShowSettings(true)}
+                  onCreateChannel={() => {
+                    setCreateChannelType('text')
+                    setCreateChannelName('')
+                    setShowCreateChannel(true)
+                    setCreateChannelClosing(false)
+                    if (createChannelCloseTimerRef.current) {
+                      window.clearTimeout(createChannelCloseTimerRef.current)
+                      createChannelCloseTimerRef.current = null
+                    }
+                  }}
+                  onRenameChannel={(channelId, name) => {
+                    if (!canManageChannels) return
+                    if (!activeServerId) return
+                    axios
+                      .patch(`${serverBase}/api/servers/${activeServerId}/channels/${channelId}/name`, { name }, { withCredentials: true })
+                      .then(refreshChannels)
+                      .catch(() => {})
+                  }}
+                  onDeleteChannel={(channelId) => {
+                    if (!canManageChannels) return
+                    if (!activeServerId) return
+                    axios
+                      .delete(`${serverBase}/api/servers/${activeServerId}/channels/${channelId}`, { withCredentials: true })
+                      .then(refreshChannels)
+                      .catch(() => {})
+                  }}
+                  onToggleChannelHidden={(channelId, hidden) => {
+                    if (!canManageChannels) return
+                    if (!activeServerId) return
+                    axios
+                      .patch(`${serverBase}/api/servers/${activeServerId}/channels/${channelId}/hidden`, { hidden }, { withCredentials: true })
+                      .then(refreshChannels)
+                      .catch(() => {})
+                  }}
+                  onReorderChannels={(orderedIds) => {
+                    if (!canManageChannels) return
+                    if (!activeServerId) return
+                    axios
+                      .patch(`${serverBase}/api/servers/${activeServerId}/channels/order`, { orderedIds }, { withCredentials: true })
+                      .then(refreshChannels)
+                      .catch(() => {})
+                  }}
+                  canManage={canManageChannels}
+                />
+              )}
             </div>
           </div>
-        <div
-          className="px-3 pb-3 shrink-0"
-          style={{ background: 'var(--sidebar-bg)', boxShadow: 'inset 1px 0 0 var(--topbar-divider)' }}
-        >
+          <div
+            className="px-3 pb-3 shrink-0"
+            style={{ background: 'var(--sidebar-bg)', boxShadow: 'inset 1px 0 0 var(--topbar-divider)' }}
+          >
           {voiceSidebarChannel ? (
             <div
               className="border rounded-t-xl px-3 py-2"
@@ -1201,63 +1242,103 @@ function App() {
                 overflow: 'hidden',
               }}
             >
-              <SidebarChannels
-                channels={channels}
-                activeId={activeChannelId}
-                joinedVoiceChannelId={joinedVoiceChannelId}
-                serverName={activeServer?.name}
-                voiceMembersByChannel={voiceMembersByChannel}
-                voiceSpeakingByChannel={voiceSpeakingByChannel}
-                unreadByChannel={unreadByChannel}
-                t={t}
-                onSelect={(channelId) => {
-                  handleSelectChannel(channelId)
-                }}
-                onOpenServerSettings={() => setShowSettings(true)}
-                onCreateChannel={() => {
-                  setCreateChannelType('text')
-                  setCreateChannelName('')
-                  setShowCreateChannel(true)
-                  setCreateChannelClosing(false)
-                  if (createChannelCloseTimerRef.current) {
-                    window.clearTimeout(createChannelCloseTimerRef.current)
-                    createChannelCloseTimerRef.current = null
-                  }
-                }}
-                onRenameChannel={(channelId, name) => {
-                  if (!canManageChannels) return
-                  if (!activeServerId) return
-                  axios
-                    .patch(`${serverBase}/api/servers/${activeServerId}/channels/${channelId}/name`, { name }, { withCredentials: true })
-                    .then(refreshChannels)
-                    .catch(() => {})
-                }}
-                onDeleteChannel={(channelId) => {
-                  if (!canManageChannels) return
-                  if (!activeServerId) return
-                  axios
-                    .delete(`${serverBase}/api/servers/${activeServerId}/channels/${channelId}`, { withCredentials: true })
-                    .then(refreshChannels)
-                    .catch(() => {})
-                }}
-                onToggleChannelHidden={(channelId, hidden) => {
-                  if (!canManageChannels) return
-                  if (!activeServerId) return
-                  axios
-                    .patch(`${serverBase}/api/servers/${activeServerId}/channels/${channelId}/hidden`, { hidden }, { withCredentials: true })
-                    .then(refreshChannels)
-                    .catch(() => {})
-                }}
-                onReorderChannels={(orderedIds) => {
-                  if (!canManageChannels) return
-                  if (!activeServerId) return
-                  axios
-                    .patch(`${serverBase}/api/servers/${activeServerId}/channels/order`, { orderedIds }, { withCredentials: true })
-                    .then(refreshChannels)
-                    .catch(() => {})
-                }}
-                canManage={canManageChannels}
-              />
+              {isMeView ? (
+                <div className="flex flex-col h-full">
+                  <div
+                    className="px-3 h-12 flex items-center"
+                    style={{
+                      color: 'var(--text-primary)',
+                      borderBottom: '1px solid var(--border)',
+                      borderTop: '1px solid var(--topbar-divider)',
+                      borderLeft: '1px solid var(--topbar-divider)',
+                      borderTopLeftRadius: 'var(--topbar-radius)',
+                    }}
+                  >
+                    <span className="font-medium">홈</span>
+                  </div>
+                  <div className="p-3 space-y-2">
+                    <button
+                      type="button"
+                      className="w-full text-left px-3 py-2 rounded-md"
+                      style={{ background: 'var(--hover-bg)', color: 'var(--text-primary)' }}
+                    >
+                      홈
+                    </button>
+                    <button
+                      type="button"
+                      className="w-full text-left px-3 py-2 rounded-md"
+                      style={{ color: 'var(--text-muted)' }}
+                    >
+                      친구
+                    </button>
+                    <button
+                      type="button"
+                      className="w-full text-left px-3 py-2 rounded-md"
+                      style={{ color: 'var(--text-muted)' }}
+                    >
+                      메시지 요청
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <SidebarChannels
+                  channels={channels}
+                  activeId={activeChannelId}
+                  joinedVoiceChannelId={joinedVoiceChannelId}
+                  serverName={activeServer?.name}
+                  voiceMembersByChannel={voiceMembersByChannel}
+                  voiceSpeakingByChannel={voiceSpeakingByChannel}
+                  unreadByChannel={unreadByChannel}
+                  t={t}
+                  onSelect={(channelId) => {
+                    handleSelectChannel(channelId)
+                  }}
+                  onOpenServerSettings={() => setShowSettings(true)}
+                  onCreateChannel={() => {
+                    setCreateChannelType('text')
+                    setCreateChannelName('')
+                    setShowCreateChannel(true)
+                    setCreateChannelClosing(false)
+                    if (createChannelCloseTimerRef.current) {
+                      window.clearTimeout(createChannelCloseTimerRef.current)
+                      createChannelCloseTimerRef.current = null
+                    }
+                  }}
+                  onRenameChannel={(channelId, name) => {
+                    if (!canManageChannels) return
+                    if (!activeServerId) return
+                    axios
+                      .patch(`${serverBase}/api/servers/${activeServerId}/channels/${channelId}/name`, { name }, { withCredentials: true })
+                      .then(refreshChannels)
+                      .catch(() => {})
+                  }}
+                  onDeleteChannel={(channelId) => {
+                    if (!canManageChannels) return
+                    if (!activeServerId) return
+                    axios
+                      .delete(`${serverBase}/api/servers/${activeServerId}/channels/${channelId}`, { withCredentials: true })
+                      .then(refreshChannels)
+                      .catch(() => {})
+                  }}
+                  onToggleChannelHidden={(channelId, hidden) => {
+                    if (!canManageChannels) return
+                    if (!activeServerId) return
+                    axios
+                      .patch(`${serverBase}/api/servers/${activeServerId}/channels/${channelId}/hidden`, { hidden }, { withCredentials: true })
+                      .then(refreshChannels)
+                      .catch(() => {})
+                  }}
+                  onReorderChannels={(orderedIds) => {
+                    if (!canManageChannels) return
+                    if (!activeServerId) return
+                    axios
+                      .patch(`${serverBase}/api/servers/${activeServerId}/channels/order`, { orderedIds }, { withCredentials: true })
+                      .then(refreshChannels)
+                      .catch(() => {})
+                  }}
+                  canManage={canManageChannels}
+                />
+              )}
             </div>
             <div
               className="px-3 pb-3 shrink-0"
@@ -1359,7 +1440,7 @@ function App() {
             onToggleChannels={() => setShowMobileChannels((prev) => !prev)}
             t={t}
           />
-          {voiceChannelId ? (
+          {!isMeView && voiceChannelId ? (
             <div style={{ display: isVoiceChannel ? 'block' : 'none' }}>
               <VoicePanel
                 channelId={voiceChannelId}
@@ -1381,35 +1462,61 @@ function App() {
             </div>
           ) : null}
           {isMeView ? (
-            <div className="flex-1 flex items-center justify-center px-6">
-              <div className="max-w-[420px] w-full rounded-2xl border p-6 text-center" style={{ background: 'var(--panel)', borderColor: 'var(--border)' }}>
-                <div className="text-lg font-semibold mb-2">메인 메뉴</div>
-                <div className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>
-                  서버를 만들거나 초대 코드를 입력해서 시작하세요.
+            <div className="flex-1 flex min-h-0">
+              <div className="flex-1 min-w-0 flex flex-col border-r" style={{ borderColor: 'var(--border)' }}>
+                <div className="px-6 pt-5 pb-3 border-b" style={{ borderColor: 'var(--border)' }}>
+                  <div className="flex items-center gap-3">
+                    <div className="text-lg font-semibold">친구</div>
+                    <button
+                      type="button"
+                      className="h-8 px-3 rounded-md text-sm font-semibold"
+                      style={{ background: 'var(--accent)', color: '#111' }}
+                    >
+                      친구 추가하기
+                    </button>
+                  </div>
+                  <div className="mt-3 flex items-center gap-2 text-sm">
+                    <button className="px-3 h-8 rounded-md" style={{ background: 'var(--hover-bg)', color: 'var(--text-primary)' }}>온라인</button>
+                    <button className="px-3 h-8 rounded-md" style={{ color: 'var(--text-muted)' }}>모두</button>
+                    <button className="px-3 h-8 rounded-md" style={{ color: 'var(--text-muted)' }}>대기 중</button>
+                    <button className="px-3 h-8 rounded-md" style={{ color: 'var(--text-muted)' }}>차단됨</button>
+                  </div>
                 </div>
-                <div className="flex gap-3 justify-center">
-                  <button
-                    type="button"
-                    className="h-10 px-4 rounded-md text-white font-semibold"
-                    style={{ background: 'var(--accent)' }}
-                    onClick={handleCreateServer}
-                  >
-                    서버 만들기
-                  </button>
-                  <button
-                    type="button"
-                    className="h-10 px-4 rounded-md"
-                    style={{ background: 'var(--input-bg)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
-                    onClick={() => {
-                      const code = window.prompt('초대 코드 6자리를 입력하세요.')
-                      if (code && code.trim()) {
-                        navigate(`/invite/${code.trim()}`)
-                      }
-                    }}
-                  >
-                    초대 코드 입력
-                  </button>
+                <div className="px-6 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
+                  <div className="flex items-center gap-2 rounded-md px-3 h-10" style={{ background: 'var(--input-bg)', border: '1px solid var(--border)' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>🔍</span>
+                    <span className="text-sm" style={{ color: 'var(--text-muted)' }}>대화 찾기 또는 시작하기</span>
+                  </div>
                 </div>
+                <div className="px-6 py-4 flex-1 overflow-y-auto space-y-3">
+                  {['Ari', 'B51', 'bigbeuro', 'chowondori', 'fwanny'].map((name) => (
+                    <div key={name} className="flex items-center justify-between rounded-xl px-4 py-3" style={{ background: 'var(--panel)', border: '1px solid var(--border)' }}>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-9 h-9 rounded-full" style={{ background: 'var(--input-bg)' }} />
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold truncate">{name}</div>
+                          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>온라인</div>
+                        </div>
+                      </div>
+                      <button className="h-8 w-8 rounded-full" style={{ background: 'var(--hover-bg)' }}>💬</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="w-[280px] shrink-0 p-4 space-y-3">
+                <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>현재 활동 중</div>
+                {[1, 2, 3].map((idx) => (
+                  <div key={idx} className="rounded-xl p-3" style={{ background: 'var(--panel)', border: '1px solid var(--border)' }}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg" style={{ background: 'var(--input-bg)' }} />
+                      <div>
+                        <div className="text-sm font-semibold">활동 {idx}</div>
+                        <div className="text-xs" style={{ color: 'var(--text-muted)' }}>지금 참여 중</div>
+                      </div>
+                    </div>
+                    <div className="mt-3 h-24 rounded-md" style={{ background: 'var(--input-bg)' }} />
+                  </div>
+                ))}
               </div>
             </div>
           ) : isVoiceChannel ? null : (

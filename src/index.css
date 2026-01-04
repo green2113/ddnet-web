@@ -19,7 +19,7 @@
   --topbar-radius: 12px;
   --border: rgba(0,0,0,0.04);
   --input-bg: #ffffff;
-  --accent: #5865f2;
+  --accent: #e0a533;
   --link: oklab(0.670197 -0.038481 -0.141434);
   --link: oklab(0.670197 -0.038481 -0.141434);
   --hover-bg: rgba(0,0,0,0.06);
@@ -71,7 +71,7 @@ body {
   --topbar-divider: rgba(255,255,255,0.06);
   --border: rgba(255,255,255,0.06);
   --input-bg: #383a40;  /* input surface */
-  --accent: #5865f2;
+  --accent: #e0a533;
   --hover-bg: rgba(255,255,255,0.08);
   --scroll-thumb: #2a2c31;
   --divider: rgba(255,255,255,0.18);

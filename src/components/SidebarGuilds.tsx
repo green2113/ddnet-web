@@ -40,12 +40,10 @@ export default function SidebarGuilds({
         title="홈"
         aria-label="홈"
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden>
           <path
             d="M4 11.5L12 5l8 6.5V20a1 1 0 0 1-1 1h-5.5v-6h-3v6H5a1 1 0 0 1-1-1v-8.5z"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinejoin="round"
+            fill="currentColor"
           />
         </svg>
       </button>
