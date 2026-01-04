@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { io, Socket } from 'socket.io-client'
 import axios from 'axios'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
 import SidebarGuilds from './components/SidebarGuilds'
 import SidebarChannels from './components/SidebarChannels'
 import SidebarProfileBar from './components/SidebarProfileBar'
@@ -187,7 +187,9 @@ function App() {
     try {
       const electronAPI = (window as any).electronAPI
       if (electronAPI?.copyImageFromUrl) {
-        await electronAPI.copyImageFromUrl({ url })
+        try {
+          await electronAPI.copyImageFromUrl({ url })
+        } catch {}
         return
       }
       const res = await fetch(url)
@@ -219,7 +221,9 @@ function App() {
       })()
       const electronAPI = (window as any).electronAPI
       if (electronAPI?.saveImageFromUrl) {
-        await electronAPI.saveImageFromUrl({ url, filename: name })
+        try {
+          await electronAPI.saveImageFromUrl({ url, filename: name })
+        } catch {}
         return
       }
       const res = await fetch(url)
@@ -336,6 +340,13 @@ function App() {
     if (!authReady) return
     if (!user) requireLogin()
   }, [authReady, user, requireLogin])
+
+  useEffect(() => {
+    if (!authReady || user) return
+    if (location.pathname === '/login') return
+    const returnTo = `${location.pathname}${location.search}${location.hash}`
+    localStorage.setItem('return_to', returnTo || '/')
+  }, [authReady, user, location])
 
   useEffect(() => {
     if (voiceSwitchTargetId) {
@@ -810,6 +821,11 @@ function App() {
       <span className="truncate">{activeChannel?.name || 'general'}</span>
     </div>
   )
+
+  if (authReady && !user && location.pathname !== '/login') {
+    const returnTo = `${location.pathname}${location.search}${location.hash}`
+    return <Navigate to="/login" replace state={{ from: returnTo }} />
+  }
 
   return (
     <div

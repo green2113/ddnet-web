@@ -152,8 +152,12 @@ ipcMain.handle('image:copy', (_event, payload) => {
   return true
 })
 
-const downloadImage = (url) =>
+const downloadImage = (url, depth = 0) =>
   new Promise((resolve, reject) => {
+    if (depth > 5) {
+      reject(new Error('too many redirects'))
+      return
+    }
     let parsed
     try {
       parsed = new URL(url)
@@ -166,18 +170,29 @@ const downloadImage = (url) =>
       reject(new Error('unsupported protocol'))
       return
     }
-    client
-      .get(parsed, (res) => {
-        if (res.statusCode && res.statusCode >= 400) {
-          reject(new Error(`status ${res.statusCode}`))
+    const req = client.request(
+      parsed,
+      { headers: { 'User-Agent': 'DDNet-Electron' } },
+      (res) => {
+        const status = res.statusCode || 0
+        if (status >= 300 && status < 400 && res.headers.location) {
+          res.resume()
+          const next = new URL(res.headers.location, parsed)
+          downloadImage(next.toString(), depth + 1).then(resolve).catch(reject)
+          return
+        }
+        if (status >= 400) {
+          reject(new Error(`status ${status}`))
           res.resume()
           return
         }
         const chunks = []
         res.on('data', (chunk) => chunks.push(chunk))
         res.on('end', () => resolve(Buffer.concat(chunks)))
-      })
-      .on('error', reject)
+      }
+    )
+    req.on('error', reject)
+    req.end()
   })
 
 ipcMain.handle('image:copy-url', async (_event, payload) => {
