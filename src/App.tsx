@@ -316,7 +316,7 @@ function App() {
         return [] as Server[]
       })
       .catch(() => [] as Server[])
-  }, [serverBase, user, fetchChannels])
+  }, [serverBase, user])
 
   const fetchChannels = useCallback((serverId: string) => {
     if (!serverId) return
