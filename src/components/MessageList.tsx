@@ -35,7 +35,8 @@ export default function MessageList({ messages, adminIds = [], loading = false, 
       hour12: true,
     })
 
-  const renderContent = (content: string) => {
+  const renderContent = (message: ChatMessage) => {
+    const content = message.content
     const parts = content.split(/(https?:\/\/[^\s]+)/g)
     return parts.map((part, idx) => {
       if (/^https?:\/\//.test(part)) {
@@ -51,6 +52,12 @@ export default function MessageList({ messages, adminIds = [], loading = false, 
                 loading="lazy"
                 className="max-w-[360px] max-h-[360px] rounded-md"
                 style={{ border: '1px solid var(--border)' }}
+                onContextMenu={(event: React.MouseEvent<HTMLImageElement>) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  const ev = new CustomEvent('open-msg-menu', { detail: { message, x: event.clientX, y: event.clientY, imageUrl: part } })
+                  window.dispatchEvent(ev)
+                }}
               />
             </span>
           )
@@ -200,7 +207,7 @@ export default function MessageList({ messages, adminIds = [], loading = false, 
                       </div>
                     )}
                     <div className="whitespace-pre-wrap break-words">
-                      <span>{renderContent(m.content)}</span>
+                      <span>{renderContent(m)}</span>
                     </div>
                   </div>
                 </div>

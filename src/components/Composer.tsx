@@ -1,7 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { createEditor, Editor, Node, Text, Transforms } from 'slate'
-import type { BaseRange, Descendant, NodeEntry } from 'slate'
-import { Editable, ReactEditor, Slate, withReact } from 'slate-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 type Props = {
   value: string
@@ -23,30 +20,6 @@ type Props = {
   }
 }
 
-type LinkRange = BaseRange & { link?: boolean }
-
-type CustomText = { text: string }
-type ParagraphElement = { type: 'paragraph'; children: CustomText[] }
-
-declare module 'slate' {
-  interface CustomTypes {
-    Element: ParagraphElement
-    Text: CustomText
-  }
-}
-
-const toSlateValue = (text: string): Descendant[] => {
-  if (!text) {
-    return [{ type: 'paragraph', children: [{ text: '' }] }]
-  }
-  return text.split('\n').map((line) => ({
-    type: 'paragraph',
-    children: [{ text: line }],
-  }))
-}
-
-const toPlainText = (nodes: Descendant[]) => nodes.map((node) => Node.string(node)).join('\n')
-
 export default function Composer({
   value,
   onChange,
@@ -64,41 +37,271 @@ export default function Composer({
   const placeholder = disabled
     ? t.composer.placeholderLogin
     : t.composer.placeholderMessageWithChannel.replace('{channel}', channelName || 'general')
-  const fileRef = useRef<HTMLInputElement | null>(null)
   const editorRef = useRef<HTMLDivElement | null>(null)
-  const lastValueRef = useRef(value)
+  const fileRef = useRef<HTMLInputElement | null>(null)
+  const isComposingRef = useRef(false)
   const maxEditorHeight = 180
 
-  const editor = useMemo(() => withReact(createEditor()), [])
-  const [editorValue, setEditorValue] = useState<Descendant[]>(() => toSlateValue(value))
+  const escapeHtml = (input: string) =>
+    input
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
 
-  useEffect(() => {
-    if (value === lastValueRef.current) return
-    lastValueRef.current = value
-    const nextValue = toSlateValue(value)
-    setEditorValue(nextValue)
-    Editor.withoutNormalizing(editor, () => {
-      const start = Editor.start(editor, [])
-      const end = Editor.end(editor, [])
-      Transforms.delete(editor, { at: { anchor: start, focus: end } })
-      Transforms.insertNodes(editor, nextValue)
-      const point = value.length === 0 ? Editor.start(editor, []) : Editor.end(editor, [])
-      Transforms.select(editor, point)
-    })
-    setIsEmpty(value.length === 0)
-  }, [value, editor])
+  const highlightedHtml = useMemo(() => {
+    const zeroWidthChar = '\uFEFF'
+    const buildLeaf = (text: string, className?: string) => {
+      const classAttr = className ? ` class="${className}"` : ''
+      return `<span data-slate-leaf="true"${classAttr}>${escapeHtml(text)}</span>`
+    }
+    const buildEmptyLeaf = () =>
+      `<span data-slate-leaf="true" class="empty-text"><span data-slate-zero-width="n" data-slate-length="0">${zeroWidthChar}<br></span></span>`
+    const wrapBlock = (inner: string) =>
+      `<div data-slate-node="element"><span data-slate-node="text">${inner}</span></div>`
 
-  const adjustHeight = useCallback(() => {
+    const renderLine = (line: string) => {
+      if (line.length === 0) return buildEmptyLeaf()
+      const parts = line.split(/(https?:\/\/\S{2,})/g)
+      return parts
+        .map((part) => {
+          if (/^https?:\/\/\S{2,}$/.test(part)) {
+            return buildLeaf(part, 'link')
+          }
+          return buildLeaf(part)
+        })
+        .join('')
+    }
+
+    const lines = value.split('\n')
+    if (lines.length === 0) lines.push('')
+    return lines.map((line) => wrapBlock(renderLine(line))).join('')
+  }, [value])
+
+  const hasUrl = useMemo(() => /https?:\/\/\S{2,}/.test(value), [value])
+
+  const plainHtml = useMemo(() => {
+    const zeroWidthChar = '\uFEFF'
+    const buildLeaf = (text: string) => `<span data-slate-leaf="true">${escapeHtml(text)}</span>`
+    const buildEmptyLeaf = () =>
+      `<span data-slate-leaf="true" class="empty-text"><span data-slate-zero-width="n" data-slate-length="0">${zeroWidthChar}<br></span></span>`
+    const wrapBlock = (inner: string) =>
+      `<div data-slate-node="element"><span data-slate-node="text">${inner}</span></div>`
+
+    const lines = value.split('\n')
+    if (lines.length === 0) lines.push('')
+    return lines.map((line) => wrapBlock(line.length === 0 ? buildEmptyLeaf() : buildLeaf(line))).join('')
+  }, [value])
+
+  const readEditorValue = () => {
+    const editor = editorRef.current
+    if (!editor) return ''
+    const blocks = Array.from(editor.querySelectorAll<HTMLDivElement>('div[data-slate-node="element"]'))
+    if (blocks.length === 0) return editor.textContent || ''
+    return blocks
+      .map((block) => (block.textContent || '').replace(/[\uFEFF\u200B]/g, ''))
+      .join('\n')
+  }
+
+  const insertLineBreakBlock = () => {
+    const editor = editorRef.current
+    if (!editor) return
+    const selection = window.getSelection()
+    if (!selection || selection.rangeCount === 0) return
+    const range = selection.getRangeAt(0)
+    if (!editor.contains(range.startContainer)) return
+    range.deleteContents()
+
+    const block = document.createElement('div')
+    block.setAttribute('data-slate-node', 'element')
+    const textNode = document.createElement('span')
+    textNode.setAttribute('data-slate-node', 'text')
+    const leaf = document.createElement('span')
+    leaf.setAttribute('data-slate-leaf', 'true')
+    leaf.className = 'empty-text'
+    const zeroWidth = document.createElement('span')
+    zeroWidth.setAttribute('data-slate-zero-width', 'n')
+    zeroWidth.setAttribute('data-slate-length', '0')
+    zeroWidth.textContent = '\uFEFF'
+    const br = document.createElement('br')
+    zeroWidth.appendChild(br)
+    leaf.appendChild(zeroWidth)
+    textNode.appendChild(leaf)
+    block.appendChild(textNode)
+
+    const startElement = range.startContainer.nodeType === Node.ELEMENT_NODE
+      ? (range.startContainer as Element)
+      : range.startContainer.parentElement
+    const currentBlock = startElement?.closest('div[data-slate-node="element"]') || null
+    if (currentBlock && currentBlock.parentNode === editor) {
+      if (currentBlock.nextSibling) {
+        editor.insertBefore(block, currentBlock.nextSibling)
+      } else {
+        editor.appendChild(block)
+      }
+    } else {
+      editor.appendChild(block)
+    }
+
+    const nextRange = document.createRange()
+    nextRange.setStart(leaf, 0)
+    nextRange.collapse(true)
+    selection.removeAllRanges()
+    selection.addRange(nextRange)
+  }
+
+  const getSelectionOffset = () => {
+    const editor = editorRef.current
+    if (!editor) return null
+    const selection = window.getSelection()
+    if (!selection || selection.rangeCount === 0) return null
+    const range = selection.getRangeAt(0)
+    if (!editor.contains(range.startContainer)) return null
+    const blocks = Array.from(editor.querySelectorAll<HTMLDivElement>('div[data-slate-node="element"]'))
+    if (blocks.length === 0) {
+      const preRange = range.cloneRange()
+      preRange.selectNodeContents(editor)
+      preRange.setEnd(range.startContainer, range.startOffset)
+      return preRange.toString().length
+    }
+    const startElement = range.startContainer.nodeType === Node.ELEMENT_NODE
+      ? (range.startContainer as Element)
+      : range.startContainer.parentElement
+    const currentBlock = startElement?.closest('div[data-slate-node="element"]') || null
+    let offset = 0
+    for (const block of blocks) {
+      if (block === currentBlock) {
+        const blockRange = range.cloneRange()
+        blockRange.selectNodeContents(block)
+        blockRange.setEnd(range.startContainer, range.startOffset)
+        offset += blockRange.toString().length
+        break
+      }
+      offset += (block.textContent || '').length + 1
+    }
+    return offset
+  }
+
+  const restoreSelection = (offset: number) => {
+    const editor = editorRef.current
+    if (!editor) return
+    const selection = window.getSelection()
+    if (!selection) return
+    const blocks = Array.from(editor.querySelectorAll<HTMLDivElement>('div[data-slate-node="element"]'))
+    if (blocks.length === 0) {
+      selection.selectAllChildren(editor)
+      selection.collapseToEnd()
+      return
+    }
+    let remaining = offset
+    for (let i = 0; i < blocks.length; i += 1) {
+      const block = blocks[i]
+      const blockLength = (block.textContent || '').length
+      if (remaining <= blockLength) {
+        const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT, null)
+        let node = walker.nextNode()
+        let localRemaining = remaining
+        while (node) {
+          const textLength = node.textContent?.length ?? 0
+          if (localRemaining <= textLength) {
+            const range = document.createRange()
+            range.setStart(node, localRemaining)
+            range.collapse(true)
+            selection.removeAllRanges()
+            selection.addRange(range)
+            return
+          }
+          localRemaining -= textLength
+          node = walker.nextNode()
+        }
+        const range = document.createRange()
+        range.selectNodeContents(block)
+        range.collapse(false)
+        selection.removeAllRanges()
+        selection.addRange(range)
+        return
+      }
+      remaining -= blockLength
+      if (remaining === 1) {
+        const nextBlock = blocks[i + 1]
+        if (nextBlock) {
+          const range = document.createRange()
+          range.selectNodeContents(nextBlock)
+          range.collapse(true)
+          selection.removeAllRanges()
+          selection.addRange(range)
+          return
+        }
+      }
+      remaining -= 1
+    }
+    selection.selectAllChildren(editor)
+    selection.collapseToEnd()
+  }
+
+  const adjustHeight = () => {
+    if (typeof window === 'undefined') return
     const el = editorRef.current
     if (!el) return
     el.style.height = 'auto'
     const next = Math.min(el.scrollHeight, maxEditorHeight)
     el.style.height = `${Math.ceil(next)}px`
-  }, [maxEditorHeight])
+  }
+
+  const syncEditorHtml = () => {
+    const editor = editorRef.current
+    if (!editor) return
+    const desired = highlightedHtml || ''
+    if (editor.innerHTML === desired) return
+    const selectionOffset = getSelectionOffset()
+    editor.innerHTML = desired
+    if (selectionOffset !== null) {
+      restoreSelection(selectionOffset)
+    }
+    const nextValue = readEditorValue()
+    setIsEmpty(nextValue.length === 0)
+  }
 
   useEffect(() => {
+    if (isComposingRef.current) return
+    if (hasUrl) {
+      syncEditorHtml()
+      adjustHeight()
+      return
+    }
+    const editor = editorRef.current
+    if (!editor) return
+    const currentValue = readEditorValue()
+    if (currentValue !== value) {
+      const selectionOffset = getSelectionOffset()
+      editor.innerHTML = plainHtml
+      if (selectionOffset !== null) {
+        restoreSelection(selectionOffset)
+      }
+    }
+    setIsEmpty(value.length === 0)
     adjustHeight()
-  }, [editorValue, adjustHeight])
+  }, [highlightedHtml, plainHtml, value, hasUrl])
+
+  useEffect(() => {
+    const target: EventTarget | null = typeof window === 'undefined' ? null : window
+    if (!target) return
+    const el = editorRef.current
+    if (!el) return
+    let observer: ResizeObserver | null = null
+    if (typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(() => adjustHeight())
+      observer.observe(el)
+    } else {
+      const onResize = () => adjustHeight()
+      target.addEventListener('resize', onResize)
+      return () => target.removeEventListener('resize', onResize)
+    }
+    return () => {
+      observer?.disconnect()
+    }
+  }, [])
 
   useEffect(() => {
     const handleKeydown = (event: KeyboardEvent) => {
@@ -110,45 +313,15 @@ export default function Composer({
         const tag = target.tagName?.toLowerCase()
         if (tag === 'input' || tag === 'textarea' || target.isContentEditable) return
       }
-      ReactEditor.focus(editor)
+      if (!editorRef.current) return
+      editorRef.current.focus()
     }
     window.addEventListener('keydown', handleKeydown)
     return () => window.removeEventListener('keydown', handleKeydown)
-  }, [disabled, editor])
-
-  const decorate = useCallback((entry: NodeEntry) => {
-    const [node, path] = entry
-    if (!Text.isText(node)) return []
-    const ranges: LinkRange[] = []
-    const regex = /https?:\/\/\S{2,}/g
-    let match: RegExpExecArray | null
-    while ((match = regex.exec(node.text)) !== null) {
-      ranges.push({
-        anchor: { path, offset: match.index },
-        focus: { path, offset: match.index + match[0].length },
-        link: true,
-      })
-    }
-    return ranges
-  }, [])
-
-  const renderElement = useCallback(({ attributes, children }: { attributes: any; children: any }) => {
-    return <div {...attributes}>{children}</div>
-  }, [])
-
-  const renderLeaf = useCallback(({ attributes, children, leaf }: { attributes: any; children: any; leaf: any }) => {
-    if (leaf.link) {
-      return (
-        <span {...attributes} className="link">
-          {children}
-        </span>
-      )
-    }
-    return <span {...attributes}>{children}</span>
-  }, [])
+  }, [disabled])
 
   return (
-    <div className="px-4 pb-4">
+    <div id="composer" className="px-4 pb-4">
       <div className={`rounded-[10px] ${disabled ? 'cursor-not-allowed opacity-90' : ''}`} style={{ background: 'var(--input-bg)', color: 'var(--text-primary)' }}>
         {attachments.length > 0 ? (
           <div className="px-3 pt-3">
@@ -228,76 +401,98 @@ export default function Composer({
                 {placeholder}
               </div>
             ) : null}
-            <Slate
-              editor={editor}
-              initialValue={editorValue}
-              onChange={(nextValue) => {
-                setEditorValue(nextValue)
-                const nextText = toPlainText(nextValue)
-                setIsEmpty(nextText.length === 0)
-                if (nextText !== lastValueRef.current) {
-                  lastValueRef.current = nextText
-                  onChange(nextText)
+            <div
+              ref={editorRef}
+              className={`${disabled ? 'cursor-not-allowed' : ''}`}
+              contentEditable={!disabled}
+              role="textbox"
+              aria-label={placeholder}
+              style={{
+                minHeight: '36px',
+                maxHeight: `${maxEditorHeight}px`,
+                padding: '8px 12px',
+                fontSize: '15px',
+                lineHeight: '23px',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                outline: 'none',
+                overflow: 'hidden',
+                color: 'var(--text-primary)',
+                background: 'transparent',
+              }}
+              onCompositionStart={() => {
+                isComposingRef.current = true
+                setIsEmpty(false)
+              }}
+              onCompositionEnd={() => {
+                isComposingRef.current = false
+                if (!editorRef.current || disabled) return
+                const nextValue = readEditorValue()
+                if (nextValue !== value) {
+                  onChange(nextValue)
+                }
+                setIsEmpty(nextValue.length === 0)
+                adjustHeight()
+              }}
+              onInput={(event) => {
+                if (!editorRef.current || disabled) return
+                const nativeEvent = event.nativeEvent
+                if ('isComposing' in nativeEvent && nativeEvent.isComposing) return
+                if ('inputType' in nativeEvent && nativeEvent.inputType === 'insertLineBreak') {
+                  event.preventDefault()
+                  insertLineBreakBlock()
+                }
+                const nextValue = readEditorValue()
+                if (nextValue !== value) {
+                  onChange(nextValue)
+                }
+                setIsEmpty(nextValue.length === 0)
+                adjustHeight()
+              }}
+              onPaste={(event) => {
+                if (disabled) return
+                if (!onAddAttachment || uploading) {
+                  event.preventDefault()
+                  const text = event.clipboardData?.getData('text/plain') || ''
+                  document.execCommand('insertText', false, text)
+                  return
+                }
+                const items = event.clipboardData?.items
+                if (!items) return
+                const fileItem = Array.from(items).find((item) => item.kind === 'file')
+                if (fileItem) {
+                  const file = fileItem.getAsFile()
+                  if (file) {
+                    event.preventDefault()
+                    onAddAttachment(file)
+                  }
+                  return
+                }
+                const text = event.clipboardData?.getData('text/plain')
+                if (text) {
+                  event.preventDefault()
+                  document.execCommand('insertText', false, text)
                 }
               }}
-            >
-              <Editable
-                ref={editorRef}
-                className={`${disabled ? 'cursor-not-allowed' : ''}`}
-                readOnly={disabled}
-                role="textbox"
-                aria-label={placeholder}
-                renderElement={renderElement}
-                renderLeaf={renderLeaf}
-                decorate={decorate}
-                spellCheck={false}
-                style={{
-                  minHeight: '36px',
-                  maxHeight: `${maxEditorHeight}px`,
-                  padding: '8px 12px',
-                  fontSize: '15px',
-                  lineHeight: '23px',
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word',
-                  outline: 'none',
-                  overflow: 'hidden',
-                  color: 'var(--text-primary)',
-                  background: 'transparent',
-                }}
-                onPaste={(event) => {
-                  if (disabled) return
-                  if (!onAddAttachment || uploading) return
-                  const items = event.clipboardData?.items
-                  if (!items) return
-                  const fileItem = Array.from(items).find((item) => item.kind === 'file')
-                  if (fileItem) {
-                    const file = fileItem.getAsFile()
-                    if (file) {
-                      event.preventDefault()
-                      onAddAttachment(file)
-                    }
+              onKeyDown={(event) => {
+                if (isComposingRef.current) return
+                if (event.key === 'Enter' && event.shiftKey) {
+                  event.preventDefault()
+                  insertLineBreakBlock()
+                  const nextValue = readEditorValue()
+                  if (nextValue !== value) {
+                    onChange(nextValue)
                   }
-                }}
-                onCompositionStart={() => {
-                  setIsEmpty(false)
-                }}
-                onCompositionEnd={() => {
-                  const nextText = toPlainText(editor.children)
-                  setIsEmpty(nextText.length === 0)
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' && event.shiftKey) {
-                    event.preventDefault()
-                    Transforms.insertText(editor, '\n')
-                    return
-                  }
-                  if (event.key === 'Enter') {
-                    event.preventDefault()
-                    if (isEnabled) onSend()
-                  }
-                }}
-              />
-            </Slate>
+                  setIsEmpty(nextValue.length === 0)
+                  adjustHeight()
+                  return
+                }
+                if (event.key === 'Enter') {
+                  event.preventDefault()
+                  if (isEnabled) onSend()
+                }
+              }}
+            />
           </div>
           <div className="flex items-center gap-1 ml-2">
             <button

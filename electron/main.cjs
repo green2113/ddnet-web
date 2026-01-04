@@ -1,5 +1,6 @@
-const { app, BrowserWindow, ipcMain, shell } = require('electron')
+const { app, BrowserWindow, clipboard, dialog, ipcMain, nativeImage, shell } = require('electron')
 const path = require('path')
+const fs = require('fs')
 
 const isDev = !app.isPackaged
 
@@ -60,9 +61,7 @@ const createWindow = () => {
     event.preventDefault()
     shell.openExternal(url)
   })
-  if (isDev) {
-    win.webContents.openDevTools()
-  }
+  // DevTools auto-open disabled for faster startup in dev.
 }
 
 app.whenReady().then(createWindow)
@@ -140,6 +139,29 @@ ipcMain.handle('window:toggle-maximize', () => {
 ipcMain.handle('window:close', () => {
   const win = BrowserWindow.getFocusedWindow()
   if (win) win.close()
+})
+
+ipcMain.handle('image:copy', (_event, payload) => {
+  const bytes = payload?.data
+  if (!bytes) return false
+  const buffer = Buffer.from(bytes)
+  const image = nativeImage.createFromBuffer(buffer)
+  clipboard.writeImage(image)
+  return true
+})
+
+ipcMain.handle('image:save', async (_event, payload) => {
+  const bytes = payload?.data
+  const filename = payload?.filename || 'image'
+  if (!bytes) return false
+  const buffer = Buffer.from(bytes)
+  const win = BrowserWindow.getFocusedWindow()
+  const { canceled, filePath } = await dialog.showSaveDialog(win || undefined, {
+    defaultPath: filename,
+  })
+  if (canceled || !filePath) return false
+  fs.writeFileSync(filePath, buffer)
+  return true
 })
 
 app.on('window-all-closed', () => {

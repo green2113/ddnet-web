@@ -81,7 +81,7 @@ function App() {
   const channelsRef = useRef<Channel[]>([])
   const [isDark, setIsDark] = useState(true)
   const [authReady, setAuthReady] = useState(false)
-  const [menu, setMenu] = useState<{ visible: boolean; x: number; y: number; message: ChatMessage | null }>({ visible: false, x: 0, y: 0, message: null })
+  const [menu, setMenu] = useState<{ visible: boolean; x: number; y: number; message: ChatMessage | null; imageUrl?: string | null }>({ visible: false, x: 0, y: 0, message: null, imageUrl: null })
   const [showMobileChannels, setShowMobileChannels] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showUserSettings, setShowUserSettings] = useState(false)
@@ -182,6 +182,92 @@ function App() {
       if (el) el.scrollTop = el.scrollHeight
     })
   }
+
+  const copyImageToClipboard = async (url: string) => {
+    try {
+      const res = await fetch(url)
+      const blob = await res.blob()
+      const electronAPI = (window as any).electronAPI
+      if (electronAPI?.copyImage) {
+        const bytes = new Uint8Array(await blob.arrayBuffer())
+        await electronAPI.copyImage({ data: bytes, mime: blob.type })
+        return
+      }
+      const ClipboardItemCtor = (window as any).ClipboardItem
+      if (ClipboardItemCtor && navigator.clipboard?.write) {
+        const item = new ClipboardItemCtor({ [blob.type]: blob })
+        await navigator.clipboard.write([item])
+        return
+      }
+      await navigator.clipboard.writeText(url)
+    } catch {
+      try {
+        await navigator.clipboard.writeText(url)
+      } catch {}
+    }
+  }
+
+  const saveImageToDisk = async (url: string) => {
+    try {
+      const res = await fetch(url)
+      const blob = await res.blob()
+      const name = (() => {
+        try {
+          const u = new URL(url)
+          const filename = u.pathname.split('/').pop()
+          return filename || 'image'
+        } catch {
+          return 'image'
+        }
+      })()
+      const electronAPI = (window as any).electronAPI
+      if (electronAPI?.saveImage) {
+        const bytes = new Uint8Array(await blob.arrayBuffer())
+        await electronAPI.saveImage({ data: bytes, filename: name, mime: blob.type })
+        return
+      }
+      const savePicker = (window as any).showSaveFilePicker as
+        | ((options: { suggestedName?: string; types?: Array<{ description: string; accept: Record<string, string[]> }> }) => Promise<any>)
+        | undefined
+      if (savePicker && window.isSecureContext) {
+        const ext = name.includes('.') ? name.slice(name.lastIndexOf('.')) : ''
+        const type = blob.type || 'application/octet-stream'
+        const handle = await savePicker({
+          suggestedName: name,
+          types: [
+            {
+              description: 'Image',
+              accept: { [type]: ext ? [ext] : ['.png', '.jpg', '.jpeg', '.webp', '.gif'] },
+            },
+          ],
+        })
+        const writable = await handle.createWritable()
+        await writable.write(blob)
+        await writable.close()
+        return
+      }
+      const objectUrl = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = objectUrl
+      link.download = name
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(objectUrl)
+    } catch {
+      window.open(url, '_blank')
+    }
+  }
+
+  useEffect(() => {
+    const composer = document.getElementById('composer')
+    if (!composer || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(() => {
+      scrollMessagesToBottom()
+    })
+    observer.observe(composer)
+    return () => observer.disconnect()
+  }, [])
 
   const fetchHistory = (channelId: string) => {
     if (!channelId) return
@@ -445,10 +531,10 @@ function App() {
 
   useEffect(() => {
     const handler = (e: any) => {
-      const { x, y, message } = e.detail || {}
-      setMenu({ visible: true, x, y, message })
+      const { x, y, message, imageUrl } = e.detail || {}
+      setMenu({ visible: true, x, y, message, imageUrl: imageUrl || null })
     }
-    const closer = () => setMenu((m) => ({ ...m, visible: false }))
+    const closer = () => setMenu((m) => ({ ...m, visible: false, imageUrl: null }))
     window.addEventListener('open-msg-menu', handler as any)
     window.addEventListener('click', closer)
     return () => {
@@ -1154,10 +1240,10 @@ function App() {
                 <>
                   <div
                     className="fixed inset-0 z-40 pointer-events-auto"
-                    onMouseDown={() => setMenu({ visible: false, x: 0, y: 0, message: null })}
+                    onMouseDown={() => setMenu({ visible: false, x: 0, y: 0, message: null, imageUrl: null })}
                     onContextMenu={(e) => {
                       e.preventDefault()
-                      setMenu({ visible: false, x: 0, y: 0, message: null })
+                      setMenu({ visible: false, x: 0, y: 0, message: null, imageUrl: null })
                     }}
                   />
                   <div
@@ -1165,11 +1251,33 @@ function App() {
                     style={{ top: menu.y, left: menu.x, background: 'var(--header-bg)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
                     onClick={(e) => e.stopPropagation()}
                   >
+                    {menu.imageUrl ? (
+                      <>
+                        <button
+                          className="w-full text-left px-3 py-2 hover-surface cursor-pointer"
+                          onClick={() => {
+                            copyImageToClipboard(menu.imageUrl!)
+                            setMenu({ visible: false, x: 0, y: 0, message: null, imageUrl: null })
+                          }}
+                        >
+                          {t.app.copyImage}
+                        </button>
+                        <button
+                          className="w-full text-left px-3 py-2 hover-surface cursor-pointer"
+                          onClick={() => {
+                            saveImageToDisk(menu.imageUrl!)
+                            setMenu({ visible: false, x: 0, y: 0, message: null, imageUrl: null })
+                          }}
+                        >
+                          {t.app.saveImage}
+                        </button>
+                      </>
+                    ) : null}
                     <button
                       className="w-full text-left px-3 py-2 hover-surface cursor-pointer"
                       onClick={() => {
                         navigator.clipboard.writeText(menu.message!.content || '')
-                        setMenu({ visible: false, x: 0, y: 0, message: null })
+                        setMenu({ visible: false, x: 0, y: 0, message: null, imageUrl: null })
                       }}
                     >
                       {t.app.copyMessage}
@@ -1181,7 +1289,7 @@ function App() {
                         onClick={() => {
                           // ?��e��??????�� ?��i����(?��i����). ?��e���� ???��e��?e�Ƣ� chat:delete e����e����?��i��??��i?��??
                           socketRef.current?.emit('chat:delete', { id: menu.message!.id })
-                          setMenu({ visible: false, x: 0, y: 0, message: null })
+                          setMenu({ visible: false, x: 0, y: 0, message: null, imageUrl: null })
                         }}
                       >
                         {t.app.deleteMessage}

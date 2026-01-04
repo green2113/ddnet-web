@@ -5,6 +5,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   toggleMaximize: () => ipcRenderer.invoke('window:toggle-maximize'),
   close: () => ipcRenderer.invoke('window:close'),
   openAuth: (url, expectedOrigin) => ipcRenderer.invoke('auth:open', { url, expectedOrigin }),
+  copyImage: (payload) => ipcRenderer.invoke('image:copy', payload),
+  saveImage: (payload) => ipcRenderer.invoke('image:save', payload),
   getDesktopSources: async () => {
     const sources = await desktopCapturer.getSources({
       types: ['window', 'screen'],
