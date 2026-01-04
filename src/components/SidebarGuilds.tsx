@@ -29,6 +29,18 @@ export default function SidebarGuilds({
       className="w-16 hidden md:flex flex-col items-center py-3 gap-3 h-full"
       style={{ background: 'var(--rail-bg)' }}
     >
+      <button
+        type="button"
+        onClick={() => onSelect?.('@me')}
+        className="w-12 h-12 rounded-2xl grid place-items-center text-white text-[18px] font-bold select-none cursor-pointer transition-all"
+        style={{
+          background: activeId === '@me' ? accent : 'var(--input-bg)',
+          transform: activeId === '@me' ? 'scale(1.04)' : 'scale(1)',
+        }}
+        title="메인 메뉴"
+      >
+        @
+      </button>
       {servers.map((server) => {
         const isActive = server.id === activeId
         const label = server.name?.slice(0, 2).toUpperCase() || 'SV'

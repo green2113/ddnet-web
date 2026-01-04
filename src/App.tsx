@@ -72,6 +72,7 @@ function App() {
   const [adminIds, setAdminIds] = useState<string[]>([])
   const [servers, setServers] = useState<Server[]>([])
   const [activeServerId, setActiveServerId] = useState('')
+  const [isMeView, setIsMeView] = useState(false)
   const [activeChannelId, setActiveChannelId] = useState('')
   const [voiceChannelId, setVoiceChannelId] = useState('')
   const [joinedVoiceChannelId, setJoinedVoiceChannelId] = useState('')
@@ -133,7 +134,8 @@ function App() {
     () => servers.find((server) => server.id === activeServerId) || null,
     [servers, activeServerId]
   )
-  const serverLabel = activeServer?.name || t.sidebarChannels.serverName
+  const serverLabel = isMeView ? '메인 메뉴' : (activeServer?.name || t.sidebarChannels.serverName)
+  const activeGuildId = isMeView ? '@me' : activeServerId
 
   const handleJoinStateChange = useCallback((channelId: string, joined: boolean) => {
     setJoinedVoiceChannelId((prev) => {
@@ -385,6 +387,15 @@ function App() {
   }, [authReady, user, location])
 
   useEffect(() => {
+    if (routeServerId === '@me') {
+      setIsMeView(true)
+      setActiveServerId('')
+      setAdminIds([])
+      setChannels([])
+      setActiveChannelId('')
+      return
+    }
+    setIsMeView(false)
     if (!servers.length) return
     const requested = routeServerId && servers.find((server) => server.id === routeServerId)
     if (requested) {
@@ -395,6 +406,13 @@ function App() {
       setActiveServerId(servers[0].id)
     }
   }, [servers, routeServerId, activeServerId])
+
+  useEffect(() => {
+    if (!authReady || !user) return
+    if (servers.length > 0) return
+    if (routeServerId === '@me') return
+    navigate('/channels/@me', { replace: true })
+  }, [authReady, user, servers.length, routeServerId, navigate])
 
   useEffect(() => {
     if (!activeServerId) return
@@ -886,7 +904,12 @@ function App() {
       createChannelCloseTimerRef.current = null
     }, 180)
   }
-  const headerTitle = (
+  const headerTitle = isMeView ? (
+    <div className="flex items-center gap-2 min-w-0">
+      <span style={{ color: 'var(--text-muted)' }}>@</span>
+      <span className="truncate">메인 메뉴</span>
+    </div>
+  ) : (
     <div className="flex items-center gap-2 min-w-0">
       {isVoiceChannel ? (
         <span style={{ color: 'var(--text-muted)' }}>
@@ -904,7 +927,12 @@ function App() {
     return <Navigate to="/login" replace state={{ from: returnTo }} />
   }
   const handleSelectServer = (serverId: string) => {
-    if (!serverId || serverId === activeServerId) return
+    if (!serverId) return
+    if (serverId === '@me') {
+      navigate('/channels/@me')
+      return
+    }
+    if (serverId === activeServerId) return
     setActiveServerId(serverId)
   }
 
@@ -990,7 +1018,7 @@ function App() {
             <SidebarGuilds
               t={t}
               servers={servers}
-              activeId={activeServerId}
+              activeId={activeGuildId}
               onSelect={handleSelectServer}
               onCreate={handleCreateServer}
             />
@@ -1352,7 +1380,39 @@ function App() {
               />
             </div>
           ) : null}
-          {isVoiceChannel ? null : (
+          {isMeView ? (
+            <div className="flex-1 flex items-center justify-center px-6">
+              <div className="max-w-[420px] w-full rounded-2xl border p-6 text-center" style={{ background: 'var(--panel)', borderColor: 'var(--border)' }}>
+                <div className="text-lg font-semibold mb-2">메인 메뉴</div>
+                <div className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>
+                  서버를 만들거나 초대 코드를 입력해서 시작하세요.
+                </div>
+                <div className="flex gap-3 justify-center">
+                  <button
+                    type="button"
+                    className="h-10 px-4 rounded-md text-white font-semibold"
+                    style={{ background: 'var(--accent)' }}
+                    onClick={handleCreateServer}
+                  >
+                    서버 만들기
+                  </button>
+                  <button
+                    type="button"
+                    className="h-10 px-4 rounded-md"
+                    style={{ background: 'var(--input-bg)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
+                    onClick={() => {
+                      const code = window.prompt('초대 코드 6자리를 입력하세요.')
+                      if (code && code.trim()) {
+                        navigate(`/invite/${code.trim()}`)
+                      }
+                    }}
+                  >
+                    초대 코드 입력
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : isVoiceChannel ? null : (
             <>
               <MessageList
                 messages={messages}
