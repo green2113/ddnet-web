@@ -21,7 +21,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
       thumbnail: source.thumbnail.toDataURL(),
     }))
   },
-  hasNativeControls: true,
+  hasNativeControls: false,
 })
 
 ipcRenderer.on('auth:complete', () => {

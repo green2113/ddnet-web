@@ -97,8 +97,6 @@ export default function Tooltip({ label, children, side = 'top' }: TooltipProps)
     const handleVisibility = () => {
       if (document.visibilityState !== 'visible') closeTooltipImmediate()
     }
-    window.addEventListener('mousedown', closeTooltipImmediate)
-    window.addEventListener('touchstart', closeTooltipImmediate, { passive: true })
     window.addEventListener('blur', closeTooltipImmediate)
     window.addEventListener('keydown', handleKey)
     document.addEventListener('visibilitychange', handleVisibility)
@@ -106,8 +104,6 @@ export default function Tooltip({ label, children, side = 'top' }: TooltipProps)
       if (hideTimerRef.current) {
         window.clearTimeout(hideTimerRef.current)
       }
-      window.removeEventListener('mousedown', closeTooltipImmediate)
-      window.removeEventListener('touchstart', closeTooltipImmediate)
       window.removeEventListener('blur', closeTooltipImmediate)
       window.removeEventListener('keydown', handleKey)
       document.removeEventListener('visibilitychange', handleVisibility)
@@ -160,11 +156,8 @@ export default function Tooltip({ label, children, side = 'top' }: TooltipProps)
         requestAnimationFrame(() => setOpen(true))
       }}
       onMouseLeave={() => setOpen(false)}
-      onFocus={() => {
-        updatePortalPos()
-        requestAnimationFrame(() => setOpen(true))
-      }}
-      onBlur={() => setOpen(false)}
+      onFocus={() => {}}
+      onBlur={() => {}}
     >
       {children}
       {portalRoot && tooltip ? createPortal(tooltip, portalRoot) : tooltip}

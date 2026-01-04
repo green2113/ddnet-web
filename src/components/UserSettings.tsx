@@ -12,6 +12,7 @@ export type UserSettingsUser = {
 
 type UserSettingsProps = {
   showUserSettings: boolean
+  isDark: boolean
   settingsTab: 'profile' | 'voice' | 'language'
   onSetTab: (tab: 'profile' | 'voice' | 'language') => void
   onCloseUserSettings: () => void
@@ -34,6 +35,7 @@ type UserSettingsProps = {
 
 export default function UserSettings({
   showUserSettings,
+  isDark,
   settingsTab,
   onSetTab,
   onCloseUserSettings,
@@ -125,19 +127,19 @@ export default function UserSettings({
 
   return createPortal(
     <div
-      className={`fixed inset-0 z-[80] flex items-center justify-center px-10 py-9 user-settings-overlay${isClosing ? ' is-exiting' : ''}`}
+      className={`fixed inset-0 z-[80] flex items-center justify-center px-14 py-12 user-settings-overlay${isClosing ? ' is-exiting' : ''} theme-dark app-drag`}
       style={{ background: 'rgba(0,0,0,0.65)' }}
       onMouseDown={onCloseUserSettings}
     >
       <div
-        className={`w-full h-full rounded-2xl overflow-hidden shadow-xl user-settings-panel${isClosing ? ' is-exiting' : ''}`}
-        style={{ background: '#2b2c3c', color: 'white' }}
+        className={`rounded-2xl overflow-hidden shadow-xl user-settings-panel${isClosing ? ' is-exiting' : ''} app-no-drag`}
+        style={{ background: 'var(--header-bg)', color: 'var(--text-primary)', width: '1280px', height: '820px', maxWidth: '94vw', maxHeight: '92vh' }}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="flex h-full">
-          <div className="w-64 p-6" style={{ background: '#1e1f2b' }}>
+          <div className="w-64 p-8" style={{ background: 'var(--sidebar-bg)' }}>
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center" style={{ background: '#2f3142' }}>
+              <div className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center" style={{ background: 'var(--input-bg)' }}>
                 {user?.avatar ? (
                   <img src={user.avatar} alt={user.displayName || user.username} className="w-full h-full object-cover" />
                 ) : (
@@ -183,7 +185,7 @@ export default function UserSettings({
                 </svg>
                 <span>{t.userSettings.language}</span>
               </button>
-              <div className="my-3" style={{ height: 1, background: 'rgba(255,255,255,0.12)' }} />
+              <div className="my-3" style={{ height: 1, background: 'var(--border)' }} />
               <button
                 type="button"
                 className="w-full text-left px-3 py-2 rounded-md flex items-center gap-2 cursor-pointer"
@@ -200,7 +202,7 @@ export default function UserSettings({
               </button>
             </div>
           </div>
-          <div className="flex-1 p-8 overflow-y-auto">
+          <div className="flex-1 p-10 overflow-y-auto" style={{ background: 'var(--header-bg)' }}>
             <div className="flex items-center justify-between mb-6">
               <div>
                 <div className="text-lg font-semibold">
@@ -218,14 +220,19 @@ export default function UserSettings({
                       : t.userSettings.subtitleAccount}
                 </div>
               </div>
-              <button className="h-8 w-8 rounded-full border border-white/20" onClick={onCloseUserSettings} aria-label={t.userSettings.close}>
+              <button
+                className="h-8 w-8 rounded-full"
+                style={{ color: 'var(--text-primary)', border: '1px solid var(--border)', background: 'var(--input-bg)' }}
+                onClick={onCloseUserSettings}
+                aria-label={t.userSettings.close}
+              >
                 ✕
               </button>
             </div>
             {settingsTab === 'profile' ? (
-              <div className="rounded-xl p-6" style={{ background: '#1f202b' }}>
+              <div className="rounded-xl p-6" style={{ background: 'var(--panel)' }}>
                 <div className="flex items-center gap-5">
-                  <div className="w-20 h-20 rounded-full overflow-hidden flex items-center justify-center" style={{ background: '#2f3142' }}>
+                  <div className="w-20 h-20 rounded-full overflow-hidden flex items-center justify-center" style={{ background: 'var(--input-bg)' }}>
                     {user?.avatar ? (
                       <img src={user.avatar} alt={user.displayName || user.username} className="w-full h-full object-cover" />
                     ) : (
@@ -241,7 +248,7 @@ export default function UserSettings({
               </div>
             ) : settingsTab === 'voice' ? (
               <div className="space-y-6">
-                <div className="rounded-xl p-5" style={{ background: '#1f202b' }}>
+                <div className="rounded-xl p-5" style={{ background: 'var(--panel)' }}>
                   <div className="text-sm font-semibold mb-3">{t.userSettings.outputDevice}</div>
                   <select
                     value={outputDeviceId}
@@ -254,7 +261,7 @@ export default function UserSettings({
                       }
                     }}
                     className="w-full h-10 rounded-md px-3 text-sm device-select"
-                    style={{ background: '#2f3142', color: 'var(--text-primary)', border: '1px solid rgba(255,255,255,0.12)' }}
+                    style={{ background: 'var(--input-bg)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
                   >
                     <option value="default">{t.userSettings.deviceDefault}</option>
                     {audioOutputs.map((device, index) => (
@@ -275,7 +282,7 @@ export default function UserSettings({
                       }
                     }}
                     className="w-full h-10 rounded-md px-3 text-sm device-select"
-                    style={{ background: '#2f3142', color: 'var(--text-primary)', border: '1px solid rgba(255,255,255,0.12)' }}
+                    style={{ background: 'var(--input-bg)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
                   >
                     <option value="default">{t.userSettings.deviceDefault}</option>
                     {audioInputs.map((device, index) => (
@@ -292,12 +299,12 @@ export default function UserSettings({
                     <span className="text-sm w-16 text-right">{micSensitivity}dB</span>
                   </div>
                   <div className="mt-3">
-                    <div className="h-2 rounded-full overflow-hidden relative" style={{ background: '#2f3142' }}>
+                    <div className="h-2 rounded-full overflow-hidden relative" style={{ background: 'var(--input-bg)' }}>
                       <div
                         className="h-full transition-all"
                         style={{
                           width: `${micLevelPercent}%`,
-                          background: micLevelLabel >= micSensitivity ? '#22c55e' : '#5865f2',
+                          background: micLevelLabel >= micSensitivity ? '#22c55e' : 'var(--accent)',
                         }}
                       />
                       <div
@@ -325,7 +332,7 @@ export default function UserSettings({
                   </div>
                   <div className="text-xs opacity-70 mt-2">{t.userSettings.sensitivityHint}</div>
                 </div>
-                <div className="rounded-xl p-5" style={{ background: '#1f202b' }}>
+                <div className="rounded-xl p-5" style={{ background: 'var(--panel)' }}>
                   <div className="text-sm font-semibold">{t.userSettings.noiseSuppression}</div>
                   <div className="text-xs opacity-70 mt-1">{t.userSettings.noiseSuppressionHint}</div>
                   <div className="mt-4 space-y-2">
@@ -335,8 +342,8 @@ export default function UserSettings({
                         type="button"
                         className="w-full flex items-center justify-between px-4 py-3 rounded-md"
                         style={{
-                          background: noiseSuppressionMode === option ? 'rgba(88,101,242,0.2)' : 'transparent',
-                          border: noiseSuppressionMode === option ? '1px solid rgba(88,101,242,0.6)' : '1px solid transparent',
+                          background: noiseSuppressionMode === option ? 'color-mix(in oklch, var(--accent) 18%, transparent)' : 'transparent',
+                          border: noiseSuppressionMode === option ? '1px solid color-mix(in oklch, var(--accent) 60%, transparent)' : '1px solid transparent',
                         }}
                         onClick={() => onNoiseSuppressionModeChange(option)}
                       >
@@ -347,10 +354,10 @@ export default function UserSettings({
                   </div>
                   <div className="text-[11px] opacity-70 mt-3">{t.userSettings.rejoinHint}</div>
                 </div>
-                <div className="rounded-xl p-5" style={{ background: '#1f202b' }}>
+                <div className="rounded-xl p-5" style={{ background: 'var(--panel)' }}>
                   <div className="text-sm font-semibold mb-2">{t.userSettings.inputTest}</div>
                   <div className="text-xs opacity-70">{t.userSettings.inputTestHint}</div>
-                  <button type="button" className="mt-4 px-4 h-9 rounded-md" style={{ background: isTestingMic ? '#4b5563' : '#5865f2' }} onClick={onToggleMicTest}>
+                  <button type="button" className="mt-4 px-4 h-9 rounded-md" style={{ background: isTestingMic ? 'var(--hover-bg)' : 'var(--accent)' }} onClick={onToggleMicTest}>
                     {isTestingMic ? t.userSettings.stopTest : t.userSettings.startTest}
                   </button>
                   {isTestingMic ? <div className="mt-3 text-xs opacity-70">{t.userSettings.testingHint}</div> : null}

@@ -6,6 +6,7 @@ import type { UiText } from '../i18n'
 
 type SidebarProfileBarProps = {
   user: UserSettingsUser | null
+  isDark: boolean
   showUserSettings: boolean
   settingsTab: 'profile' | 'voice' | 'language'
   onSetTab: (tab: 'profile' | 'voice' | 'language') => void
@@ -31,6 +32,7 @@ type SidebarProfileBarProps = {
 
 export default function SidebarProfileBar({
   user,
+  isDark,
   showUserSettings,
   settingsTab,
   onSetTab,
@@ -173,6 +175,7 @@ export default function SidebarProfileBar({
       {renderSettings ? (
         <UserSettings
           showUserSettings={showUserSettings}
+          isDark={isDark}
           settingsTab={settingsTab}
           onSetTab={onSetTab}
           onCloseUserSettings={onCloseUserSettings}

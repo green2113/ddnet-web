@@ -23,11 +23,6 @@ const createWindow = () => {
     frame: false,
     autoHideMenuBar: true,
     titleBarStyle: 'hidden',
-    titleBarOverlay: {
-      color: '#1b1c20',
-      symbolColor: '#e5e7eb',
-      height: 32,
-    },
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
     },

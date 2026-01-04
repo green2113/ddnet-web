@@ -139,7 +139,7 @@ function App() {
     () => servers.find((server) => server.id === activeServerId) || null,
     [servers, activeServerId]
   )
-  const serverLabel = isMeView ? '메인 메뉴' : (activeServer?.name || t.sidebarChannels.serverName)
+  const serverLabel = isMeView ? '메인 메뉴' : (activeServer?.name || '')
   const activeGuildId = isMeView ? '@me' : activeServerId
   const orderedServers = useMemo(() => {
     if (!serverOrder.length) return servers
@@ -564,6 +564,18 @@ function App() {
     if (typeof window === 'undefined') return
     window.localStorage.setItem('ui-language', language)
   }, [language])
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    if (isDark) {
+      document.body.classList.add('theme-dark')
+    } else {
+      document.body.classList.remove('theme-dark')
+    }
+    return () => {
+      document.body.classList.remove('theme-dark')
+    }
+  }, [isDark])
 
   useEffect(() => {
     const handler = (event: Event) => {
@@ -1030,20 +1042,29 @@ function App() {
                   fill="currentColor"
                 />
               </svg>
-            ) : (
+            ) : serverLabel ? (
               <div className="w-7 h-7 rounded-2xl overflow-hidden flex items-center justify-center" style={{ background: 'var(--input-bg)', color: 'var(--text-primary)' }}>
                 <span className="text-sm font-semibold">{serverLabel.slice(0, 1)}</span>
               </div>
+            ) : (
+              <div className="w-7 h-7 rounded-2xl" style={{ background: 'var(--input-bg)' }} />
             )}
-            <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-              {isMeView ? '홈' : serverLabel}
-            </span>
+            {isMeView ? (
+              <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>홈</span>
+            ) : serverLabel ? (
+              <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{serverLabel}</span>
+            ) : (
+              <span className="inline-block h-4 w-[110px] rounded-md" style={{ background: 'var(--input-bg)' }} />
+            )}
           </div>
         </div>
       </div>
       {isElectronApp && !hasNativeControls
         ? createPortal(
-            <div className="fixed right-0 top-0 h-8 z-[1000] flex items-center app-no-drag pointer-events-auto">
+            <div
+              className="fixed right-0 top-0 h-8 z-[1000] flex items-center app-no-drag pointer-events-auto"
+              style={{ color: 'var(--text-primary)' }}
+            >
               <button
                 type="button"
                 className="h-full w-10 grid place-items-center hover-surface cursor-pointer"
@@ -1465,6 +1486,7 @@ function App() {
               ) : null}
               <SidebarProfileBar
                 user={user}
+                isDark={isDark}
                 showUserSettings={showUserSettings}
                 settingsTab={settingsTab}
                 onSetTab={setSettingsTab}

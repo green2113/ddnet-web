@@ -228,7 +228,7 @@ const translations: TranslationMap = {
       adminTag: '👑 Admin',
     },
     sidebarChannels: {
-      serverName: 'DDNet Server',
+      serverName: 'Server',
       serverSettings: 'Server settings',
       notifications: 'Notification settings',
       textChannels: 'Text channels',
@@ -409,7 +409,7 @@ const translations: TranslationMap = {
       adminTag: '👑 관리자',
     },
     sidebarChannels: {
-      serverName: 'DDNet Server',
+      serverName: '서버',
       serverSettings: '서버 설정',
       notifications: '알림 설정',
       textChannels: '텍스트 채널',
@@ -590,7 +590,7 @@ const translations: TranslationMap = {
       adminTag: '👑 管理员',
     },
     sidebarChannels: {
-      serverName: 'DDNet Server',
+      serverName: '服务器',
       serverSettings: '服务器设置',
       notifications: '通知设置',
       textChannels: '文字频道',
@@ -771,7 +771,7 @@ const translations: TranslationMap = {
       adminTag: '👑 管理員',
     },
     sidebarChannels: {
-      serverName: 'DDNet Server',
+      serverName: '伺服器',
       serverSettings: '伺服器設定',
       notifications: '通知設定',
       textChannels: '文字頻道',

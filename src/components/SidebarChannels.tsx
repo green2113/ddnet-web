@@ -137,7 +137,6 @@ export default function SidebarChannels({
     return ids
   }
 
-  const resolvedServerName = serverName || t.sidebarChannels.serverName
   return (
     <aside className="w-full flex flex-col p-0 flex-1 min-h-0">
       {/* 서버 헤더 */}
@@ -168,7 +167,11 @@ export default function SidebarChannels({
           onMouseEnter={(e) => ((e.currentTarget.style.background as any) = 'var(--hover-bg)')}
           onMouseLeave={(e) => ((e.currentTarget.style.background as any) = 'var(--sidebar-bg)')}
         >
-          <span className="truncate font-medium">{resolvedServerName}</span>
+          {serverName ? (
+            <span className="truncate font-medium">{serverName}</span>
+          ) : (
+            <span className="inline-block h-4 w-[120px] rounded-md" style={{ background: 'var(--input-bg)' }} />
+          )}
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 120ms ease' }}>
             <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
