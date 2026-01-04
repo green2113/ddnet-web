@@ -71,6 +71,7 @@ function App() {
   const [channels, setChannels] = useState<Channel[]>([])
   const [adminIds, setAdminIds] = useState<string[]>([])
   const [servers, setServers] = useState<Server[]>([])
+  const [serverOrder, setServerOrder] = useState<string[]>([])
   const [activeServerId, setActiveServerId] = useState('')
   const [isMeView, setIsMeView] = useState(false)
   const [activeChannelId, setActiveChannelId] = useState('')
@@ -140,6 +141,15 @@ function App() {
   )
   const serverLabel = isMeView ? '메인 메뉴' : (activeServer?.name || t.sidebarChannels.serverName)
   const activeGuildId = isMeView ? '@me' : activeServerId
+  const orderedServers = useMemo(() => {
+    if (!serverOrder.length) return servers
+    const orderSet = new Set(serverOrder)
+    const ordered = serverOrder
+      .map((id) => servers.find((server) => server.id === id))
+      .filter(Boolean) as Server[]
+    const rest = servers.filter((server) => !orderSet.has(server.id))
+    return [...ordered, ...rest]
+  }, [servers, serverOrder])
 
   const handleJoinStateChange = useCallback((channelId: string, joined: boolean) => {
     setJoinedVoiceChannelId((prev) => {
@@ -379,6 +389,32 @@ function App() {
   }, [user, fetchServers])
 
   useEffect(() => {
+    if (!user) {
+      setServerOrder([])
+      return
+    }
+    axios
+      .get(`${serverBase}/api/servers/order`, { withCredentials: true })
+      .then((res) => {
+        if (Array.isArray(res.data)) {
+          setServerOrder(res.data.map((id) => String(id)))
+        }
+      })
+      .catch(() => {})
+  }, [user, serverBase])
+
+  useEffect(() => {
+    if (!user) return
+    if (!servers.length) return
+    setServerOrder((prev) => {
+      const existing = new Set(servers.map((server) => server.id))
+      const next = prev.filter((id) => existing.has(id))
+      const missing = servers.map((server) => server.id).filter((id) => !next.includes(id))
+      return [...next, ...missing]
+    })
+  }, [servers, user])
+
+  useEffect(() => {
     if (!authReady) return
     if (!user) requireLogin()
   }, [authReady, user, requireLogin])
@@ -499,12 +535,13 @@ function App() {
   }, [activeChannelId, channels, messageCache])
 
   useEffect(() => {
-    if (isMeView || routeServerId === '@me') return
+    const isMeRoute = location.pathname === '/channels/@me' || location.pathname.startsWith('/channels/@me/')
+    if (isMeView || routeServerId === '@me' || isMeRoute) return
     if (!activeChannelId || !activeServerId) return
     if (routeChannelId !== activeChannelId || routeServerId !== activeServerId) {
       navigate(`/channels/${activeServerId}/${activeChannelId}`, { replace: true })
     }
-  }, [activeChannelId, activeServerId, navigate, routeChannelId, routeServerId, isMeView])
+  }, [activeChannelId, activeServerId, navigate, routeChannelId, routeServerId, isMeView, location.pathname])
 
   useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default') {
@@ -943,6 +980,7 @@ function App() {
     }
     if (serverId === activeServerId) return
     setActiveServerId(serverId)
+    navigate(`/channels/${serverId}`)
   }
 
   const handleCreateServer = () => {
@@ -958,6 +996,12 @@ function App() {
       window.clearTimeout(createServerCloseTimerRef.current)
       createServerCloseTimerRef.current = null
     }
+  }
+
+  const handleReorderServers = (orderedIds: string[]) => {
+    if (!user) return
+    setServerOrder(orderedIds)
+    axios.put(`${serverBase}/api/servers/order`, { orderedIds }, { withCredentials: true }).catch(() => {})
   }
 
   const closeCreateServer = () => {
@@ -1039,10 +1083,11 @@ function App() {
           <div className="flex flex-1 min-h-0">
             <SidebarGuilds
               t={t}
-              servers={servers}
+              servers={orderedServers}
               activeId={activeGuildId}
               onSelect={handleSelectServer}
               onCreate={handleCreateServer}
+              onReorder={handleReorderServers}
             />
             <div
               className="w-64 min-h-0 flex flex-col"

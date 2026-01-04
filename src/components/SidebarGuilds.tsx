@@ -1,3 +1,6 @@
+import { useRef, useState } from 'react'
+import Tooltip from './Tooltip'
+
 type Server = {
   id: string
   name: string
@@ -9,6 +12,7 @@ type Props = {
   activeId?: string
   onSelect?: (serverId: string) => void
   onCreate?: () => void
+  onReorder?: (orderedIds: string[]) => void
   t: {
     sidebarGuilds: {
       add: string
@@ -22,56 +26,115 @@ export default function SidebarGuilds({
   activeId,
   onSelect,
   onCreate,
+  onReorder,
   t,
 }: Props) {
+  const [hoveredId, setHoveredId] = useState<string | null>(null)
+  const dragIdRef = useRef<string | null>(null)
   return (
     <aside
-      className="w-16 hidden md:flex flex-col items-center py-3 gap-3 h-full"
+      className="w-[78px] hidden md:flex flex-col items-center py-3 gap-3 h-full"
       style={{ background: 'var(--rail-bg)' }}
     >
-      <button
-        type="button"
-        onClick={() => onSelect?.('@me')}
-        className="w-12 h-12 rounded-xl grid place-items-center text-white text-[18px] select-none cursor-pointer transition-all"
-        style={{
-          background: activeId === '@me' ? accent : 'var(--input-bg)',
-          boxShadow: activeId === '@me' ? '0 10px 18px rgba(0,0,0,0.25)' : 'none',
-        }}
-        title="홈"
-        aria-label="홈"
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden>
-          <path
-            d="M4 11.5L12 5l8 6.5V20a1 1 0 0 1-1 1h-5.5v-6h-3v6H5a1 1 0 0 1-1-1v-8.5z"
-            fill="currentColor"
-          />
-        </svg>
-      </button>
+      <div className="relative w-full flex items-center justify-center">
+        <span
+          className="absolute left-0 h-10 w-[6px] rounded-full bg-white transition-opacity"
+          style={{ opacity: activeId === '@me' ? 1 : 0, clipPath: 'inset(0 0 0 50%)' }}
+        />
+        <button
+          type="button"
+          onClick={() => onSelect?.('@me')}
+          className="w-11 h-11 rounded-xl grid place-items-center text-white text-[17px] select-none cursor-pointer transition-all"
+          style={{
+            background: activeId === '@me' ? accent : 'var(--input-bg)',
+            boxShadow: activeId === '@me' ? '0 10px 18px rgba(0,0,0,0.25)' : 'none',
+          }}
+          aria-label="홈"
+        >
+          <svg width="19" height="19" viewBox="0 0 24 24" aria-hidden>
+            <path
+              d="M4 11.5L12 5l8 6.5V20a1 1 0 0 1-1 1h-5.5v-6h-3v6H5a1 1 0 0 1-1-1v-8.5z"
+              fill="currentColor"
+            />
+          </svg>
+        </button>
+      </div>
       <div className="w-8 h-[2px] rounded bg-black/15" />
+      <div
+        className="w-full flex flex-col items-center gap-3"
+        onDragOver={(event) => {
+          if (!dragIdRef.current) return
+          event.preventDefault()
+          if (event.dataTransfer) {
+            event.dataTransfer.dropEffect = 'move'
+          }
+        }}
+      >
       {servers.map((server) => {
         const isActive = server.id === activeId
+        const isHovering = hoveredId === server.id
         const label = server.name?.slice(0, 2).toUpperCase() || 'SV'
         return (
-          <button
-            key={server.id}
-            type="button"
-            onClick={() => onSelect?.(server.id)}
-            className="w-12 h-12 rounded-2xl grid place-items-center text-white text-sm font-bold select-none cursor-pointer transition-all"
-            style={{
-              background: isActive ? accent : 'var(--input-bg)',
-              transform: isActive ? 'scale(1.04)' : 'scale(1)',
-            }}
-            title={server.name}
-          >
-            {label}
-          </button>
+          <div key={server.id} className="relative w-full flex items-center justify-center">
+            <span
+              className="absolute left-0 h-10 w-[6px] rounded-full bg-white transition-opacity"
+              style={{ opacity: isActive ? 1 : 0, clipPath: 'inset(0 0 0 50%)' }}
+            />
+            <Tooltip label={server.name} side="right">
+              <button
+                type="button"
+                onClick={() => onSelect?.(server.id)}
+                onMouseEnter={() => setHoveredId(server.id)}
+                onMouseLeave={() => setHoveredId(null)}
+                draggable
+                onDragStart={(event) => {
+                  dragIdRef.current = server.id
+                  if (event.dataTransfer) {
+                    event.dataTransfer.effectAllowed = 'move'
+                    event.dataTransfer.setData('text/plain', server.id)
+                  }
+                }}
+                onDragEnd={() => {
+                  dragIdRef.current = null
+                }}
+                onDragOver={(event) => {
+                  if (!dragIdRef.current || dragIdRef.current === server.id) return
+                  event.preventDefault()
+                  if (event.dataTransfer) {
+                    event.dataTransfer.dropEffect = 'move'
+                  }
+                }}
+                onDrop={(event) => {
+                  event.preventDefault()
+                  const draggedId = dragIdRef.current || event.dataTransfer?.getData('text/plain')
+                  if (!draggedId || draggedId === server.id) return
+                  const ids = servers.map((s) => s.id)
+                  const fromIndex = ids.indexOf(draggedId)
+                  const toIndex = ids.indexOf(server.id)
+                  if (fromIndex === -1 || toIndex === -1) return
+                  ids.splice(fromIndex, 1)
+                  ids.splice(toIndex, 0, draggedId)
+                  onReorder?.(ids)
+                }}
+                className="w-11 h-11 rounded-2xl grid place-items-center text-white text-sm font-bold select-none cursor-pointer transition-all"
+                style={{
+                  background: isActive || isHovering ? accent : 'var(--input-bg)',
+                  transform: isActive ? 'scale(1.04)' : 'scale(1)',
+                }}
+                aria-label={server.name}
+              >
+                {label}
+              </button>
+            </Tooltip>
+          </div>
         )
       })}
-      <div className="w-12 h-[2px] rounded bg-black/10" />
+      </div>
+      <div className="w-11 h-[2px] rounded bg-black/10" />
       <button
-        className="w-12 h-12 rounded-2xl grid place-items-center text-[22px] text-white cursor-pointer"
+        className="w-11 h-11 rounded-2xl grid place-items-center text-[20px] text-white cursor-pointer"
         style={{ background: 'var(--input-bg)' }}
-        title={t.sidebarGuilds.add}
+        aria-label={t.sidebarGuilds.add}
         onClick={onCreate}
       >
         +

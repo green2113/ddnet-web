@@ -11,7 +11,7 @@ type TooltipProps = {
 
 const arrowClassMap: Record<TooltipSide, string> = {
   top: 'top-full left-1/2 -translate-x-1/2 -translate-y-[1px]',
-  right: 'right-full top-1/2 -translate-y-1/2 translate-x-1/2',
+  right: 'right-full top-1/2 -translate-y-1/2 translate-x-1',
   bottom: 'bottom-full left-1/2 -translate-x-1/2 translate-y-[1px]',
   left: 'left-full top-1/2 -translate-y-1/2 -translate-x-1/2',
 }
@@ -25,7 +25,7 @@ const arrowRotateMap: Record<TooltipSide, string> = {
 
 const portalTransformMap: Record<TooltipSide, string> = {
   top: 'translate(-50%, calc(-100% - 8px))',
-  right: 'translate(8px, -50%)',
+  right: 'translate(12px, -50%)',
   bottom: 'translate(-50%, 8px)',
   left: 'translate(calc(-100% - 8px), -50%)',
 }
@@ -114,10 +114,13 @@ export default function Tooltip({ label, children, side = 'top' }: TooltipProps)
     }
   }, [])
 
+  const transitionClass = side === 'right'
+    ? (visible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2')
+    : (visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1')
   const tooltip = rendered && portalPos ? (
     <span
       role="tooltip"
-      className={`pointer-events-none absolute z-50 rounded-lg px-3 py-2 text-[13px] whitespace-nowrap transition duration-150 ease-out ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1'}`}
+      className={`pointer-events-none absolute z-50 rounded-lg px-3 py-1.5 text-[14px] whitespace-nowrap transition duration-150 ease-out ${transitionClass}`}
       style={{
         background: 'var(--tooltip-bg)',
         color: 'var(--text-primary)',
