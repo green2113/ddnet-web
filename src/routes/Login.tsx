@@ -23,6 +23,23 @@ export default function Login() {
     }
   }, [])
 
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const res = await fetch(`${baseUrl}/api/me`, { credentials: 'include' })
+        if (!res.ok) return
+        const data = await res.json()
+        if (!data) return
+        const returnTo = localStorage.getItem('return_to') || '/channels/general'
+        localStorage.removeItem('return_to')
+        navigate(returnTo, { replace: true })
+      } catch {
+        // ignore
+      }
+    }
+    checkSession()
+  }, [baseUrl, navigate])
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
     if (loading) return
