@@ -104,9 +104,6 @@ function App() {
   const [createChannelType, setCreateChannelType] = useState<'text' | 'voice' | 'category'>('text')
   const [createChannelName, setCreateChannelName] = useState('')
   const [createChannelCategoryId, setCreateChannelCategoryId] = useState<string>('')
-  const [showCreateServer, setShowCreateServer] = useState(false)
-  const [createServerClosing, setCreateServerClosing] = useState(false)
-  const createServerCloseTimerRef = useRef<number | null>(null)
   const [createServerName, setCreateServerName] = useState('')
   const [showServerAction, setShowServerAction] = useState(false)
   const [serverActionClosing, setServerActionClosing] = useState(false)
@@ -808,9 +805,6 @@ function App() {
       if (createChannelCloseTimerRef.current) {
         window.clearTimeout(createChannelCloseTimerRef.current)
       }
-      if (createServerCloseTimerRef.current) {
-        window.clearTimeout(createServerCloseTimerRef.current)
-      }
       if (inviteCloseTimerRef.current) {
         window.clearTimeout(inviteCloseTimerRef.current)
       }
@@ -945,7 +939,6 @@ function App() {
   }
   const canManageChannels = Boolean(user?.id && adminIds.includes(user.id))
   const voiceSwitchTarget = voiceSwitchTargetId ? channels.find((channel) => channel.id === voiceSwitchTargetId) : null
-  const defaultCategoryId = channels.find((channel) => channel.type === 'category')?.id || ''
 
   const applyChannelSelect = (channelId: string) => {
     activeChannelRef.current = channelId
@@ -1056,16 +1049,6 @@ function App() {
     if (!user) return
     setServerOrder(orderedIds)
     axios.put(`${serverBase}/api/servers/order`, { orderedIds }, { withCredentials: true }).catch(() => {})
-  }
-
-  const closeCreateServer = () => {
-    if (createServerClosing) return
-    setCreateServerClosing(true)
-    createServerCloseTimerRef.current = window.setTimeout(() => {
-      setShowCreateServer(false)
-      setCreateServerClosing(false)
-      createServerCloseTimerRef.current = null
-    }, 180)
   }
 
   const closeServerAction = () => {
@@ -1440,18 +1423,33 @@ function App() {
                   </button>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Tooltip label={isScreenSharing ? t.voice.stopShare : t.voice.screenShare}>
-                    <button
-                      type="button"
-                      aria-label={isScreenSharing ? t.voice.stopShare : t.voice.screenShare}
-                      aria-pressed={isScreenSharing}
-                      className="h-8 w-8 rounded-md grid place-items-center hover-surface cursor-pointer"
-                      style={{ color: isScreenSharing ? '#38bdf8' : '#cbd5e1' }}
-                      onClick={() => window.dispatchEvent(new CustomEvent('voice-screen-share-toggle'))}
-                    >
-                      <ScreenShareIcon size={16} />
-                    </button>
-                  </Tooltip>
+                  {user?.isGuest ? (
+                    <Tooltip label={t.sidebarChannels.guestDisabled}>
+                      <button
+                        type="button"
+                        aria-label={t.sidebarChannels.guestDisabled}
+                        aria-disabled
+                        className="h-8 w-8 rounded-md grid place-items-center"
+                        style={{ color: '#64748b', cursor: 'not-allowed' }}
+                        onClick={() => {}}
+                      >
+                        <ScreenShareIcon size={16} />
+                      </button>
+                    </Tooltip>
+                  ) : (
+                    <Tooltip label={isScreenSharing ? t.voice.stopShare : t.voice.screenShare}>
+                      <button
+                        type="button"
+                        aria-label={isScreenSharing ? t.voice.stopShare : t.voice.screenShare}
+                        aria-pressed={isScreenSharing}
+                        className="h-8 w-8 rounded-md grid place-items-center hover-surface cursor-pointer"
+                        style={{ color: isScreenSharing ? '#38bdf8' : '#cbd5e1' }}
+                        onClick={() => window.dispatchEvent(new CustomEvent('voice-screen-share-toggle'))}
+                      >
+                        <ScreenShareIcon size={16} />
+                      </button>
+                    </Tooltip>
+                  )}
                   <Tooltip label={t.voice.disconnect}>
                     <button
                       type="button"
@@ -1471,7 +1469,6 @@ function App() {
           ) : null}
           <SidebarProfileBar
             user={user}
-            isDark={isDark}
             showUserSettings={showUserSettings}
             settingsTab={settingsTab}
             onSetTab={setSettingsTab}
@@ -1679,18 +1676,33 @@ function App() {
                       </button>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Tooltip label={isScreenSharing ? t.voice.stopShare : t.voice.screenShare}>
-                        <button
-                          type="button"
-                          aria-label={isScreenSharing ? t.voice.stopShare : t.voice.screenShare}
-                          aria-pressed={isScreenSharing}
-                          className="h-8 w-8 rounded-md grid place-items-center hover-surface cursor-pointer"
-                          style={{ color: isScreenSharing ? '#38bdf8' : '#cbd5e1' }}
-                          onClick={() => window.dispatchEvent(new CustomEvent('voice-screen-share-toggle'))}
-                        >
-                          <ScreenShareIcon size={16} />
-                        </button>
-                      </Tooltip>
+                      {user?.isGuest ? (
+                        <Tooltip label={t.sidebarChannels.guestDisabled}>
+                          <button
+                            type="button"
+                            aria-label={t.sidebarChannels.guestDisabled}
+                            aria-disabled
+                            className="h-8 w-8 rounded-md grid place-items-center"
+                            style={{ color: '#64748b', cursor: 'not-allowed' }}
+                            onClick={() => {}}
+                          >
+                            <ScreenShareIcon size={16} />
+                          </button>
+                        </Tooltip>
+                      ) : (
+                        <Tooltip label={isScreenSharing ? t.voice.stopShare : t.voice.screenShare}>
+                          <button
+                            type="button"
+                            aria-label={isScreenSharing ? t.voice.stopShare : t.voice.screenShare}
+                            aria-pressed={isScreenSharing}
+                            className="h-8 w-8 rounded-md grid place-items-center hover-surface cursor-pointer"
+                            style={{ color: isScreenSharing ? '#38bdf8' : '#cbd5e1' }}
+                            onClick={() => window.dispatchEvent(new CustomEvent('voice-screen-share-toggle'))}
+                          >
+                            <ScreenShareIcon size={16} />
+                          </button>
+                        </Tooltip>
+                      )}
                       <Tooltip label={t.voice.disconnect}>
                         <button
                           type="button"
@@ -1710,7 +1722,6 @@ function App() {
               ) : null}
               <SidebarProfileBar
                 user={user}
-                isDark={isDark}
                 showUserSettings={showUserSettings}
                 settingsTab={settingsTab}
                 onSetTab={setSettingsTab}

@@ -20,8 +20,11 @@ const getMemberLabel = (member: VoiceMember) => member.displayName || member.use
 const sortMembersByName = (members: VoiceMember[]) =>
   [...members].sort((a, b) => memberNameCollator.compare(getMemberLabel(a), getMemberLabel(b)))
 
+type Channel = { id: string; name: string; hidden?: boolean; type?: 'text' | 'voice' | 'category'; categoryId?: string | null; order?: number }
+type TextVoiceChannel = { id: string; name: string; hidden?: boolean; type?: 'text' | 'voice'; categoryId?: string | null; order?: number }
+
 export type SidebarChannelsProps = {
-  channels: Array<{ id: string; name: string; hidden?: boolean; type?: 'text' | 'voice' | 'category'; categoryId?: string | null; order?: number }>
+  channels: Channel[]
   activeId?: string
   joinedVoiceChannelId?: string
   serverName?: string
@@ -129,11 +132,13 @@ export default function SidebarChannels({
     if (!channel.hidden) return true
     return canManage && showHiddenChannels
   })
+  const isCategory = (channel: Channel): channel is Channel & { type: 'category' } => channel.type === 'category'
+  const isTextOrVoice = (channel: Channel): channel is TextVoiceChannel => channel.type !== 'category'
   const categories = visibleChannels
-    .filter((channel) => channel.type === 'category')
+    .filter(isCategory)
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
   const uncategorizedChannels = visibleChannels
-    .filter((channel) => channel.type !== 'category' && !channel.categoryId)
+    .filter((channel): channel is TextVoiceChannel => isTextOrVoice(channel) && !channel.categoryId)
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
 
   const computeReorder = (sourceIds: string[], draggedId: string, targetId: string, position: 'above' | 'below') => {
@@ -175,7 +180,7 @@ export default function SidebarChannels({
     return ids
   }
 
-  const renderChannelItem = (channel: { id: string; name: string; hidden?: boolean; type?: 'text' | 'voice'; categoryId?: string | null }, list: Array<{ id: string }>, index: number, groupId: string) => {
+  const renderChannelItem = (channel: TextVoiceChannel, list: Array<{ id: string }>, index: number, groupId: string) => {
     const isLast = index === list.length - 1
     const ids = list.map((item) => item.id)
     const members = voiceMembersByChannel[channel.id] || []
@@ -462,7 +467,7 @@ export default function SidebarChannels({
           ) : null}
           {categories.map((category, index) => {
             const categoryChannels = visibleChannels
-              .filter((channel) => channel.type !== 'category' && channel.categoryId === category.id)
+              .filter((channel): channel is TextVoiceChannel => isTextOrVoice(channel) && channel.categoryId === category.id)
               .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
             const categoryIds = categories.map((item) => item.id)
             const isLast = index === categories.length - 1

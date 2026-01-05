@@ -12,7 +12,6 @@ export type UserSettingsUser = {
 
 type UserSettingsProps = {
   showUserSettings: boolean
-  isDark: boolean
   settingsTab: 'profile' | 'voice' | 'language'
   onSetTab: (tab: 'profile' | 'voice' | 'language') => void
   onCloseUserSettings: () => void
@@ -35,7 +34,6 @@ type UserSettingsProps = {
 
 export default function UserSettings({
   showUserSettings,
-  isDark,
   settingsTab,
   onSetTab,
   onCloseUserSettings,

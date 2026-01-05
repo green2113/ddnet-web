@@ -142,7 +142,6 @@ export default function SidebarGuilds({
                   if (event.dataTransfer) {
                     event.dataTransfer.dropEffect = 'move'
                   }
-                  const rect = (event.currentTarget as HTMLButtonElement).getBoundingClientRect()
                   const position = isLast ? 'below' : 'above'
                   const nextOrder = computeReorder(dragIdRef.current, server.id, position)
                   setDragOverId(nextOrder ? server.id : null)
@@ -155,7 +154,6 @@ export default function SidebarGuilds({
                   setDragOverId(null)
                   setDragOverPos(null)
                   if (!draggedId || draggedId === server.id) return
-                  const rect = (event.currentTarget as HTMLButtonElement).getBoundingClientRect()
                   const position = isLast ? 'below' : 'above'
                   const nextOrder = computeReorder(draggedId, server.id, position)
                   if (!nextOrder) return
