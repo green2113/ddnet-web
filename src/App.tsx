@@ -1764,7 +1764,10 @@ function App() {
             t={t}
           />
           {!isMeView && voiceChannelId ? (
-            <div style={{ display: isVoiceChannel ? 'block' : 'none' }}>
+            <div
+              className="flex-1 min-h-0 flex"
+              style={{ display: isVoiceChannel ? 'flex' : 'none' }}
+            >
               <VoicePanel
                 channelId={voiceChannelId}
                 socket={socketRef.current}

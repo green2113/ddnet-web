@@ -78,6 +78,7 @@ export default function SidebarChannels({
   const [dragOverPos, setDragOverPos] = useState<'above' | 'below' | null>(null)
   const [categoryDragOverId, setCategoryDragOverId] = useState<string | null>(null)
   const [categoryDragOverPos, setCategoryDragOverPos] = useState<'above' | 'below' | null>(null)
+  const [channelDropCategoryId, setChannelDropCategoryId] = useState<string | null>(null)
   const [serverMenuPos, setServerMenuPos] = useState<{ top: number; left: number; width: number } | null>(null)
   const wrapRef = useRef<HTMLDivElement | null>(null)
   const serverMenuRef = useRef<HTMLDivElement | null>(null)
@@ -220,6 +221,7 @@ export default function SidebarChannels({
             dragGroupRef.current = groupId
             setDragOverId(null)
             setDragOverPos(null)
+            setChannelDropCategoryId(null)
             if (event.dataTransfer) {
               event.dataTransfer.setData('text/plain', channel.id)
               event.dataTransfer.effectAllowed = 'move'
@@ -230,6 +232,7 @@ export default function SidebarChannels({
             dragGroupRef.current = null
             setDragOverId(null)
             setDragOverPos(null)
+            setChannelDropCategoryId(null)
           }}
           onDragOver={(e) => {
             if (!canManage || !dragIdRef.current) return
@@ -237,7 +240,9 @@ export default function SidebarChannels({
             if (e.dataTransfer) {
               e.dataTransfer.dropEffect = 'move'
             }
-            const position = isLast ? 'below' : 'above'
+            const fromIndex = ids.indexOf(dragIdRef.current)
+            const toIndex = ids.indexOf(channel.id)
+            const position = fromIndex !== -1 && toIndex !== -1 && fromIndex < toIndex ? 'below' : 'above'
             const nextOrder = computeReorderWithInsert(ids, dragIdRef.current, channel.id, position)
             setDragOverId(nextOrder ? channel.id : null)
             setDragOverPos(nextOrder ? position : null)
@@ -251,7 +256,9 @@ export default function SidebarChannels({
             setDragOverId(null)
             setDragOverPos(null)
             if (!draggedId || draggedId === channel.id) return
-            const position = isLast ? 'below' : 'above'
+            const fromIndex = ids.indexOf(draggedId)
+            const toIndex = ids.indexOf(channel.id)
+            const position = fromIndex !== -1 && toIndex !== -1 && fromIndex < toIndex ? 'below' : 'above'
             const nextOrder = computeReorderWithInsert(ids, draggedId, channel.id, position)
             if (!nextOrder) return
             onReorderChannels?.(nextOrder, groupId === 'uncategorized' ? null : groupId)
@@ -313,12 +320,12 @@ export default function SidebarChannels({
           ) : null}
         </div>
         {isVoice && members.length > 0 ? (
-          <div className="pl-6 space-y-1">
+          <div className="pl-6 space-y-1.5">
             {sortedMembers.map((member) => {
               const isSpeaking = speakingIds.includes(member.id) && !member.muted && !member.deafened
               return (
-                <div key={member.id} className="flex items-center gap-2 text-xs">
-                  <div className={`voice-avatar${isSpeaking ? ' voice-speaking-ring' : ''}`}>
+                <div key={member.id} className="flex items-center gap-2.5 text-[13px]">
+                  <div className={`voice-avatar voice-avatar-lg${isSpeaking ? ' voice-speaking-ring' : ''}`}>
                     <div className="voice-avatar-inner">
                       {member.avatar ? (
                         <img src={member.avatar} alt={member.username} className="w-full h-full object-cover" />
@@ -335,8 +342,8 @@ export default function SidebarChannels({
                     {getMemberLabel(member)}
                   </span>
                   <span className="ml-auto flex items-center gap-1" style={{ color: '#f87171' }}>
-                    {member.muted ? <MicIcon size={12} muted outlineColor="var(--sidebar-bg)" /> : null}
-                    {member.deafened ? <HeadsetIcon size={12} muted outlineColor="var(--sidebar-bg)" /> : null}
+                    {member.muted ? <MicIcon size={14} muted outlineColor="var(--sidebar-bg)" /> : null}
+                    {member.deafened ? <HeadsetIcon size={14} muted outlineColor="var(--sidebar-bg)" /> : null}
                   </span>
                 </div>
               )
@@ -491,7 +498,10 @@ export default function SidebarChannels({
                   ) : null}
                   <div
                     className="px-2 py-1 rounded-md cursor-pointer uppercase tracking-wide text-[11px] flex items-center justify-between gap-2"
-                    style={{ color: 'var(--text-muted)' }}
+                    style={{
+                      color: 'var(--text-muted)',
+                      background: channelDropCategoryId === category.id ? 'color-mix(in oklch, var(--accent) 14%, transparent)' : 'transparent',
+                    }}
                     draggable={canManage}
                     onContextMenu={(event) => {
                       if (!canManage) return
@@ -539,9 +549,11 @@ export default function SidebarChannels({
                       if (event.dataTransfer) {
                         event.dataTransfer.dropEffect = 'move'
                       }
+                      setChannelDropCategoryId(category.id)
                     }}
                     onDrop={(event) => {
                       event.preventDefault()
+                      setChannelDropCategoryId(null)
                       if (dragCategoryIdRef.current) {
                         const draggedId = dragCategoryIdRef.current || event.dataTransfer?.getData('text/plain')
                         dragCategoryIdRef.current = null
@@ -566,6 +578,7 @@ export default function SidebarChannels({
                       if (!canManage) return
                       setCategoryDragOverId((prev) => (prev === category.id ? null : prev))
                       setCategoryDragOverPos((prev) => (categoryDragOverId === category.id ? null : prev))
+                      setChannelDropCategoryId((prev) => (prev === category.id ? null : prev))
                     }}
                   >
                     <span className="truncate">{category.name}</span>

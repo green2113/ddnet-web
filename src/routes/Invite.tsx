@@ -77,27 +77,35 @@ export default function Invite() {
   }
 
   return (
-    <div className="min-h-screen grid place-items-center px-6" style={{ background: 'var(--bg-app)', color: 'var(--text-primary)' }}>
-      <div className="w-full max-w-[420px] rounded-2xl border px-6 py-7" style={{ background: 'var(--panel)', borderColor: 'var(--border)' }}>
-        <div className="text-lg font-semibold mb-2">서버 초대</div>
-        {loading ? <div className="text-sm">불러오는 중...</div> : null}
-        {!loading && error ? <div className="text-sm text-red-400">{error}</div> : null}
+    <div className="invite-page">
+      <div className="invite-bg">
+        <div className="invite-orb orb-1" />
+        <div className="invite-orb orb-2" />
+        <div className="invite-orb orb-3" />
+      </div>
+      <div className="invite-card">
+        <div className="invite-badge">INVITE</div>
+        <h1 className="invite-title">서버 초대</h1>
+        <p className="invite-subtitle">초대 링크로 서버에 참여할 수 있어요.</p>
+        {loading ? <div className="invite-status">불러오는 중...</div> : null}
+        {!loading && error ? <div className="invite-error">{error}</div> : null}
         {!loading && invite ? (
-          <div className="space-y-4">
-            <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
-              {invite.server.name} 서버에 참여합니다.
+          <div className="invite-server">
+            <div className="invite-avatar">{invite.server.name.slice(0, 1)}</div>
+            <div className="invite-meta">
+              <div className="invite-name">{invite.server.name}</div>
+              <div className="invite-desc">이 서버로 바로 이동합니다.</div>
             </div>
-            <button
-              type="button"
-              className="w-full h-10 rounded-md text-white font-semibold"
-              style={{ background: 'var(--accent)', opacity: joining ? 0.7 : 1 }}
-              onClick={handleJoin}
-              disabled={joining}
-            >
-              참여하기
-            </button>
           </div>
         ) : null}
+        <button
+          type="button"
+          className="invite-cta"
+          onClick={handleJoin}
+          disabled={joining || !invite || Boolean(error)}
+        >
+          {joining ? '입장 중...' : '참여하기'}
+        </button>
       </div>
     </div>
   )

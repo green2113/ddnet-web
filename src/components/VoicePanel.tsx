@@ -819,7 +819,7 @@ export default function VoicePanel({
   }, [joined, leaveSignal])
 
   return (
-    <div className={`flex-1 flex flex-col gap-4${focusedShareId ? '' : ' p-6'}`}>
+    <div className={`flex-1 min-h-0 flex flex-col gap-4${focusedShareId ? '' : ' p-6'}`}>
       {showScreenSharePicker
         ? createPortal(
             <>
@@ -997,7 +997,10 @@ export default function VoicePanel({
               ))}
             </div>
           ) : null}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+          <div
+            className="grid gap-2"
+            style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 272px))', justifyContent: 'start' }}
+          >
             {(members.length > 1 ? sortMembersByName(members) : members).map((member) => {
               const isSpeaking = speakingIds.includes(member.id) && !member.muted && !member.deafened
               return (
@@ -1006,6 +1009,8 @@ export default function VoicePanel({
                   className={`flex items-center justify-between gap-3 rounded-md px-2 py-2${isSpeaking ? ' voice-speaking-card' : ''}`}
                   style={{
                     background: 'var(--panel)',
+                    maxWidth: 272,
+                    width: '100%',
                   }}
                 >
                   <div className="flex items-center gap-3 min-w-0">

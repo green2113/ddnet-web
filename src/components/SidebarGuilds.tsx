@@ -142,7 +142,10 @@ export default function SidebarGuilds({
                   if (event.dataTransfer) {
                     event.dataTransfer.dropEffect = 'move'
                   }
-                  const position = isLast ? 'below' : 'above'
+                  const ids = servers.map((item) => item.id)
+                  const fromIndex = ids.indexOf(dragIdRef.current)
+                  const toIndex = ids.indexOf(server.id)
+                  const position = fromIndex !== -1 && toIndex !== -1 && fromIndex < toIndex ? 'below' : 'above'
                   const nextOrder = computeReorder(dragIdRef.current, server.id, position)
                   setDragOverId(nextOrder ? server.id : null)
                   setDragOverPos(nextOrder ? position : null)
@@ -154,7 +157,10 @@ export default function SidebarGuilds({
                   setDragOverId(null)
                   setDragOverPos(null)
                   if (!draggedId || draggedId === server.id) return
-                  const position = isLast ? 'below' : 'above'
+                  const ids = servers.map((item) => item.id)
+                  const fromIndex = ids.indexOf(draggedId)
+                  const toIndex = ids.indexOf(server.id)
+                  const position = fromIndex !== -1 && toIndex !== -1 && fromIndex < toIndex ? 'below' : 'above'
                   const nextOrder = computeReorder(draggedId, server.id, position)
                   if (!nextOrder) return
                   onReorder?.(nextOrder)

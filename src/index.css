@@ -507,6 +507,7 @@ a:hover {
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
 }
 
 .focused-share-stage.focused-share-hidden {
@@ -519,6 +520,190 @@ a:hover {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
+}
+
+.voice-avatar.voice-avatar-lg {
+  width: 24px;
+  height: 24px;
+}
+
+.invite-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px 20px;
+  color: #f8fafc;
+  font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
+  background: radial-gradient(circle at top left, rgba(224, 165, 51, 0.15), transparent 55%),
+    radial-gradient(circle at 20% 80%, rgba(45, 212, 191, 0.18), transparent 60%),
+    linear-gradient(160deg, #17181b 0%, #1c1e22 50%, #141518 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.invite-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.invite-orb {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(0px);
+  opacity: 0.7;
+  animation: invite-orb-float 16s ease-in-out infinite;
+}
+
+.invite-orb.orb-1 {
+  width: 280px;
+  height: 280px;
+  background: radial-gradient(circle, rgba(224, 165, 51, 0.4), rgba(224, 165, 51, 0));
+  top: -60px;
+  left: -40px;
+}
+
+.invite-orb.orb-2 {
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle, rgba(45, 212, 191, 0.35), rgba(45, 212, 191, 0));
+  right: -120px;
+  bottom: -80px;
+  animation-delay: -6s;
+}
+
+.invite-orb.orb-3 {
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(249, 115, 22, 0.35), rgba(249, 115, 22, 0));
+  left: 55%;
+  top: 12%;
+  animation-delay: -3s;
+}
+
+.invite-card {
+  position: relative;
+  z-index: 1;
+  width: min(520px, 94vw);
+  background: rgba(24, 26, 30, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  padding: 28px 28px 26px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(12px);
+}
+
+.invite-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(224, 165, 51, 0.16);
+  color: #fbd38d;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.invite-title {
+  margin-top: 12px;
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.invite-subtitle {
+  margin-top: 6px;
+  color: rgba(226, 232, 240, 0.7);
+  font-size: 14px;
+}
+
+.invite-status {
+  margin-top: 16px;
+  font-size: 14px;
+  color: rgba(226, 232, 240, 0.7);
+}
+
+.invite-error {
+  margin-top: 16px;
+  font-size: 14px;
+  color: #f87171;
+}
+
+.invite-server {
+  margin-top: 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(15, 16, 18, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.invite-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: rgba(224, 165, 51, 0.25);
+  color: #fcd34d;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+}
+
+.invite-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.invite-name {
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.invite-desc {
+  font-size: 13px;
+  color: rgba(226, 232, 240, 0.65);
+}
+
+.invite-cta {
+  margin-top: 22px;
+  width: 100%;
+  height: 44px;
+  border-radius: 12px;
+  border: none;
+  font-weight: 700;
+  font-size: 15px;
+  color: #1b1202;
+  background: linear-gradient(135deg, #f3c85a, #e0a533);
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
+}
+
+.invite-cta:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(224, 165, 51, 0.25);
+}
+
+.invite-cta:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  filter: grayscale(0.2);
+}
+
+@keyframes invite-orb-float {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(12px, -10px, 0) scale(1.04);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
 }
 
 /* Chat scrollbars */
