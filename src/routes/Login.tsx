@@ -239,7 +239,7 @@ export default function Login() {
                   checkUsernameAvailability(raw)
                 }}
                     className="login-username-input"
-                    placeholder="사용자 이름을 입력해 주세요. (최대 15자)"
+                    placeholder="사용자 이름을 입력해 주세요."
                   />
                 </div>
                 {fieldErrors.username ? <div className="login-error">필수 입력입니다.</div> : null}
