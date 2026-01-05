@@ -127,7 +127,7 @@ export default function UserSettings({
 
   return createPortal(
     <div
-      className={`fixed inset-0 z-[80] flex items-center justify-center px-14 py-12 user-settings-overlay${isClosing ? ' is-exiting' : ''} theme-dark app-drag`}
+      className={`fixed inset-0 z-[80] flex items-center justify-center px-14 py-12 user-settings-overlay${isClosing ? ' is-exiting' : ''} theme-dark app-no-drag`}
       style={{ background: 'rgba(0,0,0,0.65)' }}
       onMouseDown={onCloseUserSettings}
     >

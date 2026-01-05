@@ -101,6 +101,9 @@ export default function VoicePanel({
   const [showScreenSharePicker, setShowScreenSharePicker] = useState(false)
   const [selectedScreenSourceId, setSelectedScreenSourceId] = useState<string | null>(null)
   const [selectedScreenSourceName, setSelectedScreenSourceName] = useState('')
+  const [screenShareAvailable, setScreenShareAvailable] = useState<string[]>([])
+  const [focusedShareId, setFocusedShareId] = useState<string | null>(null)
+  const [hideFocusedCursor, setHideFocusedCursor] = useState(false)
   const forcedHeadsetRef = useRef(false)
   const micBeforeForceRef = useRef(false)
   const headsetBeforeForceRef = useRef(false)
@@ -108,6 +111,9 @@ export default function VoicePanel({
   const rawStreamRef = useRef<MediaStream | null>(null)
   const screenShareStreamRef = useRef<MediaStream | null>(null)
   const screenShareSendersRef = useRef<Map<string, RTCRtpSender>>(new Map())
+  const screenShareViewersRef = useRef<Set<string>>(new Set())
+  const localShareIdRef = useRef<string | null>(null)
+  const hideCursorTimerRef = useRef<number | null>(null)
   const micContextRef = useRef<AudioContext | null>(null)
   const micGainRef = useRef<GainNode | null>(null)
   const micDestinationRef = useRef<MediaStreamAudioDestinationNode | null>(null)
@@ -162,6 +168,9 @@ export default function VoicePanel({
     if (screenShareSendersRef.current.has(peerId)) {
       screenShareSendersRef.current.delete(peerId)
     }
+    if (screenShareViewersRef.current.has(peerId)) {
+      screenShareViewersRef.current.delete(peerId)
+    }
     setScreenShares((prev) => prev.filter((share) => share.id !== peerId))
   }
 
@@ -213,6 +222,8 @@ export default function VoicePanel({
     if (socket?.id) {
       cleanupPeer(socket.id)
     }
+    setScreenShareAvailable([])
+    setFocusedShareId(null)
     rawStreamRef.current?.getTracks().forEach((track) => track.stop())
     localStreamRef.current?.getTracks().forEach((track) => track.stop())
     micContextRef.current?.close()
@@ -307,12 +318,6 @@ export default function VoicePanel({
     localStreamRef.current?.getTracks().forEach((track) => {
       peer.addTrack(track, localStreamRef.current as MediaStream)
     })
-    const screenTrack = screenShareStreamRef.current?.getVideoTracks()[0]
-    if (screenTrack && screenShareStreamRef.current) {
-      const sender = peer.addTrack(screenTrack, screenShareStreamRef.current)
-      screenShareSendersRef.current.set(peerId, sender)
-    }
-
     peer.onicecandidate = (event) => {
       if (event.candidate) {
         socket.emit('voice:ice', { channelId, targetId: peerId, candidate: event.candidate })
@@ -371,17 +376,26 @@ export default function VoicePanel({
       track.onended = () => {
         stopScreenShare()
       }
+      track.onmute = () => {
+        pauseScreenShareSenders()
+      }
+      track.onunmute = () => {
+        resumeScreenShareSenders()
+      }
     }
+    const localShareId = socket?.id || 'local'
+    localShareIdRef.current = localShareId
     setScreenShares((prev) => {
-      const next = prev.filter((share) => share.id !== 'local')
-      return [...next, { id: 'local', stream, label: t.voice.screenShareYou, isLocal: true }]
+      const next = prev.filter((share) => share.id !== localShareId)
+      return [...next, { id: localShareId, stream, label: t.voice.screenShareYou, isLocal: true }]
     })
-    peersRef.current.forEach((peer, peerId) => {
-      if (!track) return
-      const sender = peer.addTrack(track, stream)
-      screenShareSendersRef.current.set(peerId, sender)
-      void renegotiatePeer(peerId)
+    setScreenShareAvailable((prev) => (prev.includes(localShareId) ? prev : [...prev, localShareId]))
+    screenShareViewersRef.current.forEach((peerId) => {
+      void addScreenShareToPeer(peerId)
     })
+    if (socket) {
+      socket.emit('screen:announce', { channelId, active: true })
+    }
     window.dispatchEvent(new CustomEvent('voice-screen-share-state', { detail: true }))
   }
 
@@ -391,8 +405,7 @@ export default function VoicePanel({
     try {
       const sources = await electronAPI.getDesktopSources()
       if (!Array.isArray(sources) || sources.length === 0) {
-        window.dispatchEvent(new CustomEvent('voice-screen-share-error', { detail: 'failed' }))
-        return true
+        return false
       }
       setSelectedScreenSourceId(null)
       setSelectedScreenSourceName('')
@@ -401,8 +414,7 @@ export default function VoicePanel({
       return true
     } catch (error) {
       console.error('[voice] failed to get desktop sources', error)
-      window.dispatchEvent(new CustomEvent('voice-screen-share-error', { detail: 'failed' }))
-      return true
+      return false
     }
   }
 
@@ -440,6 +452,19 @@ export default function VoicePanel({
     socket.emit('voice:offer', { channelId, targetId: peerId, sdp: offer })
   }
 
+  const addScreenShareToPeer = async (peerId: string) => {
+    const stream = screenShareStreamRef.current
+    if (!stream) return
+    const peer = peersRef.current.get(peerId)
+    if (!peer) return
+    if (screenShareSendersRef.current.has(peerId)) return
+    const track = stream.getVideoTracks()[0]
+    if (!track) return
+    const sender = peer.addTrack(track, stream)
+    screenShareSendersRef.current.set(peerId, sender)
+    await renegotiatePeer(peerId)
+  }
+
   const startScreenShare = async () => {
     if (!joined) return
     if (screenShareStreamRef.current) return
@@ -462,6 +487,9 @@ export default function VoicePanel({
     if (!stream) return
     stream.getTracks().forEach((track) => track.stop())
     screenShareStreamRef.current = null
+    const localShareId = localShareIdRef.current
+    localShareIdRef.current = null
+    screenShareViewersRef.current.clear()
     peersRef.current.forEach((peer, peerId) => {
       const sender = screenShareSendersRef.current.get(peerId)
       if (!sender) return
@@ -469,8 +497,31 @@ export default function VoicePanel({
       screenShareSendersRef.current.delete(peerId)
       void renegotiatePeer(peerId)
     })
-    setScreenShares((prev) => prev.filter((share) => share.id !== 'local'))
+    if (localShareId) {
+      setScreenShares((prev) => prev.filter((share) => share.id !== localShareId))
+      setScreenShareAvailable((prev) => prev.filter((id) => id !== localShareId))
+      setFocusedShareId((prev) => (prev === localShareId ? null : prev))
+    }
+    if (socket) {
+      socket.emit('screen:announce', { channelId, active: false })
+    }
     window.dispatchEvent(new CustomEvent('voice-screen-share-state', { detail: false }))
+  }
+
+  const pauseScreenShareSenders = () => {
+    peersRef.current.forEach((peer, peerId) => {
+      const sender = screenShareSendersRef.current.get(peerId)
+      if (!sender) return
+      peer.removeTrack(sender)
+      screenShareSendersRef.current.delete(peerId)
+      void renegotiatePeer(peerId)
+    })
+  }
+
+  const resumeScreenShareSenders = () => {
+    screenShareViewersRef.current.forEach((peerId) => {
+      void addScreenShareToPeer(peerId)
+    })
   }
 
   const joinVoice = async () => {
@@ -575,12 +626,33 @@ export default function VoicePanel({
       leaveVoice()
     }
 
+    const handleScreenAnnounce = (payload: { channelId: string; peerId: string; active: boolean }) => {
+      if (payload.channelId !== channelId) return
+      if (payload.active) {
+        setScreenShareAvailable((prev) => (prev.includes(payload.peerId) ? prev : [...prev, payload.peerId]))
+        return
+      }
+      setScreenShareAvailable((prev) => prev.filter((id) => id !== payload.peerId))
+      setScreenShares((prev) => prev.filter((share) => share.id !== payload.peerId))
+      screenShareViewersRef.current.delete(payload.peerId)
+      setFocusedShareId((prev) => (prev === payload.peerId ? null : prev))
+    }
+
+    const handleScreenRequest = (payload: { channelId: string; fromId: string }) => {
+      if (payload.channelId !== channelId) return
+      if (!screenShareStreamRef.current) return
+      screenShareViewersRef.current.add(payload.fromId)
+      void addScreenShareToPeer(payload.fromId)
+    }
+
     socket.on('voice:members', handleMembers)
     socket.on('voice:offer', handleOffer)
     socket.on('voice:answer', handleAnswer)
     socket.on('voice:ice', handleIce)
     socket.on('voice:leave', handleLeave)
     socket.on('voice:force-leave', handleForceLeave)
+    socket.on('screen:announce', handleScreenAnnounce)
+    socket.on('screen:request', handleScreenRequest)
 
     return () => {
       socket.off('voice:members', handleMembers)
@@ -589,12 +661,22 @@ export default function VoicePanel({
       socket.off('voice:ice', handleIce)
       socket.off('voice:leave', handleLeave)
       socket.off('voice:force-leave', handleForceLeave)
+      socket.off('screen:announce', handleScreenAnnounce)
+      socket.off('screen:request', handleScreenRequest)
     }
   }, [channelId, joined, socket, user])
 
   useEffect(() => {
     onJoinStateChange?.(channelId, joined)
   }, [channelId, joined, onJoinStateChange])
+
+  useEffect(() => {
+    if (!socket || !joined) return
+    socket.emit('screen:list', { channelId }, (payload: { channelId: string; peers: string[] } | null) => {
+      if (!payload || payload.channelId !== channelId) return
+      setScreenShareAvailable(payload.peers || [])
+    })
+  }, [channelId, joined, socket])
 
   useEffect(() => {
     if (!joined) {
@@ -619,6 +701,23 @@ export default function VoicePanel({
     if (!stream) return
     startSpeakingMonitor(socket.id, stream, micSensitivity)
   }, [joined, micSensitivity, socket?.id])
+
+  useEffect(() => {
+    if (hideCursorTimerRef.current) {
+      window.clearTimeout(hideCursorTimerRef.current)
+      hideCursorTimerRef.current = null
+    }
+    setHideFocusedCursor(false)
+  }, [focusedShareId])
+
+  const focusedShare = focusedShareId ? screenShares.find((share) => share.id === focusedShareId) : null
+  const availableShareIds = screenShareAvailable.filter((id) => id && id !== socket?.id)
+  const availableShareCards = availableShareIds.map((peerId) => {
+    const member = members.find((item) => item.id === peerId)
+    const streamShare = screenShares.find((share) => share.id === peerId)
+    return { peerId, member, streamShare }
+  })
+  const extraScreenShares = screenShares.filter((share) => !availableShareIds.includes(share.id))
 
   useEffect(() => {
     if (!joined) return
@@ -720,7 +819,7 @@ export default function VoicePanel({
   }, [joined, leaveSignal])
 
   return (
-    <div className="flex-1 flex flex-col p-6 gap-4">
+    <div className={`flex-1 flex flex-col gap-4${focusedShareId ? '' : ' p-6'}`}>
       {showScreenSharePicker
         ? createPortal(
             <>
@@ -773,9 +872,13 @@ export default function VoicePanel({
                         onClick={() => {
                           setSelectedScreenSourceId(source.id)
                           setSelectedScreenSourceName(source.name)
+                          void startElectronScreenShare(source.id)
                         }}
                       >
-                        <img src={source.thumbnail} alt="" />
+                        <img src={source.thumbnail} alt="" className="screen-share-thumb" />
+                        <div className="screen-share-overlay">
+                          <span className="screen-share-label">화면 공유</span>
+                        </div>
                         <div className="flex items-center justify-between gap-3">
                           <div className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
                             {source.name}
@@ -789,18 +892,6 @@ export default function VoicePanel({
                     <div className="text-sm truncate" style={{ color: 'var(--text-muted)' }}>
                       {selectedScreenSourceName || t.voice.screenShareSelectNone}
                     </div>
-                    <button
-                      type="button"
-                      className="h-11 px-5 rounded-lg font-semibold hover-surface disabled:opacity-60"
-                      style={{ background: 'var(--input-bg)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
-                      disabled={!selectedScreenSourceId}
-                      onClick={() => {
-                        if (!selectedScreenSourceId) return
-                        void startElectronScreenShare(selectedScreenSourceId)
-                      }}
-                    >
-                      {t.voice.screenShareSelectConfirm}
-                    </button>
                   </div>
                 </div>
               </div>
@@ -808,82 +899,191 @@ export default function VoicePanel({
             document.body
           )
         : null}
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="text-lg font-semibold">{t.voice.title}</div>
-          <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
-            {formatText(t.voice.membersCount, { count: members.length })}
+      {focusedShareId ? null : (
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-lg font-semibold">{t.voice.title}</div>
+            <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
+              {formatText(t.voice.membersCount, { count: members.length })}
+            </div>
           </div>
         </div>
-      </div>
-      {screenShares.length > 0 ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          {screenShares.map((share) => (
-            <ScreenShareCard key={share.id} stream={share.stream} label={share.label} isLocal={share.isLocal} />
-          ))}
+      )}
+      {focusedShareId ? (
+        <div
+          className={`flex-1 w-full focused-share-stage${hideFocusedCursor ? ' focused-share-hidden' : ''}`}
+          onMouseMove={() => {
+            if (hideCursorTimerRef.current) {
+              window.clearTimeout(hideCursorTimerRef.current)
+            }
+            if (hideFocusedCursor) setHideFocusedCursor(false)
+            hideCursorTimerRef.current = window.setTimeout(() => {
+              setHideFocusedCursor(true)
+              hideCursorTimerRef.current = null
+            }, 1600)
+          }}
+          onMouseLeave={() => {
+            if (hideCursorTimerRef.current) {
+              window.clearTimeout(hideCursorTimerRef.current)
+              hideCursorTimerRef.current = null
+            }
+            setHideFocusedCursor(false)
+          }}
+        >
+          {focusedShare ? (
+            <div className="w-full h-full" onClick={() => setFocusedShareId(null)}>
+              <video
+                autoPlay
+                playsInline
+                muted={focusedShare.isLocal}
+                ref={(node) => {
+                  if (!node) return
+                  node.srcObject = focusedShare.stream
+                }}
+                className="focused-share-video"
+              />
+            </div>
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-sm" style={{ color: 'var(--text-muted)' }}>
+              방송을 불러오는 중이에요.
+            </div>
+          )}
         </div>
-      ) : null}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-        {(members.length > 1 ? sortMembersByName(members) : members).map((member) => {
-          const isSpeaking = speakingIds.includes(member.id) && !member.muted && !member.deafened
-          return (
-            <div
-              key={member.id}
-              className={`flex items-center justify-between gap-3 rounded-md px-2 py-2${isSpeaking ? ' voice-speaking-card' : ''}`}
-              style={{
-                background: 'var(--panel)',
-              }}
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-full overflow-hidden" style={{ background: 'var(--input-bg)' }}>
-                  {member.avatar ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={member.avatar} alt={member.username} className="w-full h-full object-cover" />
-                  ) : null}
-                </div>
-                <div className="min-w-0">
-                  <div className="text-sm font-medium truncate">{getMemberLabel(member)}</div>
-                  <div className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
-                    {member.username}
+      ) : (
+        <>
+          {availableShareCards.length > 0 || extraScreenShares.length > 0 ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              {availableShareCards.map(({ peerId, member, streamShare }) =>
+                streamShare ? (
+                  <ScreenShareCard
+                    key={peerId}
+                    stream={streamShare.stream}
+                    label={streamShare.label}
+                    isLocal={streamShare.isLocal}
+                    onClick={() => setFocusedShareId(peerId)}
+                  />
+                ) : (
+                  <div
+                    key={peerId}
+                    className="rounded-2xl border px-4 py-6 flex flex-col items-center justify-center gap-3"
+                    style={{ background: 'var(--panel)', border: '1px solid var(--border)' }}
+                  >
+                    <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                      {member ? getMemberLabel(member) : '화면 공유'}
+                    </div>
+                    <button
+                      type="button"
+                      className="h-10 px-4 rounded-lg font-semibold hover-surface"
+                      style={{ background: 'var(--input-bg)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
+                      onClick={() => {
+                        if (!socket) return
+                        socket.emit('screen:request', { channelId, targetId: peerId })
+                        setFocusedShareId(peerId)
+                      }}
+                    >
+                      방송 보기
+                    </button>
+                  </div>
+                )
+              )}
+              {extraScreenShares.map((share) => (
+                <ScreenShareCard
+                  key={share.id}
+                  stream={share.stream}
+                  label={share.label}
+                  isLocal={share.isLocal}
+                  onClick={() => setFocusedShareId(share.id)}
+                />
+              ))}
+            </div>
+          ) : null}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+            {(members.length > 1 ? sortMembersByName(members) : members).map((member) => {
+              const isSpeaking = speakingIds.includes(member.id) && !member.muted && !member.deafened
+              return (
+                <div
+                  key={member.id}
+                  className={`flex items-center justify-between gap-3 rounded-md px-2 py-2${isSpeaking ? ' voice-speaking-card' : ''}`}
+                  style={{
+                    background: 'var(--panel)',
+                  }}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-full overflow-hidden" style={{ background: 'var(--input-bg)' }}>
+                      {member.avatar ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={member.avatar} alt={member.username} className="w-full h-full object-cover" />
+                      ) : null}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium truncate">{getMemberLabel(member)}</div>
+                      <div className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
+                        {member.username}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0 justify-end">
+                    {member.muted ? (
+                      <span title={t.voice.micMuted} style={{ color: '#f87171' }}>
+                        <MicIcon size={16} muted outlineColor="var(--panel)" />
+                      </span>
+                    ) : null}
+                    {member.deafened ? (
+                      <span title={t.voice.headsetMuted} style={{ color: '#f87171' }}>
+                        <HeadsetIcon size={16} muted outlineColor="var(--panel)" />
+                      </span>
+                    ) : null}
                   </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-2 shrink-0 justify-end">
-                {member.muted ? (
-                  <span title={t.voice.micMuted} style={{ color: '#f87171' }}>
-                    <MicIcon size={16} muted outlineColor="var(--panel)" />
-                  </span>
-                ) : null}
-                {member.deafened ? (
-                  <span title={t.voice.headsetMuted} style={{ color: '#f87171' }}>
-                    <HeadsetIcon size={16} muted outlineColor="var(--panel)" />
-                  </span>
-                ) : null}
-              </div>
-            </div>
-          )
-        })}
-      </div>
+              )
+            })}
+          </div>
+        </>
+      )}
     </div>
   )
 }
 
-function ScreenShareCard({ stream, label, isLocal }: { stream: MediaStream; label: string; isLocal?: boolean }) {
+function ScreenShareCard({
+  stream,
+  isLocal,
+  onClick,
+  className = '',
+}: {
+  stream: MediaStream
+  label: string
+  isLocal?: boolean
+  onClick?: () => void
+  className?: string
+}) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
+  const [aspectRatio, setAspectRatio] = useState(16 / 9)
 
   useEffect(() => {
-    if (!videoRef.current) return
-    videoRef.current.srcObject = stream
+    const video = videoRef.current
+    if (!video) return
+    video.srcObject = stream
+    const updateAspect = () => {
+      if (!video.videoWidth || !video.videoHeight) return
+      setAspectRatio(video.videoWidth / video.videoHeight)
+    }
+    updateAspect()
+    video.addEventListener('loadedmetadata', updateAspect)
+    video.addEventListener('resize', updateAspect)
+    return () => {
+      video.removeEventListener('loadedmetadata', updateAspect)
+      video.removeEventListener('resize', updateAspect)
+    }
   }, [stream])
 
   return (
-    <div className="rounded-lg overflow-hidden" style={{ background: 'var(--panel)', border: '1px solid var(--border)' }}>
-      <div className="px-3 py-2 text-xs" style={{ color: 'var(--text-muted)' }}>
-        {label}
-      </div>
-      <div className="bg-black/60">
-        <video ref={videoRef} autoPlay playsInline muted={isLocal} className="w-full h-[220px] object-contain" />
-      </div>
+    <div
+      className={`rounded-2xl overflow-hidden w-full${onClick ? ' cursor-pointer' : ''} ${className}`.trim()}
+      style={{ background: 'var(--panel)', border: '1px solid var(--border)', aspectRatio }}
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+    >
+      <video ref={videoRef} autoPlay playsInline muted={isLocal} className="w-full h-full object-cover" />
     </div>
   )
 }

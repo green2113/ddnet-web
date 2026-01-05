@@ -1,4 +1,4 @@
-const { app, BrowserWindow, clipboard, dialog, ipcMain, nativeImage, shell } = require('electron')
+const { app, BrowserWindow, clipboard, desktopCapturer, dialog, ipcMain, nativeImage, shell } = require('electron')
 const path = require('path')
 const fs = require('fs')
 const http = require('http')
@@ -145,6 +145,19 @@ ipcMain.handle('image:copy', (_event, payload) => {
   const image = nativeImage.createFromBuffer(buffer)
   clipboard.writeImage(image)
   return true
+})
+
+ipcMain.handle('desktop:get-sources', async () => {
+  const sources = await desktopCapturer.getSources({
+    types: ['window', 'screen'],
+    thumbnailSize: { width: 640, height: 360 },
+    fetchWindowIcons: true,
+  })
+  return sources.map((source) => ({
+    id: source.id,
+    name: source.name,
+    thumbnail: source.thumbnail.toDataURL(),
+  }))
 })
 
 const downloadImage = (url, depth = 0) =>

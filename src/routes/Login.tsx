@@ -216,7 +216,7 @@ export default function Login() {
                     usernameError || fieldErrors.username ? ' is-invalid' : ''
                   }`}
                 >
-                  <span className="login-username-prefix" aria-hidden>
+                  <span className="login-username-prefix select-none" aria-hidden>
                     @
                   </span>
                   <input
