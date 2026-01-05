@@ -88,96 +88,91 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen grid place-items-center px-6" style={{ background: 'var(--bg-app)', color: 'var(--text-primary)' }}>
-      <div
-        className="w-full max-w-[420px] rounded-2xl border px-6 py-7"
-        style={{ background: 'var(--panel)', borderColor: 'var(--border)' }}
-      >
-        <div className="flex items-center gap-2 mb-5">
-          <button
-            type="button"
-            className={`flex-1 h-10 rounded-md text-sm font-semibold ${mode === 'login' ? '' : 'opacity-60'}`}
-            style={{ background: mode === 'login' ? 'var(--header-bg)' : 'transparent', border: '1px solid var(--border)' }}
-            onClick={() => setMode('login')}
-          >
-            {t.login.loginTab}
-          </button>
-          <button
-            type="button"
-            className={`flex-1 h-10 rounded-md text-sm font-semibold ${mode === 'signup' ? '' : 'opacity-60'}`}
-            style={{ background: mode === 'signup' ? 'var(--header-bg)' : 'transparent', border: '1px solid var(--border)' }}
-            onClick={() => setMode('signup')}
-          >
-            {t.login.signupTab}
-          </button>
-        </div>
-
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          {mode === 'signup' ? (
+    <div className="login-shell">
+      <div className="login-ambient" />
+      <div className="login-card">
+        <div className="login-hero">
+          <div className="login-badge">CHAT</div>
+          <h1 className="login-title">대화는 가볍게. 연결은 단단하게.</h1>
+          <p className="login-subtitle">서버를 만들고, 초대를 공유하고, 바로 시작하세요.</p>
+          <div className="login-stats">
             <div>
-              <label className="text-xs uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
-                {t.login.usernameLabel}
-              </label>
+              <div className="login-stat-value">빠르게</div>
+              <div className="login-stat-label">초대하고 시작</div>
+            </div>
+            <div>
+              <div className="login-stat-value">간편하게</div>
+              <div className="login-stat-label">연결 유지</div>
+            </div>
+          </div>
+        </div>
+        <div className="login-form">
+          <div className="login-tabs">
+            <button
+              type="button"
+              className={`login-tab ${mode === 'login' ? 'is-active' : ''}`}
+              onClick={() => setMode('login')}
+            >
+              {t.login.loginTab}
+            </button>
+            <div className="login-tab-divider" aria-hidden />
+            <button
+              type="button"
+              className={`login-tab ${mode === 'signup' ? 'is-active' : ''}`}
+              onClick={() => setMode('signup')}
+            >
+              {t.login.signupTab}
+            </button>
+          </div>
+
+          <form className="login-fields" onSubmit={handleSubmit}>
+            {mode === 'signup' ? (
+              <div>
+                <label className="login-label">{t.login.usernameLabel}</label>
+                <input
+                  value={username}
+                  onChange={(event) => setUsername(event.target.value)}
+                  className="login-input"
+                  placeholder={t.login.usernamePlaceholder}
+                />
+              </div>
+            ) : null}
+            <div>
+              <label className="login-label">{t.login.emailLabel}</label>
               <input
-                value={username}
-                onChange={(event) => setUsername(event.target.value)}
-                className="mt-2 w-full h-10 rounded-md px-3"
-                style={{ background: 'var(--input-bg)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
-                placeholder={t.login.usernamePlaceholder}
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                type="email"
+                className="login-input"
+                placeholder={t.login.emailPlaceholder}
               />
             </div>
-          ) : null}
-          <div>
-            <label className="text-xs uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
-              {t.login.emailLabel}
-            </label>
-            <input
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              type="email"
-              className="mt-2 w-full h-10 rounded-md px-3"
-              style={{ background: 'var(--input-bg)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
-              placeholder={t.login.emailPlaceholder}
-            />
-          </div>
-          <div>
-            <label className="text-xs uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
-              {t.login.passwordLabel}
-            </label>
-            <input
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              type="password"
-              className="mt-2 w-full h-10 rounded-md px-3"
-              style={{ background: 'var(--input-bg)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
-              placeholder={t.login.passwordPlaceholder}
-            />
-          </div>
-          {error ? (
-            <div className="text-sm" style={{ color: '#f87171' }}>
-              {error}
+            <div>
+              <label className="login-label">{t.login.passwordLabel}</label>
+              <input
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                type="password"
+                className="login-input"
+                placeholder={t.login.passwordPlaceholder}
+              />
             </div>
-          ) : null}
-          <button
-            type="submit"
-            className="w-full h-10 rounded-md text-white font-semibold"
-            style={{ background: 'var(--accent)', opacity: loading ? 0.7 : 1 }}
-            disabled={loading}
-          >
-            {mode === 'signup' ? t.login.signupAction : t.login.loginAction}
+            {error ? <div className="login-error">{error}</div> : null}
+            <button type="submit" className="login-submit" disabled={loading}>
+              {mode === 'signup' ? t.login.signupAction : t.login.loginAction}
+            </button>
+          </form>
+
+          <div className="login-divider">
+            <span />
+            <span>또는</span>
+            <span />
+          </div>
+
+          <button type="button" onClick={handleDiscord} className="login-discord">
+            {t.login.discordAction}
           </button>
-        </form>
-
-        <div className="my-5" style={{ height: 1, background: 'var(--border)' }} />
-
-        <button
-          type="button"
-          onClick={handleDiscord}
-          className="w-full h-10 rounded-md text-white font-semibold"
-          style={{ background: '#5865f2' }}
-        >
-          {t.login.discordAction}
-        </button>
+        </div>
       </div>
     </div>
   )

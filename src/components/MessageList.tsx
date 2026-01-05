@@ -64,7 +64,7 @@ export default function MessageList({ messages, adminIds = [], loading = false, 
           )
         }
         return (
-          <a key={`${part}-${idx}`} href={part} target="_blank" rel="noreferrer" className="underline">
+          <a key={`${part}-${idx}`} href={part} target="_blank" rel="noreferrer" className="chat-link">
             {part}
           </a>
         )
