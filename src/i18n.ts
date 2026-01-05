@@ -49,6 +49,8 @@ export type UiText = {
     serverSettings: string
     invite: string
     notifications: string
+    createCategory: string
+    channelsTitle: string
     textChannels: string
     voiceChannels: string
     showHidden: string
@@ -63,13 +65,21 @@ export type UiText = {
     addVoiceChannel: string
     createTitle: string
     createSubtitle: string
+    createCategoryTitle: string
+    createCategorySubtitle: string
     channelType: string
     textOption: string
     textOptionDesc: string
     voiceOption: string
     voiceOptionDesc: string
+    categoryOption: string
+    categoryOptionDesc: string
     channelNameLabel: string
     channelNamePlaceholder: string
+    categoryNameLabel: string
+    categoryNamePlaceholder: string
+    categorySelectLabel: string
+    categorySelectNone: string
     cancelCreate: string
     confirmCreate: string
     closeCreate: string
@@ -181,6 +191,12 @@ export type UiText = {
     loginAction: string
     signupAction: string
     discordAction: string
+    guestLabel: string
+    guestPlaceholder: string
+    guestAction: string
+    guestDivider: string
+    guestRequired: string
+    guestLoading: string
     errorGeneric: string
   }
 }
@@ -233,6 +249,8 @@ const translations: TranslationMap = {
       serverSettings: 'Server settings',
       invite: 'Invite to server',
       notifications: 'Notification settings',
+      createCategory: 'Create category',
+      channelsTitle: 'Channels',
       textChannels: 'Text channels',
       voiceChannels: 'Voice channels',
       showHidden: 'Show hidden channels ({count})',
@@ -247,13 +265,21 @@ const translations: TranslationMap = {
       addVoiceChannel: 'Add voice channel',
       createTitle: 'Create channel',
       createSubtitle: 'Create a new channel in this server.',
+      createCategoryTitle: 'Create category',
+      createCategorySubtitle: 'Create a new category for channels.',
       channelType: 'Channel type',
       textOption: 'Text',
       textOptionDesc: 'Send messages, images, GIFs, and more.',
       voiceOption: 'Voice',
       voiceOptionDesc: 'Hang out with voice and screen share.',
+      categoryOption: 'Category',
+      categoryOptionDesc: 'Group channels into sections.',
       channelNameLabel: 'Channel name',
       channelNamePlaceholder: 'new-channel',
+      categoryNameLabel: 'Category name',
+      categoryNamePlaceholder: 'New category',
+      categorySelectLabel: 'Category',
+      categorySelectNone: 'No category',
       cancelCreate: 'Cancel',
       confirmCreate: 'Create channel',
       closeCreate: 'Close',
@@ -365,6 +391,12 @@ const translations: TranslationMap = {
       loginAction: 'Log in',
       signupAction: 'Create account',
       discordAction: 'Continue with Discord',
+      guestLabel: 'Guest name',
+      guestPlaceholder: 'Enter a name',
+      guestAction: 'Continue as guest',
+      guestDivider: 'or',
+      guestRequired: 'Please enter a name.',
+      guestLoading: 'Joining…',
       errorGeneric: 'Something went wrong. Please try again.',
     },
   },
@@ -415,6 +447,8 @@ const translations: TranslationMap = {
       serverSettings: '서버 설정',
       invite: '서버에 초대하기',
       notifications: '알림 설정',
+      createCategory: '카테고리 만들기',
+      channelsTitle: '채널',
       textChannels: '텍스트 채널',
       voiceChannels: '음성 채널',
       showHidden: '숨겨진 채널 보기 ({count})',
@@ -429,13 +463,21 @@ const translations: TranslationMap = {
       addVoiceChannel: '음성 채널 추가',
       createTitle: '채널 만들기',
       createSubtitle: '이 서버에 새 채널을 만드세요.',
+      createCategoryTitle: '카테고리 만들기',
+      createCategorySubtitle: '채널을 묶을 새 카테고리를 만드세요.',
       channelType: '채널 유형',
       textOption: '텍스트',
       textOptionDesc: '메시지, 이미지, GIF 등을 전송하세요.',
       voiceOption: '음성',
       voiceOptionDesc: '음성 채팅과 화면 공유로 함께하세요.',
+      categoryOption: '카테고리',
+      categoryOptionDesc: '채널을 섹션으로 묶습니다.',
       channelNameLabel: '채널 이름',
       channelNamePlaceholder: '새로운-채널',
+      categoryNameLabel: '카테고리 이름',
+      categoryNamePlaceholder: '새 카테고리',
+      categorySelectLabel: '카테고리',
+      categorySelectNone: '카테고리 없음',
       cancelCreate: '취소',
       confirmCreate: '채널 만들기',
       closeCreate: '닫기',
@@ -538,7 +580,7 @@ const translations: TranslationMap = {
       pleaseDo: '해 주세요.',
       loginTab: '로그인',
       signupTab: '회원가입',
-      usernameLabel: '이름',
+      usernameLabel: '사용자 이름',
       usernamePlaceholder: '사용할 이름을 입력하세요',
       emailLabel: '이메일',
       emailPlaceholder: 'you@example.com',
@@ -547,6 +589,12 @@ const translations: TranslationMap = {
       loginAction: '로그인',
       signupAction: '계정 만들기',
       discordAction: 'Discord로 계속하기',
+      guestLabel: '게스트 이름',
+      guestPlaceholder: '이름을 입력하세요',
+      guestAction: '게스트로 시작',
+      guestDivider: '또는',
+      guestRequired: '이름을 입력해 주세요.',
+      guestLoading: '입장 중...',
       errorGeneric: '문제가 발생했습니다. 다시 시도해 주세요.',
     },
   },
@@ -597,6 +645,8 @@ const translations: TranslationMap = {
       serverSettings: '服务器设置',
       invite: '邀请加入服务器',
       notifications: '通知设置',
+      createCategory: '创建分类',
+      channelsTitle: '频道',
       textChannels: '文字频道',
       voiceChannels: '语音频道',
       showHidden: '显示隐藏频道（{count}）',
@@ -611,13 +661,21 @@ const translations: TranslationMap = {
       addVoiceChannel: '新增语音频道',
       createTitle: '????',
       createSubtitle: '????????????',
+      createCategoryTitle: '????',
+      createCategorySubtitle: '????????????',
       channelType: '????',
       textOption: '??',
       textOptionDesc: '????????GIF ????',
       voiceOption: '??',
       voiceOptionDesc: '????????????',
+      categoryOption: '分类',
+      categoryOptionDesc: '将频道分组到分类中。',
       channelNameLabel: '????',
       channelNamePlaceholder: '????',
+      categoryNameLabel: '分类名称',
+      categoryNamePlaceholder: '新分类',
+      categorySelectLabel: '分类',
+      categorySelectNone: '不使用分类',
       cancelCreate: '??',
       confirmCreate: '????',
       closeCreate: '??',
@@ -729,6 +787,12 @@ const translations: TranslationMap = {
       loginAction: '登录',
       signupAction: '创建账号',
       discordAction: '使用 Discord 继续',
+      guestLabel: '访客名称',
+      guestPlaceholder: '请输入名称',
+      guestAction: '以访客身份继续',
+      guestDivider: '或',
+      guestRequired: '请输入名称。',
+      guestLoading: '正在进入…',
       errorGeneric: '发生错误，请重试。',
     },
   },
@@ -779,6 +843,8 @@ const translations: TranslationMap = {
       serverSettings: '伺服器設定',
       invite: '邀請加入伺服器',
       notifications: '通知設定',
+      createCategory: '建立類別',
+      channelsTitle: '頻道',
       textChannels: '文字頻道',
       voiceChannels: '語音頻道',
       showHidden: '顯示隱藏頻道（{count}）',
@@ -793,13 +859,21 @@ const translations: TranslationMap = {
       addVoiceChannel: '新增語音頻道',
       createTitle: '????',
       createSubtitle: '????????????',
+      createCategoryTitle: '????',
+      createCategorySubtitle: '????????????',
       channelType: '????',
       textOption: '??',
       textOptionDesc: '????????GIF ????',
       voiceOption: '??',
       voiceOptionDesc: '????????????',
+      categoryOption: '類別',
+      categoryOptionDesc: '將頻道分組到類別中。',
       channelNameLabel: '????',
       channelNamePlaceholder: '????',
+      categoryNameLabel: '類別名稱',
+      categoryNamePlaceholder: '新類別',
+      categorySelectLabel: '類別',
+      categorySelectNone: '不使用類別',
       cancelCreate: '??',
       confirmCreate: '????',
       closeCreate: '??',
@@ -911,6 +985,12 @@ const translations: TranslationMap = {
       loginAction: '登入',
       signupAction: '建立帳號',
       discordAction: '使用 Discord 繼續',
+      guestLabel: '訪客名稱',
+      guestPlaceholder: '請輸入名稱',
+      guestAction: '以訪客身分繼續',
+      guestDivider: '或',
+      guestRequired: '請輸入名稱。',
+      guestLoading: '正在進入…',
       errorGeneric: '發生錯誤，請再試一次。',
     },
   },

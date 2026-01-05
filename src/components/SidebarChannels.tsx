@@ -21,7 +21,7 @@ const sortMembersByName = (members: VoiceMember[]) =>
   [...members].sort((a, b) => memberNameCollator.compare(getMemberLabel(a), getMemberLabel(b)))
 
 export type SidebarChannelsProps = {
-  channels: Array<{ id: string; name: string; hidden?: boolean; type?: 'text' | 'voice' }>
+  channels: Array<{ id: string; name: string; hidden?: boolean; type?: 'text' | 'voice' | 'category'; categoryId?: string | null; order?: number }>
   activeId?: string
   joinedVoiceChannelId?: string
   serverName?: string
@@ -30,11 +30,13 @@ export type SidebarChannelsProps = {
   unreadByChannel?: Record<string, boolean>
   t: UiText
   onSelect?: (channelId: string) => void
-  onCreateChannel?: () => void
+  onCreateChannel?: (categoryId?: string | null) => void
+  onCreateCategory?: () => void
   onDeleteChannel?: (channelId: string) => void
   onToggleChannelHidden?: (channelId: string, hidden: boolean) => void
   onRenameChannel?: (channelId: string, name: string) => void
-  onReorderChannels?: (orderedIds: string[]) => void
+  onReorderChannels?: (orderedIds: string[], categoryId?: string | null) => void
+  onReorderCategories?: (orderedIds: string[]) => void
   canManage?: boolean
   onOpenServerSettings?: () => void
   onCreateInvite?: () => void
@@ -51,10 +53,12 @@ export default function SidebarChannels({
   t,
   onSelect,
   onCreateChannel,
+  onCreateCategory,
   onDeleteChannel,
   onToggleChannelHidden,
   onRenameChannel,
   onReorderChannels,
+  onReorderCategories,
   canManage = false,
   onOpenServerSettings,
   onCreateInvite,
@@ -69,10 +73,14 @@ export default function SidebarChannels({
   })
   const [dragOverId, setDragOverId] = useState<string | null>(null)
   const [dragOverPos, setDragOverPos] = useState<'above' | 'below' | null>(null)
+  const [categoryDragOverId, setCategoryDragOverId] = useState<string | null>(null)
+  const [categoryDragOverPos, setCategoryDragOverPos] = useState<'above' | 'below' | null>(null)
   const [serverMenuPos, setServerMenuPos] = useState<{ top: number; left: number; width: number } | null>(null)
   const wrapRef = useRef<HTMLDivElement | null>(null)
   const serverMenuRef = useRef<HTMLDivElement | null>(null)
   const dragIdRef = useRef<string | null>(null)
+  const dragGroupRef = useRef<string | null>(null)
+  const dragCategoryIdRef = useRef<string | null>(null)
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
       if (!wrapRef.current) return
@@ -121,11 +129,16 @@ export default function SidebarChannels({
     if (!channel.hidden) return true
     return canManage && showHiddenChannels
   })
-  const textChannels = visibleChannels.filter((channel) => channel.type !== 'voice')
-  const voiceChannels = visibleChannels.filter((channel) => channel.type === 'voice')
-  const computeReorder = (draggedId: string, targetId: string, position: 'above' | 'below') => {
+  const categories = visibleChannels
+    .filter((channel) => channel.type === 'category')
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+  const uncategorizedChannels = visibleChannels
+    .filter((channel) => channel.type !== 'category' && !channel.categoryId)
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+
+  const computeReorder = (sourceIds: string[], draggedId: string, targetId: string, position: 'above' | 'below') => {
     if (!draggedId || !targetId || draggedId === targetId) return null
-    const ids = channels.map((channel) => channel.id)
+    const ids = [...sourceIds]
     const fromIndex = ids.indexOf(draggedId)
     const toIndex = ids.indexOf(targetId)
     if (fromIndex === -1 || toIndex === -1) return null
@@ -134,9 +147,199 @@ export default function SidebarChannels({
     if (fromIndex < toIndex) adjustedToIndex = toIndex - 1
     const insertIndex = position === 'above' ? adjustedToIndex : adjustedToIndex + 1
     ids.splice(insertIndex, 0, draggedId)
-    const isSameOrder = channels.every((channel, index) => channel.id === ids[index])
+    const isSameOrder = sourceIds.every((id, index) => id === ids[index])
     if (isSameOrder) return null
     return ids
+  }
+
+  const computeReorderWithInsert = (
+    sourceIds: string[],
+    draggedId: string,
+    targetId: string,
+    position: 'above' | 'below',
+  ) => {
+    if (!draggedId || !targetId || draggedId === targetId) return null
+    const ids = [...sourceIds]
+    const fromIndex = ids.indexOf(draggedId)
+    const toIndex = ids.indexOf(targetId)
+    if (toIndex === -1) return null
+    if (fromIndex !== -1) {
+      ids.splice(fromIndex, 1)
+    }
+    let adjustedToIndex = toIndex
+    if (fromIndex !== -1 && fromIndex < toIndex) adjustedToIndex = toIndex - 1
+    const insertIndex = position === 'above' ? adjustedToIndex : adjustedToIndex + 1
+    ids.splice(insertIndex, 0, draggedId)
+    const isSameOrder = sourceIds.every((id, index) => id === ids[index])
+    if (isSameOrder) return null
+    return ids
+  }
+
+  const renderChannelItem = (channel: { id: string; name: string; hidden?: boolean; type?: 'text' | 'voice'; categoryId?: string | null }, list: Array<{ id: string }>, index: number, groupId: string) => {
+    const isLast = index === list.length - 1
+    const ids = list.map((item) => item.id)
+    const members = voiceMembersByChannel[channel.id] || []
+    const sortedMembers = members.length > 1 ? sortMembersByName(members) : members
+    const speakingIds = voiceSpeakingByChannel[channel.id] || []
+    const isVoice = channel.type === 'voice'
+    return (
+      <div key={channel.id} className={isVoice ? 'space-y-1' : undefined}>
+        <div
+          className="px-2 py-1 rounded-md cursor-pointer flex items-center gap-2 hover:opacity-90"
+          style={{
+            color: 'var(--text-primary)',
+            background: channel.id === activeId ? 'rgba(255,255,255,0.12)' : 'transparent',
+            opacity: channel.hidden ? 0.6 : 1,
+            userSelect: 'none',
+            position: 'relative',
+          }}
+          onMouseEnter={(e) => {
+            if (channel.id === activeId) return
+            e.currentTarget.style.background = 'color-mix(in oklch, var(--text-primary) 8%, transparent)'
+          }}
+          onMouseLeave={(e) => {
+            if (channel.id === activeId) return
+            e.currentTarget.style.background = 'transparent'
+          }}
+          draggable={canManage}
+          onClick={() => onSelect?.(channel.id)}
+          onDoubleClick={() => {
+            if (!canManage) return
+            const name = window.prompt(t.sidebarChannels.channelNamePrompt, channel.name)
+            if (!name) return
+            onRenameChannel?.(channel.id, name)
+          }}
+          onDragStart={(event) => {
+            if (!canManage) return
+            dragIdRef.current = channel.id
+            dragGroupRef.current = groupId
+            setDragOverId(null)
+            setDragOverPos(null)
+            if (event.dataTransfer) {
+              event.dataTransfer.setData('text/plain', channel.id)
+              event.dataTransfer.effectAllowed = 'move'
+            }
+          }}
+          onDragEnd={() => {
+            dragIdRef.current = null
+            dragGroupRef.current = null
+            setDragOverId(null)
+            setDragOverPos(null)
+          }}
+          onDragOver={(e) => {
+            if (!canManage || !dragIdRef.current) return
+            e.preventDefault()
+            if (e.dataTransfer) {
+              e.dataTransfer.dropEffect = 'move'
+            }
+            const position = isLast ? 'below' : 'above'
+            const nextOrder = computeReorderWithInsert(ids, dragIdRef.current, channel.id, position)
+            setDragOverId(nextOrder ? channel.id : null)
+            setDragOverPos(nextOrder ? position : null)
+          }}
+          onDrop={(e) => {
+            if (!canManage) return
+            e.preventDefault()
+            const draggedId = dragIdRef.current
+            dragIdRef.current = null
+            dragGroupRef.current = null
+            setDragOverId(null)
+            setDragOverPos(null)
+            if (!draggedId || draggedId === channel.id) return
+            const position = isLast ? 'below' : 'above'
+            const nextOrder = computeReorderWithInsert(ids, draggedId, channel.id, position)
+            if (!nextOrder) return
+            onReorderChannels?.(nextOrder, groupId === 'uncategorized' ? null : groupId)
+          }}
+          onDragLeave={() => {
+            if (!canManage) return
+            setDragOverId((prev) => (prev === channel.id ? null : prev))
+            setDragOverPos((prev) => (dragOverId === channel.id ? null : prev))
+          }}
+          onContextMenu={(e) => {
+            if (!canManage) return
+            e.preventDefault()
+            setOpen(false)
+            setChannelMenu({ visible: true, x: e.clientX, y: e.clientY, channel: channel })
+          }}
+        >
+          {canManage && dragOverId === channel.id && dragOverPos ? (
+            <div
+              style={{
+                position: 'absolute',
+                left: 8,
+                right: 8,
+                top: dragOverPos === 'above' ? -2 : 'auto',
+                bottom: dragOverPos === 'below' ? -2 : 'auto',
+                height: 3,
+                borderRadius: 999,
+                background: 'var(--accent)',
+                boxShadow: '0 0 6px color-mix(in oklch, var(--accent) 60%, transparent)',
+              }}
+            />
+          ) : null}
+          <span style={{ color: channel.id === activeId ? '#ffffff' : 'var(--text-muted)' }}>
+            {isVoice ? <VolumeIcon size={16} /> : '#'}
+          </span>
+          <span
+            className="truncate"
+            style={{
+              color:
+                channel.id === activeId
+                  ? 'var(--text-primary)'
+                  : isVoice && joinedVoiceChannelId === channel.id
+                    ? '#ffffff'
+                    : unreadByChannel[channel.id]
+                      ? 'var(--text-primary)'
+                      : 'var(--text-muted)',
+            }}
+          >
+            {channel.name}
+          </span>
+          {isVoice && members.length > 0 ? (
+            <span className="ml-auto text-[11px]" style={{ color: 'var(--text-muted)' }}>
+              {members.length}
+            </span>
+          ) : null}
+          {channel.hidden ? (
+            <span className="ml-auto text-[10px] uppercase" style={{ color: 'var(--text-muted)' }}>
+              {t.sidebarChannels.hidden}
+            </span>
+          ) : null}
+        </div>
+        {isVoice && members.length > 0 ? (
+          <div className="pl-6 space-y-1">
+            {sortedMembers.map((member) => {
+              const isSpeaking = speakingIds.includes(member.id) && !member.muted && !member.deafened
+              return (
+                <div key={member.id} className="flex items-center gap-2 text-xs">
+                  <div className={`voice-avatar${isSpeaking ? ' voice-speaking-ring' : ''}`}>
+                    <div className="voice-avatar-inner">
+                      {member.avatar ? (
+                        <img src={member.avatar} alt={member.username} className="w-full h-full object-cover" />
+                      ) : null}
+                    </div>
+                  </div>
+                  <span
+                    className="truncate"
+                    style={{
+                      color: isSpeaking ? '#ffffff' : 'var(--text-muted)',
+                      textShadow: isSpeaking ? '0 0 6px rgba(34,197,94,0.6)' : 'none',
+                    }}
+                  >
+                    {getMemberLabel(member)}
+                  </span>
+                  <span className="ml-auto flex items-center gap-1" style={{ color: '#f87171' }}>
+                    {member.muted ? <MicIcon size={12} muted outlineColor="var(--sidebar-bg)" /> : null}
+                    {member.deafened ? <HeadsetIcon size={12} muted outlineColor="var(--sidebar-bg)" /> : null}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        ) : null}
+      </div>
+    )
   }
 
   return (
@@ -210,6 +413,15 @@ export default function SidebarChannels({
                   </>
                 ) : null}
                 <MenuItem
+                  icon="folder"
+                  label={t.sidebarChannels.createCategory}
+                  bold
+                  onClick={() => {
+                    onCreateCategory?.()
+                    setOpen(false)
+                  }}
+                />
+                <MenuItem
                   icon="invite"
                   label={t.sidebarChannels.invite}
                   bold
@@ -226,27 +438,6 @@ export default function SidebarChannels({
       </div>
 
       <div className="p-3 flex-1 overflow-y-auto overflow-x-visible channels-scroll">
-        <div className="flex items-center justify-between text-[11px] uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
-          <span>{t.sidebarChannels.textChannels}</span>
-          {canManage ? (
-            <Tooltip label={t.sidebarChannels.createTitle} side="top">
-              <button
-                type="button"
-                aria-label={t.sidebarChannels.createTitle}
-                className="rounded-md p-1 cursor-pointer hover-surface"
-                style={{ color: 'var(--text-muted)' }}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onCreateChannel?.()
-                }}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
-                  <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                </svg>
-              </button>
-            </Tooltip>
-          ) : null}
-        </div>
         {canManage && hiddenChannelsCount > 0 ? (
           <button
             type="button"
@@ -259,233 +450,31 @@ export default function SidebarChannels({
               : formatText(t.sidebarChannels.showHidden, { count: hiddenChannelsCount })}
           </button>
         ) : null}
-        <div
-          className="flex-1 space-y-1"
-          onDragOver={(event) => {
-            if (!canManage || !dragIdRef.current) return
-            event.preventDefault()
-            if (event.dataTransfer) {
-              event.dataTransfer.dropEffect = 'move'
-            }
-          }}
-        >
-          {textChannels.map((c) => (
-            <div
-              key={c.id}
-              className="px-2 py-1 rounded-md cursor-pointer flex items-center gap-2 hover:opacity-90"
-              style={{
-                color: 'var(--text-primary)',
-                background: c.id === activeId ? 'rgba(255,255,255,0.12)' : 'transparent',
-                opacity: c.hidden ? 0.6 : 1,
-                userSelect: 'none',
-                position: 'relative',
-              }}
-              onMouseEnter={(e) => {
-                if (c.id === activeId) return
-                e.currentTarget.style.background = 'color-mix(in oklch, var(--text-primary) 8%, transparent)'
-              }}
-              onMouseLeave={(e) => {
-                if (c.id === activeId) return
-                e.currentTarget.style.background = 'transparent'
-              }}
-              draggable={canManage}
-              onClick={() => onSelect?.(c.id)}
-              onDoubleClick={() => {
-                if (!canManage) return
-                const name = window.prompt(t.sidebarChannels.channelNamePrompt, c.name)
-                if (!name) return
-                onRenameChannel?.(c.id, name)
-              }}
-              onDragStart={(event) => {
-                if (!canManage) return
-                dragIdRef.current = c.id
-                setDragOverId(null)
-                setDragOverPos(null)
-                if (event.dataTransfer) {
-                  event.dataTransfer.setData('text/plain', c.id)
-                  event.dataTransfer.effectAllowed = 'move'
-                }
-              }}
-              onDragEnd={() => {
-                dragIdRef.current = null
-                setDragOverId(null)
-                setDragOverPos(null)
-              }}
-              onDragOver={(e) => {
-                if (!canManage || !dragIdRef.current) return
-                e.preventDefault()
-                if (e.dataTransfer) {
-                  e.dataTransfer.dropEffect = 'move'
-                }
-                const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect()
-                const position = e.clientY < rect.top + rect.height / 2 ? 'above' : 'below'
-                const nextOrder = computeReorder(dragIdRef.current, c.id, position)
-                setDragOverId(nextOrder ? c.id : null)
-                setDragOverPos(nextOrder ? position : null)
-              }}
-              onDrop={(e) => {
-                if (!canManage) return
-                e.preventDefault()
-                const draggedId = dragIdRef.current
-                dragIdRef.current = null
-                setDragOverId(null)
-                setDragOverPos(null)
-                if (!draggedId || draggedId === c.id) return
-                const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect()
-                const position = e.clientY < rect.top + rect.height / 2 ? 'above' : 'below'
-                const nextOrder = computeReorder(draggedId, c.id, position)
-                if (!nextOrder) return
-                onReorderChannels?.(nextOrder)
-              }}
-              onDragLeave={() => {
-                if (!canManage) return
-                setDragOverId((prev) => (prev === c.id ? null : prev))
-                setDragOverPos((prev) => (dragOverId === c.id ? null : prev))
-              }}
-              onContextMenu={(e) => {
-                if (!canManage) return
-                e.preventDefault()
-                setOpen(false)
-                setChannelMenu({ visible: true, x: e.clientX, y: e.clientY, channel: c })
-              }}
-            >
-              {canManage && dragOverId === c.id && dragOverPos ? (
-                <div
-                  style={{
-                    position: 'absolute',
-                    left: 8,
-                    right: 8,
-                    top: dragOverPos === 'above' ? -2 : 'auto',
-                    bottom: dragOverPos === 'below' ? -2 : 'auto',
-                    height: 3,
-                    borderRadius: 999,
-                    background: 'var(--accent)',
-                    boxShadow: '0 0 6px color-mix(in oklch, var(--accent) 60%, transparent)',
-                  }}
-                />
-              ) : null}
-              <span style={{ color: c.id === activeId ? '#ffffff' : 'var(--text-muted)' }}>#</span>
-              <span
-                className="truncate"
-                style={{
-                  color: c.id === activeId ? 'var(--text-primary)' : unreadByChannel[c.id] ? 'var(--text-primary)' : 'var(--text-muted)',
-                }}
-              >
-                {c.name}
-              </span>
-              {c.hidden ? (
-                <span className="ml-auto text-[10px] uppercase" style={{ color: 'var(--text-muted)' }}>
-                  {t.sidebarChannels.hidden}
-                </span>
-              ) : null}
+        <div className="space-y-4">
+          {uncategorizedChannels.length > 0 ? (
+            <div className="space-y-1">
+              {uncategorizedChannels.map((channel, index) =>
+                renderChannelItem(channel, uncategorizedChannels, index, 'uncategorized')
+              )}
             </div>
-          ))}
-        </div>
-        <div className="mt-4 flex items-center justify-between text-[11px] uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
-          <span>{t.sidebarChannels.voiceChannels}</span>
-        </div>
-        <div
-          className="flex-1 space-y-1"
-          onDragOver={(event) => {
-            if (!canManage || !dragIdRef.current) return
-            event.preventDefault()
-            if (event.dataTransfer) {
-              event.dataTransfer.dropEffect = 'move'
-            }
-          }}
-        >
-          {voiceChannels.map((c) => {
-            const members = voiceMembersByChannel[c.id] || []
-            const sortedMembers = members.length > 1 ? sortMembersByName(members) : members
-            const speakingIds = voiceSpeakingByChannel[c.id] || []
+          ) : null}
+          {categories.map((category, index) => {
+            const categoryChannels = visibleChannels
+              .filter((channel) => channel.type !== 'category' && channel.categoryId === category.id)
+              .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+            const categoryIds = categories.map((item) => item.id)
+            const isLast = index === categories.length - 1
             return (
-              <div key={c.id} className="space-y-1">
-                <div
-                  className="px-2 py-1 rounded-md cursor-pointer flex items-center gap-2 hover:opacity-90"
-                  style={{
-                    color: 'var(--text-primary)',
-                    background: c.id === activeId ? 'rgba(255,255,255,0.12)' : 'transparent',
-                    opacity: c.hidden ? 0.6 : 1,
-                    userSelect: 'none',
-                    position: 'relative',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (c.id === activeId) return
-                    e.currentTarget.style.background = 'color-mix(in oklch, var(--text-primary) 8%, transparent)'
-                  }}
-                  onMouseLeave={(e) => {
-                    if (c.id === activeId) return
-                    e.currentTarget.style.background = 'transparent'
-                  }}
-                  draggable={canManage}
-                  onClick={() => onSelect?.(c.id)}
-                  onDoubleClick={() => {
-                    if (!canManage) return
-                    const name = window.prompt(t.sidebarChannels.channelNamePrompt, c.name)
-                    if (!name) return
-                    onRenameChannel?.(c.id, name)
-                  }}
-                  onDragStart={(event) => {
-                    if (!canManage) return
-                    dragIdRef.current = c.id
-                    setDragOverId(null)
-                    setDragOverPos(null)
-                    if (event.dataTransfer) {
-                      event.dataTransfer.setData('text/plain', c.id)
-                      event.dataTransfer.effectAllowed = 'move'
-                    }
-                  }}
-                  onDragEnd={() => {
-                    dragIdRef.current = null
-                    setDragOverId(null)
-                    setDragOverPos(null)
-                  }}
-                  onDragOver={(e) => {
-                    if (!canManage || !dragIdRef.current) return
-                    e.preventDefault()
-                    if (e.dataTransfer) {
-                      e.dataTransfer.dropEffect = 'move'
-                    }
-                    const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect()
-                    const position = e.clientY < rect.top + rect.height / 2 ? 'above' : 'below'
-                    const nextOrder = computeReorder(dragIdRef.current, c.id, position)
-                    setDragOverId(nextOrder ? c.id : null)
-                    setDragOverPos(nextOrder ? position : null)
-                  }}
-                  onDrop={(e) => {
-                    if (!canManage) return
-                    e.preventDefault()
-                    const draggedId = dragIdRef.current
-                    dragIdRef.current = null
-                    setDragOverId(null)
-                    setDragOverPos(null)
-                    if (!draggedId || draggedId === c.id) return
-                    const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect()
-                    const position = e.clientY < rect.top + rect.height / 2 ? 'above' : 'below'
-                    const nextOrder = computeReorder(draggedId, c.id, position)
-                    if (!nextOrder) return
-                    onReorderChannels?.(nextOrder)
-                  }}
-                  onDragLeave={() => {
-                    if (!canManage) return
-                    setDragOverId((prev) => (prev === c.id ? null : prev))
-                    setDragOverPos((prev) => (dragOverId === c.id ? null : prev))
-                  }}
-                  onContextMenu={(e) => {
-                    if (!canManage) return
-                    e.preventDefault()
-                    setOpen(false)
-                    setChannelMenu({ visible: true, x: e.clientX, y: e.clientY, channel: c })
-                  }}
-                >
-                  {canManage && dragOverId === c.id && dragOverPos ? (
+              <div key={category.id} className="space-y-1">
+                <div className="relative">
+                  {canManage && categoryDragOverId === category.id && categoryDragOverPos ? (
                     <div
                       style={{
                         position: 'absolute',
                         left: 8,
                         right: 8,
-                        top: dragOverPos === 'above' ? -2 : 'auto',
-                        bottom: dragOverPos === 'below' ? -2 : 'auto',
+                        top: categoryDragOverPos === 'above' ? -4 : 'auto',
+                        bottom: categoryDragOverPos === 'below' ? -4 : 'auto',
                         height: 3,
                         borderRadius: 999,
                         background: 'var(--accent)',
@@ -493,70 +482,110 @@ export default function SidebarChannels({
                       }}
                     />
                   ) : null}
-                  <span style={{ color: c.id === activeId ? '#ffffff' : 'var(--text-muted)' }}>
-                    <VolumeIcon size={16} />
-                  </span>
-                  <span
-                    className="truncate"
-                    style={{
-                      color:
-                        c.id === activeId
-                          ? 'var(--text-primary)'
-                          : joinedVoiceChannelId === c.id
-                            ? '#ffffff'
-                            : unreadByChannel[c.id]
-                              ? 'var(--text-primary)'
-                              : 'var(--text-muted)',
+                  <div
+                    className="px-2 py-1 rounded-md cursor-pointer uppercase tracking-wide text-[11px] flex items-center justify-between gap-2"
+                    style={{ color: 'var(--text-muted)' }}
+                    draggable={canManage}
+                    onContextMenu={(event) => {
+                      if (!canManage) return
+                      event.preventDefault()
+                      setOpen(false)
+                      setChannelMenu({ visible: true, x: event.clientX, y: event.clientY, channel: category })
+                    }}
+                    onDoubleClick={() => {
+                      if (!canManage) return
+                      const name = window.prompt(t.sidebarChannels.channelNamePrompt, category.name)
+                      if (!name) return
+                      onRenameChannel?.(category.id, name)
+                    }}
+                    onDragStart={(event) => {
+                      if (!canManage) return
+                      dragCategoryIdRef.current = category.id
+                      setCategoryDragOverId(null)
+                      setCategoryDragOverPos(null)
+                      if (event.dataTransfer) {
+                        event.dataTransfer.setData('text/plain', category.id)
+                        event.dataTransfer.effectAllowed = 'move'
+                      }
+                    }}
+                    onDragEnd={() => {
+                      dragCategoryIdRef.current = null
+                      setCategoryDragOverId(null)
+                      setCategoryDragOverPos(null)
+                    }}
+                    onDragOver={(event) => {
+                      if (!canManage) return
+                      if (dragCategoryIdRef.current) {
+                        if (dragCategoryIdRef.current === category.id) return
+                        event.preventDefault()
+                        if (event.dataTransfer) {
+                          event.dataTransfer.dropEffect = 'move'
+                        }
+                        const position = isLast ? 'below' : 'above'
+                        const nextOrder = computeReorder(categoryIds, dragCategoryIdRef.current, category.id, position)
+                        setCategoryDragOverId(nextOrder ? category.id : null)
+                        setCategoryDragOverPos(nextOrder ? position : null)
+                        return
+                      }
+                      if (!dragIdRef.current) return
+                      event.preventDefault()
+                      if (event.dataTransfer) {
+                        event.dataTransfer.dropEffect = 'move'
+                      }
+                    }}
+                    onDrop={(event) => {
+                      event.preventDefault()
+                      if (dragCategoryIdRef.current) {
+                        const draggedId = dragCategoryIdRef.current || event.dataTransfer?.getData('text/plain')
+                        dragCategoryIdRef.current = null
+                        setCategoryDragOverId(null)
+                        setCategoryDragOverPos(null)
+                        if (!draggedId || draggedId === category.id) return
+                        const position = isLast ? 'below' : 'above'
+                        const nextOrder = computeReorder(categoryIds, draggedId, category.id, position)
+                        if (!nextOrder) return
+                        onReorderCategories?.(nextOrder)
+                        return
+                      }
+                      if (!dragIdRef.current) return
+                      const draggedId = dragIdRef.current
+                      dragIdRef.current = null
+                      dragGroupRef.current = null
+                      const ids = categoryChannels.map((item) => item.id)
+                      const nextOrder = ids.includes(draggedId) ? ids : [...ids, draggedId]
+                      onReorderChannels?.(nextOrder, category.id)
+                    }}
+                    onDragLeave={() => {
+                      if (!canManage) return
+                      setCategoryDragOverId((prev) => (prev === category.id ? null : prev))
+                      setCategoryDragOverPos((prev) => (categoryDragOverId === category.id ? null : prev))
                     }}
                   >
-                    {c.name}
-                  </span>
-                  {members.length > 0 ? (
-                    <span className="ml-auto text-[11px]" style={{ color: 'var(--text-muted)' }}>
-                      {members.length}
-                    </span>
-                  ) : null}
-                  {c.hidden ? (
-                    <span className="ml-2 text-[10px] uppercase" style={{ color: 'var(--text-muted)' }}>
-                      {t.sidebarChannels.hidden}
-                    </span>
-                  ) : null}
-                </div>
-                {members.length > 0 ? (
-                  <div className="pl-6 space-y-1">
-                    {sortedMembers.map((member) => {
-                      const isSpeaking = speakingIds.includes(member.id) && !member.muted && !member.deafened
-                      return (
-                        <div key={member.id} className="flex items-center gap-2 text-xs">
-                        <div className={`voice-avatar${isSpeaking ? ' voice-speaking-ring' : ''}`}>
-                          <div className="voice-avatar-inner">
-                            {member.avatar ? (
-                              <img src={member.avatar} alt={member.username} className="w-full h-full object-cover" />
-                            ) : null}
-                          </div>
-                        </div>
-                          <span
-                            className="truncate"
-                            style={{
-                              color: isSpeaking ? '#ffffff' : 'var(--text-muted)',
-                              textShadow: isSpeaking ? '0 0 6px rgba(34,197,94,0.6)' : 'none',
-                            }}
-                          >
-                            {getMemberLabel(member)}
-                          </span>
-                          <span className="ml-auto flex items-center gap-1" style={{ color: '#f87171' }}>
-                            {member.muted ? (
-                              <MicIcon size={12} muted outlineColor="var(--sidebar-bg)" />
-                            ) : null}
-                            {member.deafened ? (
-                              <HeadsetIcon size={12} muted outlineColor="var(--sidebar-bg)" />
-                            ) : null}
-                          </span>
-                        </div>
-                      )
-                    })}
+                    <span className="truncate">{category.name}</span>
+                    {canManage ? (
+                      <Tooltip label={t.sidebarChannels.createTitle} side="top">
+                        <button
+                          type="button"
+                          className="h-6 w-6 rounded-md grid place-items-center hover-surface cursor-pointer"
+                          style={{ color: 'var(--text-muted)' }}
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            onCreateChannel?.(category.id)
+                          }}
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden>
+                            <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                          </svg>
+                        </button>
+                      </Tooltip>
+                    ) : null}
                   </div>
-                ) : null}
+                </div>
+                <div className="space-y-1">
+                  {categoryChannels.map((channel, channelIndex) =>
+                    renderChannelItem(channel, categoryChannels, channelIndex, category.id)
+                  )}
+                </div>
               </div>
             )
           })}
@@ -642,6 +671,14 @@ function Icon({ name }: { name: string }) {
           <path
             fill="currentColor"
             d="M15.5 12a3.5 3.5 0 1 0-3.3-4.8 5.5 5.5 0 0 1 0 9.6A3.5 3.5 0 1 0 15.5 12ZM7 13a4 4 0 1 0-3.8-5.5 4 4 0 0 0 0 9A4 4 0 0 0 7 13Zm9 5c-1.9 0-3.6.6-4.7 1.6-.4.3-.3.9.1 1.1.6.3 1.2.3 1.8 0 1-.5 2.1-.7 2.8-.7 2 0 4 1 4 2.5 0 .6.4 1.1 1 1.1s1-.5 1-1.1C22 19.1 19.2 18 16 18Zm-9 0c-2.6 0-6 1.2-6 3.6 0 .6.4 1.1 1 1.1s1-.5 1-1.1C3 20.4 5.2 19 7 19c1.4 0 2.8.4 3.9 1 .6.3 1.2.3 1.8 0 .4-.2.5-.8.1-1.1C11.6 18.6 9.6 18 7 18Z"
+          />
+        </svg>
+      )
+    case 'folder':
+      return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+          <path
+            d="M4 6.5a2 2 0 0 1 2-2h4.1a2 2 0 0 1 1.4.6l1.3 1.3a2 2 0 0 0 1.4.6H18a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6.5z"
           />
         </svg>
       )

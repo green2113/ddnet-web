@@ -51,7 +51,9 @@ type Channel = {
   id: string
   name: string
   hidden?: boolean
-  type?: 'text' | 'voice'
+  type?: 'text' | 'voice' | 'category'
+  categoryId?: string | null
+  order?: number
 }
 
 type Server = {
@@ -99,12 +101,20 @@ function App() {
   const [showCreateChannel, setShowCreateChannel] = useState(false)
   const [createChannelClosing, setCreateChannelClosing] = useState(false)
   const createChannelCloseTimerRef = useRef<number | null>(null)
-  const [createChannelType, setCreateChannelType] = useState<'text' | 'voice'>('text')
+  const [createChannelType, setCreateChannelType] = useState<'text' | 'voice' | 'category'>('text')
   const [createChannelName, setCreateChannelName] = useState('')
+  const [createChannelCategoryId, setCreateChannelCategoryId] = useState<string>('')
   const [showCreateServer, setShowCreateServer] = useState(false)
   const [createServerClosing, setCreateServerClosing] = useState(false)
   const createServerCloseTimerRef = useRef<number | null>(null)
   const [createServerName, setCreateServerName] = useState('')
+  const [showServerAction, setShowServerAction] = useState(false)
+  const [serverActionClosing, setServerActionClosing] = useState(false)
+  const serverActionCloseTimerRef = useRef<number | null>(null)
+  const [serverActionStep, setServerActionStep] = useState<'select' | 'create' | 'join'>('select')
+  const [joinInviteInput, setJoinInviteInput] = useState('')
+  const [joinInviteError, setJoinInviteError] = useState('')
+  const [joinInviteLoading, setJoinInviteLoading] = useState(false)
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [inviteClosing, setInviteClosing] = useState(false)
   const inviteCloseTimerRef = useRef<number | null>(null)
@@ -497,13 +507,14 @@ function App() {
     const requested =
       routeChannelId &&
       (!routeServerId || routeServerId === activeServerId) &&
-      channels.find((channel) => channel.id === routeChannelId)
+      channels.find((channel) => channel.id === routeChannelId && channel.type !== 'category')
     if (requested) {
       setActiveChannelId(requested.id)
       return
     }
-    if (!activeChannelId || !channels.find((channel) => channel.id === activeChannelId)) {
-      setActiveChannelId(channels[0].id)
+    const firstChannel = channels.find((channel) => channel.type !== 'category')
+    if (!activeChannelId || !channels.find((channel) => channel.id === activeChannelId && channel.type !== 'category')) {
+      if (firstChannel) setActiveChannelId(firstChannel.id)
     }
   }, [channels, activeChannelId, routeChannelId, routeServerId, activeServerId])
 
@@ -934,6 +945,7 @@ function App() {
   }
   const canManageChannels = Boolean(user?.id && adminIds.includes(user.id))
   const voiceSwitchTarget = voiceSwitchTargetId ? channels.find((channel) => channel.id === voiceSwitchTargetId) : null
+  const defaultCategoryId = channels.find((channel) => channel.type === 'category')?.id || ''
 
   const applyChannelSelect = (channelId: string) => {
     activeChannelRef.current = channelId
@@ -1005,19 +1017,39 @@ function App() {
     navigate(`/channels/${serverId}`)
   }
 
-  const handleCreateServer = () => {
+  const openCreateServerModal = () => {
     if (!user) {
       requireLogin()
       return
     }
+    if (user.isGuest) return
     const defaultName = `${user?.displayName || user?.username || '사용자'}님의 서버`
     setCreateServerName(defaultName)
-    setShowCreateServer(true)
-    setCreateServerClosing(false)
-    if (createServerCloseTimerRef.current) {
-      window.clearTimeout(createServerCloseTimerRef.current)
-      createServerCloseTimerRef.current = null
+    setServerActionStep('create')
+    setShowServerAction(true)
+    setServerActionClosing(false)
+    if (serverActionCloseTimerRef.current) {
+      window.clearTimeout(serverActionCloseTimerRef.current)
+      serverActionCloseTimerRef.current = null
     }
+  }
+
+  const openServerActionModal = () => {
+    if (!user) {
+      requireLogin()
+      return
+    }
+    setServerActionStep('select')
+    setShowServerAction(true)
+    setServerActionClosing(false)
+    if (serverActionCloseTimerRef.current) {
+      window.clearTimeout(serverActionCloseTimerRef.current)
+      serverActionCloseTimerRef.current = null
+    }
+  }
+
+  const handleCreateServer = () => {
+    openServerActionModal()
   }
 
   const handleReorderServers = (orderedIds: string[]) => {
@@ -1035,6 +1067,88 @@ function App() {
       createServerCloseTimerRef.current = null
     }, 180)
   }
+
+  const closeServerAction = () => {
+    if (serverActionClosing) return
+    setServerActionClosing(true)
+    serverActionCloseTimerRef.current = window.setTimeout(() => {
+      setShowServerAction(false)
+      setServerActionClosing(false)
+      serverActionCloseTimerRef.current = null
+    }, 180)
+  }
+
+  const openJoinServerModal = () => {
+    if (!user) {
+      requireLogin()
+      return
+    }
+    setJoinInviteInput('')
+    setJoinInviteError('')
+    setServerActionStep('join')
+    setShowServerAction(true)
+    setServerActionClosing(false)
+    if (serverActionCloseTimerRef.current) {
+      window.clearTimeout(serverActionCloseTimerRef.current)
+      serverActionCloseTimerRef.current = null
+    }
+  }
+
+  const parseInviteCode = (value: string) => {
+    const trimmed = value.trim()
+    if (!trimmed) return ''
+    const match = trimmed.match(/invite\/([A-Za-z0-9]+)/i)
+    if (match) return match[1]
+    if (/^[A-Za-z0-9]+$/.test(trimmed)) return trimmed
+    try {
+      const url = new URL(trimmed)
+      const parts = url.pathname.split('/').filter(Boolean)
+      const inviteIndex = parts.findIndex((part) => part.toLowerCase() === 'invite')
+      if (inviteIndex >= 0 && parts[inviteIndex + 1]) return parts[inviteIndex + 1]
+      if (parts.length) return parts[parts.length - 1]
+    } catch {
+      // ignore
+    }
+    return ''
+  }
+
+  const handleJoinServer = async () => {
+    if (!user) {
+      requireLogin()
+      return
+    }
+    const code = parseInviteCode(joinInviteInput)
+    if (!code) {
+      setJoinInviteError('초대 링크 또는 코드를 입력해 주세요.')
+      return
+    }
+    setJoinInviteError('')
+    setJoinInviteLoading(true)
+    try {
+      const res = await axios.post(`${serverBase}/api/invite/${code}/join`, {}, { withCredentials: true })
+      const joined = res.data?.server as Server | undefined
+      await fetchServers()
+      if (joined?.id) {
+        setActiveServerId(joined.id)
+        navigate(`/channels/${joined.id}`)
+      }
+      closeServerAction()
+    } catch (e: any) {
+      const status = e?.response?.status
+      if (status === 404) {
+        setJoinInviteError('유효하지 않은 초대 링크입니다.')
+      } else if (status === 410) {
+        setJoinInviteError('만료된 초대 링크입니다.')
+      } else if (status === 401) {
+        setJoinInviteError('로그인이 필요합니다.')
+      } else {
+        setJoinInviteError('서버에 참가할 수 없습니다.')
+      }
+    } finally {
+      setJoinInviteLoading(false)
+    }
+  }
+
 
   const closeInviteModal = () => {
     if (inviteClosing) return
@@ -1222,9 +1336,25 @@ function App() {
                     handleSelectChannel(channelId)
                   }}
                   onOpenServerSettings={() => setShowSettings(true)}
-              onCreateChannel={() => {
+              onCreateChannel={(categoryId) => {
+                const nextCategoryId =
+                  typeof categoryId === 'string'
+                    ? categoryId
+                    : channels.find((channel) => channel.type === 'category')?.id || ''
                 setCreateChannelType('text')
                 setCreateChannelName('')
+                setCreateChannelCategoryId(nextCategoryId)
+                setShowCreateChannel(true)
+                setCreateChannelClosing(false)
+                if (createChannelCloseTimerRef.current) {
+                  window.clearTimeout(createChannelCloseTimerRef.current)
+                  createChannelCloseTimerRef.current = null
+                }
+              }}
+              onCreateCategory={() => {
+                setCreateChannelType('category')
+                setCreateChannelName('')
+                setCreateChannelCategoryId('')
                 setShowCreateChannel(true)
                 setCreateChannelClosing(false)
                 if (createChannelCloseTimerRef.current) {
@@ -1257,11 +1387,23 @@ function App() {
                       .then(refreshChannels)
                       .catch(() => {})
                   }}
-                  onReorderChannels={(orderedIds) => {
+                  onReorderChannels={(orderedIds, categoryId) => {
                     if (!canManageChannels) return
                     if (!activeServerId) return
                     axios
-                      .patch(`${serverBase}/api/servers/${activeServerId}/channels/order`, { orderedIds }, { withCredentials: true })
+                      .patch(
+                        `${serverBase}/api/servers/${activeServerId}/channels/order`,
+                        { orderedIds, categoryId },
+                        { withCredentials: true }
+                      )
+                      .then(refreshChannels)
+                      .catch(() => {})
+                  }}
+                  onReorderCategories={(orderedIds) => {
+                    if (!canManageChannels) return
+                    if (!activeServerId) return
+                    axios
+                      .patch(`${serverBase}/api/servers/${activeServerId}/categories/order`, { orderedIds }, { withCredentials: true })
                       .then(refreshChannels)
                       .catch(() => {})
                   }}
@@ -1329,6 +1471,7 @@ function App() {
           ) : null}
           <SidebarProfileBar
             user={user}
+            isDark={isDark}
             showUserSettings={showUserSettings}
             settingsTab={settingsTab}
             onSetTab={setSettingsTab}
@@ -1433,9 +1576,25 @@ function App() {
                     handleSelectChannel(channelId)
                   }}
                   onOpenServerSettings={() => setShowSettings(true)}
-              onCreateChannel={() => {
+              onCreateChannel={(categoryId) => {
+                const nextCategoryId =
+                  typeof categoryId === 'string'
+                    ? categoryId
+                    : channels.find((channel) => channel.type === 'category')?.id || ''
                 setCreateChannelType('text')
                 setCreateChannelName('')
+                setCreateChannelCategoryId(nextCategoryId)
+                setShowCreateChannel(true)
+                setCreateChannelClosing(false)
+                if (createChannelCloseTimerRef.current) {
+                  window.clearTimeout(createChannelCloseTimerRef.current)
+                  createChannelCloseTimerRef.current = null
+                }
+              }}
+              onCreateCategory={() => {
+                setCreateChannelType('category')
+                setCreateChannelName('')
+                setCreateChannelCategoryId('')
                 setShowCreateChannel(true)
                 setCreateChannelClosing(false)
                 if (createChannelCloseTimerRef.current) {
@@ -1468,11 +1627,23 @@ function App() {
                       .then(refreshChannels)
                       .catch(() => {})
                   }}
-                  onReorderChannels={(orderedIds) => {
+                  onReorderChannels={(orderedIds, categoryId) => {
                     if (!canManageChannels) return
                     if (!activeServerId) return
                     axios
-                      .patch(`${serverBase}/api/servers/${activeServerId}/channels/order`, { orderedIds }, { withCredentials: true })
+                      .patch(
+                        `${serverBase}/api/servers/${activeServerId}/channels/order`,
+                        { orderedIds, categoryId },
+                        { withCredentials: true }
+                      )
+                      .then(refreshChannels)
+                      .catch(() => {})
+                  }}
+                  onReorderCategories={(orderedIds) => {
+                    if (!canManageChannels) return
+                    if (!activeServerId) return
+                    axios
+                      .patch(`${serverBase}/api/servers/${activeServerId}/categories/order`, { orderedIds }, { withCredentials: true })
                       .then(refreshChannels)
                       .catch(() => {})
                   }}
@@ -1806,7 +1977,11 @@ function App() {
                 onMouseDown={(e) => e.stopPropagation()}
               >
                 <div className="flex items-center justify-between mb-4">
-                  <div className="text-lg font-semibold">{t.sidebarChannels.createTitle}</div>
+                  <div className="text-lg font-semibold">
+                    {createChannelType === 'category'
+                      ? t.sidebarChannels.createCategoryTitle
+                      : t.sidebarChannels.createTitle}
+                  </div>
                   <button
                     type="button"
                     className="h-8 w-8 rounded-full grid place-items-center hover-surface cursor-pointer"
@@ -1819,55 +1994,71 @@ function App() {
                   </button>
                 </div>
                 <div className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>
-                  {t.sidebarChannels.createSubtitle}
+                  {createChannelType === 'category'
+                    ? t.sidebarChannels.createCategorySubtitle
+                    : t.sidebarChannels.createSubtitle}
                 </div>
-                <div className="text-sm font-semibold mb-2">{t.sidebarChannels.channelType}</div>
-                <div className="space-y-2 mb-5">
-                  {(['text', 'voice'] as const).map((option) => {
-                    const isSelected = createChannelType === option
-                    const icon = option === 'text' ? <span style={{ color: 'var(--text-muted)' }}>#</span> : <VolumeIcon size={18} />
-                    return (
-                      <button
-                        key={option}
-                        type="button"
-                        className="w-full text-left px-4 py-3 rounded-lg flex items-center gap-3"
-                        style={{
-                          background: isSelected ? 'color-mix(in oklch, var(--accent) 18%, transparent)' : 'var(--panel)',
-                          border: isSelected ? '1px solid color-mix(in oklch, var(--accent) 60%, transparent)' : '1px solid var(--border)',
-                        }}
-                        onClick={() => setCreateChannelType(option)}
-                      >
-                        <div className="h-9 w-9 rounded-full grid place-items-center" style={{ background: 'rgba(255,255,255,0.08)' }}>
-                          {icon}
-                        </div>
-                        <div className="flex-1">
-                          <div className="text-sm font-semibold">{option === 'text' ? t.sidebarChannels.textOption : t.sidebarChannels.voiceOption}</div>
-                          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                            {option === 'text' ? t.sidebarChannels.textOptionDesc : t.sidebarChannels.voiceOptionDesc}
-                          </div>
-                        </div>
-                        <div
-                          className="h-5 w-5 rounded-full border grid place-items-center"
-                          style={{
-                            borderColor: isSelected ? 'var(--accent)' : 'rgba(255,255,255,0.2)',
-                            background: isSelected ? 'var(--accent)' : 'transparent',
-                          }}
-                        >
-                          {isSelected ? <div className="h-2.5 w-2.5 rounded-full" style={{ background: '#fff' }} /> : null}
-                        </div>
-                      </button>
-                    )
-                  })}
+                {createChannelType !== 'category' ? (
+                  <>
+                    <div className="text-sm font-semibold mb-2">{t.sidebarChannels.channelType}</div>
+                    <div className="space-y-2 mb-5">
+                      {(['text', 'voice'] as const).map((option) => {
+                        const isSelected = createChannelType === option
+                        const icon = option === 'text' ? <span style={{ color: 'var(--text-muted)' }}>#</span> : <VolumeIcon size={18} />
+                        return (
+                          <button
+                            key={option}
+                            type="button"
+                            className="w-full text-left px-4 py-3 rounded-lg flex items-center gap-3"
+                            style={{
+                              background: isSelected ? 'color-mix(in oklch, var(--accent) 18%, transparent)' : 'var(--panel)',
+                              border: isSelected ? '1px solid color-mix(in oklch, var(--accent) 60%, transparent)' : '1px solid var(--border)',
+                            }}
+                            onClick={() => setCreateChannelType(option)}
+                          >
+                            <div className="h-9 w-9 rounded-full grid place-items-center" style={{ background: 'rgba(255,255,255,0.08)' }}>
+                              {icon}
+                            </div>
+                            <div className="flex-1">
+                              <div className="text-sm font-semibold">
+                                {option === 'text' ? t.sidebarChannels.textOption : t.sidebarChannels.voiceOption}
+                              </div>
+                              <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                                {option === 'text' ? t.sidebarChannels.textOptionDesc : t.sidebarChannels.voiceOptionDesc}
+                              </div>
+                            </div>
+                            <div
+                              className="h-5 w-5 rounded-full border grid place-items-center"
+                              style={{
+                                borderColor: isSelected ? 'var(--accent)' : 'rgba(255,255,255,0.2)',
+                                background: isSelected ? 'var(--accent)' : 'transparent',
+                              }}
+                            >
+                              {isSelected ? <div className="h-2.5 w-2.5 rounded-full" style={{ background: '#fff' }} /> : null}
+                            </div>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </>
+                ) : null}
+                <div className="text-sm font-semibold mb-2 mt-5">
+                  {createChannelType === 'category' ? t.sidebarChannels.categoryNameLabel : t.sidebarChannels.channelNameLabel}
                 </div>
-                <div className="text-sm font-semibold mb-2">{t.sidebarChannels.channelNameLabel}</div>
                 <div className="flex items-center gap-2 rounded-lg px-3 py-2 channel-name-field" style={{ background: 'var(--panel)', border: '1px solid var(--border)' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>
-                    {createChannelType === 'text' ? '#' : <VolumeIcon size={16} />}
-                  </span>
+                  {createChannelType === 'category' ? null : (
+                    <span style={{ color: 'var(--text-muted)' }}>
+                      {createChannelType === 'text' ? '#' : <VolumeIcon size={16} />}
+                    </span>
+                  )}
                   <input
                     value={createChannelName}
                     onChange={(event) => setCreateChannelName(event.target.value)}
-                    placeholder={t.sidebarChannels.channelNamePlaceholder}
+                    placeholder={
+                      createChannelType === 'category'
+                        ? t.sidebarChannels.categoryNamePlaceholder
+                        : t.sidebarChannels.channelNamePlaceholder
+                    }
                     className="flex-1 bg-transparent outline-none text-sm"
                     style={{ color: 'var(--text-primary)' }}
                   />
@@ -1891,7 +2082,15 @@ function App() {
                       const name = createChannelName.trim()
                       if (!name) return
                       axios
-                        .post(`${serverBase}/api/servers/${activeServerId}/channels`, { name, type: createChannelType }, { withCredentials: true })
+                        .post(
+                          `${serverBase}/api/servers/${activeServerId}/channels`,
+                          {
+                            name,
+                            type: createChannelType,
+                            categoryId: createChannelType === 'category' ? undefined : createChannelCategoryId || null,
+                          },
+                          { withCredentials: true }
+                        )
                         .then(refreshChannels)
                         .catch(() => {})
                       closeCreateChannel()
@@ -1904,83 +2103,224 @@ function App() {
               </div>
             </div>
           ) : null}
-          {showCreateServer ? (
+          {showServerAction ? (
             <div
-              className={`fixed inset-0 z-50 grid place-items-center modal-overlay${createServerClosing ? ' is-exiting' : ''}`}
+              className={`fixed inset-0 z-50 grid place-items-center modal-overlay${serverActionClosing ? ' is-exiting' : ''}`}
               style={{ background: 'rgba(0,0,0,0.6)' }}
-              onMouseDown={closeCreateServer}
+              onMouseDown={closeServerAction}
             >
               <div
-                className={`w-[520px] max-w-[92vw] rounded-2xl p-6 modal-panel${createServerClosing ? ' is-exiting' : ''}`}
-                style={{ background: 'var(--header-bg)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                className={`w-[560px] max-w-[92vw] rounded-2xl p-6 modal-panel${serverActionClosing ? ' is-exiting' : ''}`}
+                style={{
+                  height: serverActionStep === 'select' ? '320px' : '280px',
+                  background: 'var(--header-bg)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--text-primary)',
+                  transition: 'height 220ms ease',
+                }}
                 onMouseDown={(e) => e.stopPropagation()}
               >
                 <div className="flex items-center justify-between mb-4">
-                  <div className="text-lg font-semibold">서버 만들기</div>
+                  <div className="flex items-center gap-2">
+                    {serverActionStep !== 'select' ? (
+                      <button
+                        type="button"
+                        className="h-8 w-8 rounded-full grid place-items-center hover-surface cursor-pointer"
+                        aria-label="back"
+                        onClick={() => setServerActionStep('select')}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+                          <path d="M15 6l-6 6 6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </button>
+                    ) : null}
+                    <div className="text-xl font-semibold">
+                      {serverActionStep === 'create' ? '서버 만들기' : serverActionStep === 'join' ? '서버 들어가기' : '서버'}
+                    </div>
+                  </div>
                   <button
                     type="button"
                     className="h-8 w-8 rounded-full grid place-items-center hover-surface cursor-pointer"
                     aria-label="close"
-                    onClick={closeCreateServer}
+                    onClick={closeServerAction}
                   >
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
                       <path d="M6 6l12 12M18 6l-12 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                     </svg>
                   </button>
                 </div>
-                <div className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>
-                  서버 이름은 언제든지 변경할 수 있어요.
-                </div>
-                <div className="text-sm font-semibold mb-2">서버 이름</div>
-                <div className="flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: 'var(--panel)', border: '1px solid var(--border)' }}>
-                  <input
-                    value={createServerName}
-                    onChange={(event) => setCreateServerName(event.target.value)}
-                    placeholder=""
-                    className="flex-1 bg-transparent outline-none text-sm"
-                    style={{ color: 'var(--text-primary)' }}
-                  />
-                </div>
-                <div className="mt-6 flex justify-end gap-3">
-                  <button
-                    type="button"
-                    className="flex-1 h-10 rounded-md cursor-pointer hover-surface"
-                    style={{ background: 'rgba(127,127,127,0.2)', color: 'var(--text-primary)' }}
-                    onClick={closeCreateServer}
-                  >
-                    취소
-                  </button>
-                  <button
-                    type="button"
-                    className="flex-1 h-10 rounded-md text-white disabled:opacity-50 cursor-pointer hover-surface"
-                    style={{ background: 'var(--accent)' }}
-                    onClick={async () => {
-                      if (!user) {
-                        requireLogin()
-                        return
-                      }
-                      const name = createServerName.trim()
-                      if (!name) return
-                      try {
-                        const res = await axios.post(
-                          `${serverBase}/api/servers`,
-                          { name },
-                          { withCredentials: true }
-                        )
-                        const created = res.data as Server | null
-                        await fetchServers()
-                        if (created?.id) {
-                          setActiveServerId(created.id)
-                        }
-                        closeCreateServer()
-                      } catch {
-                        window.alert('서버 생성에 실패했습니다.')
-                      }
+                <div className="relative overflow-hidden">
+                  <div
+                    className="flex"
+                    style={{
+                      width: '100%',
+                      transform:
+                        serverActionStep === 'create'
+                          ? 'translateX(-100%)'
+                          : serverActionStep === 'join'
+                            ? 'translateX(-200%)'
+                            : 'translateX(0)',
+                      transition: 'transform 240ms ease',
                     }}
-                    disabled={!createServerName.trim()}
                   >
-                    만들기
-                  </button>
+                    <div className="w-full shrink-0">
+                      <div className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>
+                        서버를 직접 만들거나 초대 링크로 참여할 수 있어요.
+                      </div>
+                      <div className="grid gap-3">
+                        <button
+                          type="button"
+                          className="w-full text-left px-4 py-4 rounded-xl cursor-pointer hover-surface flex items-center justify-between gap-3"
+                          style={{
+                            background: 'var(--panel)',
+                            border: '1px solid var(--border)',
+                            cursor: user?.isGuest ? 'not-allowed' : 'pointer',
+                            opacity: user?.isGuest ? 0.6 : 1,
+                          }}
+                          onMouseEnter={(event) => {
+                            if (user?.isGuest) return
+                            event.currentTarget.style.background = 'color-mix(in oklch, white 6%, var(--panel))'
+                          }}
+                          onMouseLeave={(event) => {
+                            event.currentTarget.style.background = 'var(--panel)'
+                          }}
+                          onClick={() => {
+                            if (user?.isGuest) return
+                            openCreateServerModal()
+                          }}
+                        >
+                          <div>
+                            <div className="text-[15px] font-semibold">서버 만들기</div>
+                            <div className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
+                              서버를 생성하고 친구들을 초대해 보세요.
+                            </div>
+                          </div>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                            <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          className="w-full text-left px-4 py-4 rounded-xl cursor-pointer hover-surface flex items-center justify-between gap-3"
+                          style={{ background: 'var(--panel)', border: '1px solid var(--border)' }}
+                          onMouseEnter={(event) => {
+                            event.currentTarget.style.background = 'color-mix(in oklch, white 6%, var(--panel))'
+                          }}
+                          onMouseLeave={(event) => {
+                            event.currentTarget.style.background = 'var(--panel)'
+                          }}
+                          onClick={() => openJoinServerModal()}
+                        >
+                          <div>
+                            <div className="text-[15px] font-semibold">서버 들어가기</div>
+                            <div className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
+                              초대 링크나 코드를 입력해서 참여해요.
+                            </div>
+                          </div>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                            <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                    <div className="w-full shrink-0">
+                      <div className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>
+                        서버 이름은 언제든지 변경할 수 있어요.
+                      </div>
+                      <div className="text-[15px] font-semibold mb-2">서버 이름</div>
+                      <div className="flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: 'var(--panel)', border: '1px solid var(--border)' }}>
+                        <input
+                          value={createServerName}
+                          onChange={(event) => setCreateServerName(event.target.value)}
+                          placeholder=""
+                          className="flex-1 bg-transparent outline-none text-sm"
+                          style={{ color: 'var(--text-primary)' }}
+                        />
+                      </div>
+                      <div className="mt-6 flex justify-end gap-3">
+                        <button
+                          type="button"
+                          className="flex-1 h-10 rounded-md cursor-pointer hover-surface"
+                          style={{ background: 'rgba(127,127,127,0.2)', color: 'var(--text-primary)' }}
+                          onClick={() => setServerActionStep('select')}
+                        >
+                          뒤로
+                        </button>
+                        <button
+                          type="button"
+                          className="flex-1 h-10 rounded-md text-white disabled:opacity-50 cursor-pointer hover-surface"
+                          style={{ background: 'var(--accent)' }}
+                          onClick={async () => {
+                            if (!user) {
+                              requireLogin()
+                              return
+                            }
+                            const name = createServerName.trim()
+                            if (!name) return
+                            try {
+                              const res = await axios.post(
+                                `${serverBase}/api/servers`,
+                                { name },
+                                { withCredentials: true }
+                              )
+                              const created = res.data as Server | null
+                              await fetchServers()
+                              if (created?.id) {
+                                setActiveServerId(created.id)
+                              }
+                              closeServerAction()
+                            } catch {
+                              window.alert('서버 생성에 실패했습니다.')
+                            }
+                          }}
+                          disabled={!createServerName.trim()}
+                        >
+                          만들기
+                        </button>
+                      </div>
+                    </div>
+                    <div className="w-full shrink-0">
+                      <div className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>
+                        초대 링크 또는 코드를 입력해 주세요.
+                      </div>
+                      <div className="flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: 'var(--panel)', border: '1px solid var(--border)' }}>
+                        <input
+                          value={joinInviteInput}
+                          onChange={(event) => {
+                            setJoinInviteInput(event.target.value)
+                            if (joinInviteError) setJoinInviteError('')
+                          }}
+                          placeholder="초대 링크 또는 코드를 넣어주세요."
+                          className="flex-1 bg-transparent outline-none text-sm"
+                          style={{ color: 'var(--text-primary)' }}
+                        />
+                      </div>
+                      {joinInviteError ? (
+                  <div className="text-sm mt-3" style={{ color: '#f87171' }}>
+                          {joinInviteError}
+                        </div>
+                      ) : null}
+                      <div className="mt-6 flex justify-end gap-3">
+                        <button
+                          type="button"
+                          className="flex-1 h-10 rounded-md cursor-pointer hover-surface"
+                          style={{ background: 'rgba(127,127,127,0.2)', color: 'var(--text-primary)' }}
+                          onClick={() => setServerActionStep('select')}
+                        >
+                          뒤로
+                        </button>
+                        <button
+                          type="button"
+                          className="flex-1 h-10 rounded-md text-white disabled:opacity-50 cursor-pointer hover-surface"
+                          style={{ background: 'var(--accent)' }}
+                          onClick={handleJoinServer}
+                          disabled={!joinInviteInput.trim() || joinInviteLoading}
+                        >
+                          {joinInviteLoading ? '입장 중...' : '입장하기'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2081,4 +2421,3 @@ function App() {
 }
 
 export default App
-

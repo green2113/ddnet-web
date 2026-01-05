@@ -30,7 +30,26 @@ export default function SidebarGuilds({
   t,
 }: Props) {
   const [hoveredId, setHoveredId] = useState<string | null>(null)
+  const [dragOverId, setDragOverId] = useState<string | null>(null)
+  const [dragOverPos, setDragOverPos] = useState<'above' | 'below' | null>(null)
   const dragIdRef = useRef<string | null>(null)
+
+  const computeReorder = (draggedId: string, targetId: string, position: 'above' | 'below') => {
+    if (!draggedId || !targetId || draggedId === targetId) return null
+    const ids = servers.map((server) => server.id)
+    const fromIndex = ids.indexOf(draggedId)
+    const toIndex = ids.indexOf(targetId)
+    if (fromIndex === -1 || toIndex === -1) return null
+    ids.splice(fromIndex, 1)
+    let adjustedToIndex = toIndex
+    if (fromIndex < toIndex) adjustedToIndex = toIndex - 1
+    const insertIndex = position === 'above' ? adjustedToIndex : adjustedToIndex + 1
+    ids.splice(insertIndex, 0, draggedId)
+    const isSameOrder = servers.every((server, index) => server.id === ids[index])
+    if (isSameOrder) return null
+    return ids
+  }
+
   return (
     <aside
       className="w-[78px] hidden md:flex flex-col items-center py-3 gap-3 h-full"
@@ -70,16 +89,32 @@ export default function SidebarGuilds({
           }
         }}
       >
-      {servers.map((server) => {
+      {servers.map((server, index) => {
         const isActive = server.id === activeId
         const isHovering = hoveredId === server.id
         const label = server.name?.slice(0, 2).toUpperCase() || 'SV'
+        const isLast = index === servers.length - 1
         return (
           <div key={server.id} className="relative w-full flex items-center justify-center">
             <span
               className="absolute left-0 h-10 w-[6px] rounded-full bg-white transition-opacity"
               style={{ opacity: isActive ? 1 : 0, clipPath: 'inset(0 0 0 50%)' }}
             />
+            {dragOverId === server.id && dragOverPos ? (
+              <div
+                style={{
+                  position: 'absolute',
+                  left: 20,
+                  right: 20,
+                  top: dragOverPos === 'above' ? -6 : 'auto',
+                  bottom: dragOverPos === 'below' ? -6 : 'auto',
+                  height: 3,
+                  borderRadius: 999,
+                  background: 'var(--accent)',
+                  boxShadow: '0 0 6px color-mix(in oklch, var(--accent) 60%, transparent)',
+                }}
+              />
+            ) : null}
             <Tooltip label={server.name} side="right">
               <button
                 type="button"
@@ -89,6 +124,8 @@ export default function SidebarGuilds({
                 draggable
                 onDragStart={(event) => {
                   dragIdRef.current = server.id
+                  setDragOverId(null)
+                  setDragOverPos(null)
                   if (event.dataTransfer) {
                     event.dataTransfer.effectAllowed = 'move'
                     event.dataTransfer.setData('text/plain', server.id)
@@ -96,6 +133,8 @@ export default function SidebarGuilds({
                 }}
                 onDragEnd={() => {
                   dragIdRef.current = null
+                  setDragOverId(null)
+                  setDragOverPos(null)
                 }}
                 onDragOver={(event) => {
                   if (!dragIdRef.current || dragIdRef.current === server.id) return
@@ -103,18 +142,28 @@ export default function SidebarGuilds({
                   if (event.dataTransfer) {
                     event.dataTransfer.dropEffect = 'move'
                   }
+                  const rect = (event.currentTarget as HTMLButtonElement).getBoundingClientRect()
+                  const position = isLast ? 'below' : 'above'
+                  const nextOrder = computeReorder(dragIdRef.current, server.id, position)
+                  setDragOverId(nextOrder ? server.id : null)
+                  setDragOverPos(nextOrder ? position : null)
                 }}
                 onDrop={(event) => {
                   event.preventDefault()
                   const draggedId = dragIdRef.current || event.dataTransfer?.getData('text/plain')
+                  dragIdRef.current = null
+                  setDragOverId(null)
+                  setDragOverPos(null)
                   if (!draggedId || draggedId === server.id) return
-                  const ids = servers.map((s) => s.id)
-                  const fromIndex = ids.indexOf(draggedId)
-                  const toIndex = ids.indexOf(server.id)
-                  if (fromIndex === -1 || toIndex === -1) return
-                  ids.splice(fromIndex, 1)
-                  ids.splice(toIndex, 0, draggedId)
-                  onReorder?.(ids)
+                  const rect = (event.currentTarget as HTMLButtonElement).getBoundingClientRect()
+                  const position = isLast ? 'below' : 'above'
+                  const nextOrder = computeReorder(draggedId, server.id, position)
+                  if (!nextOrder) return
+                  onReorder?.(nextOrder)
+                }}
+                onDragLeave={() => {
+                  setDragOverId((prev) => (prev === server.id ? null : prev))
+                  setDragOverPos((prev) => (dragOverId === server.id ? null : prev))
                 }}
                 className="w-11 h-11 rounded-2xl grid place-items-center text-white text-sm font-bold select-none cursor-pointer transition-all"
                 style={{
