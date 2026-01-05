@@ -7,6 +7,8 @@ type TooltipProps = {
   label: string
   children: ReactNode
   side?: TooltipSide
+  offsetX?: number
+  offsetY?: number
 }
 
 const arrowClassMap: Record<TooltipSide, string> = {
@@ -32,7 +34,7 @@ const portalTransformMap: Record<TooltipSide, string> = {
 
 const getPortalRoot = () => (typeof document === 'undefined' ? null : document.getElementById('overlay-root') || document.body)
 
-export default function Tooltip({ label, children, side = 'top' }: TooltipProps) {
+export default function Tooltip({ label, children, side = 'top', offsetX = 0, offsetY = 0 }: TooltipProps) {
   const wrapRef = useRef<HTMLSpanElement | null>(null)
   const [open, setOpen] = useState(false)
   const [rendered, setRendered] = useState(false)
@@ -122,7 +124,13 @@ export default function Tooltip({ label, children, side = 'top' }: TooltipProps)
         color: 'var(--text-primary)',
         boxShadow: '0 6px 14px rgba(0,0,0,0.25)',
         border: '1px solid var(--tooltip-border)',
-        ...(portalPos ? { left: portalPos.left, top: portalPos.top, transform: portalTransformMap[side] } : {}),
+        ...(portalPos
+          ? {
+              left: portalPos.left + offsetX,
+              top: portalPos.top + offsetY,
+              transform: portalTransformMap[side],
+            }
+          : {}),
       }}
     >
       {label}

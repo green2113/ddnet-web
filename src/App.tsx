@@ -2168,37 +2168,66 @@ function App() {
                         서버를 직접 만들거나 초대 링크로 참여할 수 있어요.
                       </div>
                       <div className="grid gap-3">
-                        <button
-                          type="button"
-                          className="w-full text-left px-4 py-4 rounded-xl cursor-pointer hover-surface flex items-center justify-between gap-3"
-                          style={{
-                            background: 'var(--panel)',
-                            border: '1px solid var(--border)',
-                            cursor: user?.isGuest ? 'not-allowed' : 'pointer',
-                            opacity: user?.isGuest ? 0.6 : 1,
-                          }}
-                          onMouseEnter={(event) => {
-                            if (user?.isGuest) return
-                            event.currentTarget.style.background = 'color-mix(in oklch, white 6%, var(--panel))'
-                          }}
-                          onMouseLeave={(event) => {
-                            event.currentTarget.style.background = 'var(--panel)'
-                          }}
-                          onClick={() => {
-                            if (user?.isGuest) return
-                            openCreateServerModal()
-                          }}
-                        >
-                          <div>
-                            <div className="text-[15px] font-semibold">서버 만들기</div>
-                            <div className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-                              서버를 생성하고 친구들을 초대해 보세요.
+                        {user?.isGuest ? (
+                          <Tooltip label={t.sidebarChannels.guestDisabled} side="top" offsetY={20}>
+                            <button
+                              type="button"
+                              className="w-full text-left px-4 py-4 rounded-xl cursor-pointer hover-surface flex items-center justify-between gap-3"
+                              style={{
+                                background: 'var(--panel)',
+                                border: '1px solid var(--border)',
+                                cursor: 'not-allowed',
+                                opacity: 0.6,
+                              }}
+                              onMouseEnter={(event) => {
+                                event.currentTarget.style.background = 'var(--panel)'
+                              }}
+                              onMouseLeave={(event) => {
+                                event.currentTarget.style.background = 'var(--panel)'
+                              }}
+                              onClick={() => {}}
+                            >
+                              <div>
+                                <div className="text-[15px] font-semibold">서버 만들기</div>
+                                <div className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
+                                  서버를 생성하고 친구들을 초대해 보세요.
+                                </div>
+                              </div>
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                                <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                            </button>
+                          </Tooltip>
+                        ) : (
+                          <button
+                            type="button"
+                            className="w-full text-left px-4 py-4 rounded-xl cursor-pointer hover-surface flex items-center justify-between gap-3"
+                            style={{
+                              background: 'var(--panel)',
+                              border: '1px solid var(--border)',
+                              cursor: 'pointer',
+                            }}
+                            onMouseEnter={(event) => {
+                              event.currentTarget.style.background = 'color-mix(in oklch, white 6%, var(--panel))'
+                            }}
+                            onMouseLeave={(event) => {
+                              event.currentTarget.style.background = 'var(--panel)'
+                            }}
+                            onClick={() => {
+                              openCreateServerModal()
+                            }}
+                          >
+                            <div>
+                              <div className="text-[15px] font-semibold">서버 만들기</div>
+                              <div className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
+                                서버를 생성하고 친구들을 초대해 보세요.
+                              </div>
                             </div>
-                          </div>
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-                            <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        </button>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                              <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </button>
+                        )}
                         <button
                           type="button"
                           className="w-full text-left px-4 py-4 rounded-xl cursor-pointer hover-surface flex items-center justify-between gap-3"

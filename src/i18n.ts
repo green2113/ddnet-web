@@ -51,6 +51,7 @@ export type UiText = {
     notifications: string
     createCategory: string
     channelsTitle: string
+    guestDisabled: string
     textChannels: string
     voiceChannels: string
     showHidden: string
@@ -251,6 +252,7 @@ const translations: TranslationMap = {
       notifications: 'Notification settings',
       createCategory: 'Create category',
       channelsTitle: 'Channels',
+      guestDisabled: 'This feature is disabled in guest mode.',
       textChannels: 'Text channels',
       voiceChannels: 'Voice channels',
       showHidden: 'Show hidden channels ({count})',
@@ -449,6 +451,7 @@ const translations: TranslationMap = {
       notifications: '알림 설정',
       createCategory: '카테고리 만들기',
       channelsTitle: '채널',
+      guestDisabled: '게스트 모드에서는 해당 기능이 비활성화돼요.',
       textChannels: '텍스트 채널',
       voiceChannels: '음성 채널',
       showHidden: '숨겨진 채널 보기 ({count})',
@@ -647,6 +650,7 @@ const translations: TranslationMap = {
       notifications: '通知设置',
       createCategory: '创建分类',
       channelsTitle: '频道',
+      guestDisabled: '访客模式下此功能不可用。',
       textChannels: '文字频道',
       voiceChannels: '语音频道',
       showHidden: '显示隐藏频道（{count}）',
@@ -845,6 +849,7 @@ const translations: TranslationMap = {
       notifications: '通知設定',
       createCategory: '建立類別',
       channelsTitle: '頻道',
+      guestDisabled: '訪客模式下此功能不可用。',
       textChannels: '文字頻道',
       voiceChannels: '語音頻道',
       showHidden: '顯示隱藏頻道（{count}）',

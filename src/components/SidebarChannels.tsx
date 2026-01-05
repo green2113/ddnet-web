@@ -412,15 +412,17 @@ export default function SidebarChannels({
                     <div className="m-2" style={{ height: '1px', background: 'var(--divider)', opacity: 0.25 }} />
                   </>
                 ) : null}
-                <MenuItem
-                  icon="folder"
-                  label={t.sidebarChannels.createCategory}
-                  bold
-                  onClick={() => {
-                    onCreateCategory?.()
-                    setOpen(false)
-                  }}
-                />
+                {canManage ? (
+                  <MenuItem
+                    icon="folder"
+                    label={t.sidebarChannels.createCategory}
+                    bold
+                    onClick={() => {
+                      onCreateCategory?.()
+                      setOpen(false)
+                    }}
+                  />
+                ) : null}
                 <MenuItem
                   icon="invite"
                   label={t.sidebarChannels.invite}
