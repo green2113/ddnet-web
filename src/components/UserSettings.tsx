@@ -65,7 +65,6 @@ export default function UserSettings({
   const [audioOutputs, setAudioOutputs] = useState<MediaDeviceInfo[]>([])
   const [displayNameDraft, setDisplayNameDraft] = useState('')
   const [isSavingProfile, setIsSavingProfile] = useState(false)
-  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
   const avatarInputRef = useRef<HTMLInputElement | null>(null)
   const [inputDeviceId, setInputDeviceId] = useState(() => {
     if (typeof window === 'undefined') return 'default'
@@ -338,11 +337,9 @@ export default function UserSettings({
                     onChange={async (event) => {
                       const file = event.target.files?.[0]
                       if (!file) return
-                      setIsUploadingAvatar(true)
                       try {
                         await onUploadAvatar(file)
                       } finally {
-                        setIsUploadingAvatar(false)
                         event.target.value = ''
                       }
                     }}
