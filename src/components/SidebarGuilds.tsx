@@ -89,11 +89,10 @@ export default function SidebarGuilds({
           }
         }}
       >
-      {servers.map((server, index) => {
+      {servers.map((server) => {
         const isActive = server.id === activeId
         const isHovering = hoveredId === server.id
         const label = server.name?.slice(0, 2).toUpperCase() || 'SV'
-        const isLast = index === servers.length - 1
         return (
           <div key={server.id} className="relative w-full flex items-center justify-center">
             <span
