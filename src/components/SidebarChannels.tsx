@@ -211,7 +211,7 @@ export default function SidebarChannels({
     return ids
   }
 
-  const renderChannelItem = (channel: TextVoiceChannel, list: Array<{ id: string }>, index: number, groupId: string) => {
+  const renderChannelItem = (channel: TextVoiceChannel, list: Array<{ id: string }>, groupId: string) => {
     const ids = list.map((item) => item.id)
     const members = voiceMembersByChannel[channel.id] || []
     const sortedMembers = members.length > 1 ? sortMembersByName(members) : members
@@ -523,8 +523,8 @@ export default function SidebarChannels({
                 }
               }}
             >
-              {uncategorizedChannels.map((channel, index) =>
-                renderChannelItem(channel, uncategorizedChannels, index, 'uncategorized')
+              {uncategorizedChannels.map((channel) =>
+                renderChannelItem(channel, uncategorizedChannels, 'uncategorized')
               )}
             </div>
           ) : null}
@@ -701,8 +701,8 @@ export default function SidebarChannels({
                     }
                   }}
                 >
-                  {categoryChannels.map((channel, channelIndex) =>
-                    renderChannelItem(channel, categoryChannels, channelIndex, category.id)
+                  {categoryChannels.map((channel) =>
+                    renderChannelItem(channel, categoryChannels, category.id)
                   )}
                 </div>
               </div>
