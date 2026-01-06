@@ -506,11 +506,13 @@ io.use((socket, next) => {
 })
 
 const voiceMembers = new Map()
+const voiceCallStartTimes = new Map()
 
 const emitVoiceMembers = (channelId) => {
   const members = Array.from(voiceMembers.get(channelId)?.values() || [])
-  io.to(`voice:${channelId}`).emit('voice:members', { channelId, members })
-  io.to(`voice:watch:${channelId}`).emit('voice:members', { channelId, members })
+  const startedAt = voiceCallStartTimes.get(channelId) || null
+  io.to(`voice:${channelId}`).emit('voice:members', { channelId, members, startedAt })
+  io.to(`voice:watch:${channelId}`).emit('voice:members', { channelId, members, startedAt })
 }
 
 io.on('connection', (socket) => {
@@ -641,6 +643,9 @@ io.on('connection', (socket) => {
       muted: Boolean(payload?.muted),
       deafened: Boolean(payload?.deafened),
     })
+    if (channelMembers.size === 1) {
+      voiceCallStartTimes.set(channelId, Date.now())
+    }
     socket.join(`voice:${channelId}`)
     emitVoiceMembers(channelId)
   })
@@ -653,6 +658,7 @@ io.on('connection', (socket) => {
       channelMembers.delete(socket.id)
       if (channelMembers.size === 0) {
         voiceMembers.delete(channelId)
+        voiceCallStartTimes.delete(channelId)
       }
       socket.leave(`voice:${channelId}`)
       emitVoiceMembers(channelId)
@@ -701,6 +707,7 @@ io.on('connection', (socket) => {
         members.delete(socket.id)
         if (members.size === 0) {
           voiceMembers.delete(channelId)
+          voiceCallStartTimes.delete(channelId)
         }
         emitVoiceMembers(channelId)
         io.to(`voice:${channelId}`).emit('voice:leave', { channelId, peerId: socket.id })

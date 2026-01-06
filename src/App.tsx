@@ -75,6 +75,7 @@ function App() {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [messageCache, setMessageCache] = useState<MessageCache>({})
   const [voiceMembersByChannel, setVoiceMembersByChannel] = useState<VoiceMembersByChannel>({})
+  const [voiceCallStartByChannel, setVoiceCallStartByChannel] = useState<Record<string, number>>({})
   const [serverMembers, setServerMembers] = useState<ServerMember[]>([])
   const [unreadByChannel, setUnreadByChannel] = useState<UnreadByChannel>({})
   const [loadingMessages, setLoadingMessages] = useState(true)
@@ -832,9 +833,18 @@ function App() {
         return next
       })
     })
-    socket.on('voice:members', (payload: { channelId: string; members: VoiceMember[] }) => {
+    socket.on('voice:members', (payload: { channelId: string; members: VoiceMember[]; startedAt?: number | null }) => {
       if (!payload?.channelId) return
       setVoiceMembersByChannel((prev) => ({ ...prev, [payload.channelId]: payload.members || [] }))
+      setVoiceCallStartByChannel((prev) => {
+        const next = { ...prev }
+        if (payload.startedAt) {
+          next[payload.channelId] = payload.startedAt
+        } else {
+          delete next[payload.channelId]
+        }
+        return next
+      })
     })
     return () => {
       socket.disconnect()
@@ -1365,6 +1375,7 @@ function App() {
               joinedVoiceChannelId={joinedVoiceChannelId}
               serverName={activeServer?.name}
                   voiceMembersByChannel={voiceMembersByChannel}
+                  voiceCallStartByChannel={voiceCallStartByChannel}
                   voiceSpeakingByChannel={voiceSpeakingByChannel}
                   unreadByChannel={unreadByChannel}
                   t={t}
@@ -1636,6 +1647,7 @@ function App() {
               joinedVoiceChannelId={joinedVoiceChannelId}
               serverName={activeServer?.name}
                   voiceMembersByChannel={voiceMembersByChannel}
+                  voiceCallStartByChannel={voiceCallStartByChannel}
                   voiceSpeakingByChannel={voiceSpeakingByChannel}
                   unreadByChannel={unreadByChannel}
                   t={t}

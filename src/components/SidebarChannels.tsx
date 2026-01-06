@@ -29,6 +29,7 @@ export type SidebarChannelsProps = {
   joinedVoiceChannelId?: string
   serverName?: string
   voiceMembersByChannel?: Record<string, VoiceMember[]>
+  voiceCallStartByChannel?: Record<string, number>
   voiceSpeakingByChannel?: Record<string, string[]>
   unreadByChannel?: Record<string, boolean>
   t: UiText
@@ -51,6 +52,7 @@ export default function SidebarChannels({
   joinedVoiceChannelId,
   serverName,
   voiceMembersByChannel = {},
+  voiceCallStartByChannel = {},
   voiceSpeakingByChannel = {},
   unreadByChannel = {},
   t,
@@ -87,6 +89,22 @@ export default function SidebarChannels({
   const dragCategoryIdRef = useRef<string | null>(null)
   const dragOriginOrderRef = useRef<number | null>(null)
   const dragCategoryOriginOrderRef = useRef<number | null>(null)
+  const [nowMs, setNowMs] = useState(() => Date.now())
+
+  const hasActiveVoice = Object.values(voiceCallStartByChannel).some((value) => typeof value === 'number')
+
+  const formatCallDuration = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+    const secs = seconds % 60
+    const mm = String(minutes).padStart(2, '0')
+    const ss = String(secs).padStart(2, '0')
+    if (hours > 0) {
+      const hh = String(hours).padStart(2, '0')
+      return `${hh}:${mm}:${ss}`
+    }
+    return `${mm}:${ss}`
+  }
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
       if (!wrapRef.current) return
@@ -105,6 +123,14 @@ export default function SidebarChannels({
     window.addEventListener('mousedown', closeMenu)
     return () => window.removeEventListener('mousedown', closeMenu)
   }, [])
+
+  useEffect(() => {
+    if (!hasActiveVoice) return
+    const interval = window.setInterval(() => {
+      setNowMs(Date.now())
+    }, 1000)
+    return () => window.clearInterval(interval)
+  }, [hasActiveVoice])
   
   useEffect(() => {
     if (!channelMenu.visible) return
@@ -217,6 +243,9 @@ export default function SidebarChannels({
     const sortedMembers = members.length > 1 ? sortMembersByName(members) : members
     const speakingIds = voiceSpeakingByChannel[channel.id] || []
     const isVoice = channel.type === 'voice'
+    const callStart = voiceCallStartByChannel[channel.id]
+    const callDuration =
+      callStart && members.length > 0 ? formatCallDuration(Math.max(0, Math.floor((nowMs - callStart) / 1000))) : null
     return (
       <div key={channel.id} className={isVoice ? 'space-y-1' : undefined}>
         <div
@@ -346,9 +375,9 @@ export default function SidebarChannels({
           >
             {channel.name}
           </span>
-          {isVoice && members.length > 0 ? (
-            <span className="ml-auto text-[11px]" style={{ color: 'var(--text-muted)' }}>
-              {members.length}
+          {isVoice && callDuration ? (
+            <span className="ml-auto text-[11px] font-semibold" style={{ color: '#22c55e' }}>
+              {callDuration}
             </span>
           ) : null}
           {channel.hidden ? (
