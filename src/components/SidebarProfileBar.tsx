@@ -3,6 +3,7 @@ import UserSettings, { type UserSettingsUser } from './UserSettings'
 import Tooltip from './Tooltip'
 import { HeadsetIcon, MicIcon } from './icons/VoiceIcons'
 import type { UiText } from '../i18n'
+import { playSfx } from '../sfx'
 
 type SidebarProfileBarProps = {
   user: UserSettingsUser | null
@@ -128,9 +129,11 @@ export default function SidebarProfileBar({
                 style={{ color: micMuted ? '#f87171' : 'var(--text-primary)' }}
                 onClick={() => {
                   if (micMuted) {
+                    playSfx('micOn')
                     const nextHeadsetMuted = headsetMuted ? false : headsetMuted
                     applyMuteState(false, nextHeadsetMuted)
                   } else {
+                    playSfx('micOff')
                     applyMuteState(true, headsetMuted)
                   }
                 }}
@@ -146,8 +149,10 @@ export default function SidebarProfileBar({
                 style={{ color: headsetMuted ? '#f87171' : 'var(--text-primary)' }}
                 onClick={() => {
                   if (headsetMuted) {
+                    playSfx('headsetOn')
                     applyMuteState(micBeforeDeafenRef.current, false)
                   } else {
+                    playSfx('headsetOff')
                     micBeforeDeafenRef.current = micMuted
                     applyMuteState(true, true)
                   }

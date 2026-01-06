@@ -95,6 +95,7 @@ function App() {
   const [isDark, setIsDark] = useState(true)
   const [authReady, setAuthReady] = useState(false)
   const [menu, setMenu] = useState<{ visible: boolean; x: number; y: number; message: ChatMessage | null; imageUrl?: string | null }>({ visible: false, x: 0, y: 0, message: null, imageUrl: null })
+  const menuSizeRef = useRef({ width: 220, height: 140 })
   const [showMobileChannels, setShowMobileChannels] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showUserSettings, setShowUserSettings] = useState(false)
@@ -466,8 +467,9 @@ function App() {
     if (!authReady || !user) return
     if (servers.length > 0) return
     if (location.pathname === '/channels/@me' || location.pathname.startsWith('/channels/@me/')) return
+    if (routeServerId && location.pathname.startsWith('/channels/')) return
     navigate('/channels/@me', { replace: true })
-  }, [authReady, user, servers.length, navigate, location.pathname])
+  }, [authReady, user, servers.length, navigate, location.pathname, routeServerId])
 
   useEffect(() => {
     if (!activeServerId) return
@@ -615,6 +617,16 @@ function App() {
   }, [])
 
   useEffect(() => {
+    if (!menu.visible) return
+    const panel = document.getElementById('context-menu-panel')
+    if (!panel) return
+    const rect = panel.getBoundingClientRect()
+    if (rect.width && rect.height) {
+      menuSizeRef.current = { width: rect.width, height: rect.height }
+    }
+  }, [menu.visible, menu.message, menu.imageUrl])
+
+  useEffect(() => {
     if (!joinedVoiceChannelId) {
       setIsScreenSharing(false)
     }
@@ -697,7 +709,16 @@ function App() {
   useEffect(() => {
     const handler = (e: any) => {
       const { x, y, message, imageUrl } = e.detail || {}
-      setMenu({ visible: true, x, y, message, imageUrl: imageUrl || null })
+      const canDelete = Boolean(user && message && (message.author?.id === user.id || adminIds.includes(user.id)))
+      const itemCount = 1 + (imageUrl ? 2 : 0) + (canDelete ? 1 : 0)
+      const itemHeight = 34
+      const padding = 16
+      const width = Math.max(menuSizeRef.current.width, 180)
+      const height = Math.max(menuSizeRef.current.height, padding + itemCount * itemHeight)
+      const margin = 12
+      const nextX = Math.min(Math.max(x, margin), Math.max(margin, window.innerWidth - width - margin))
+      const nextY = Math.min(Math.max(y, margin), Math.max(margin, window.innerHeight - height - margin))
+      setMenu({ visible: true, x: nextX, y: nextY, message, imageUrl: imageUrl || null })
     }
     const closer = () => setMenu((m) => ({ ...m, visible: false, imageUrl: null }))
     window.addEventListener('open-msg-menu', handler as any)
@@ -706,7 +727,7 @@ function App() {
       window.removeEventListener('open-msg-menu', handler as any)
       window.removeEventListener('click', closer)
     }
-  }, [])
+  }, [adminIds, user])
 
   useEffect(() => {
     const socket = io(serverBase, {
@@ -1430,7 +1451,7 @@ function App() {
                         aria-label={t.sidebarChannels.guestDisabled}
                         aria-disabled
                         className="h-8 w-8 rounded-md grid place-items-center"
-                        style={{ color: '#64748b', cursor: 'not-allowed' }}
+                        style={{ color: 'rgba(255,255,255,0.35)', cursor: 'not-allowed' }}
                         onClick={() => {}}
                       >
                         <ScreenShareIcon size={16} />
@@ -1443,7 +1464,7 @@ function App() {
                         aria-label={isScreenSharing ? t.voice.stopShare : t.voice.screenShare}
                         aria-pressed={isScreenSharing}
                         className="h-8 w-8 rounded-md grid place-items-center hover-surface cursor-pointer"
-                        style={{ color: isScreenSharing ? '#38bdf8' : '#cbd5e1' }}
+                        style={{ color: '#ffffff' }}
                         onClick={() => window.dispatchEvent(new CustomEvent('voice-screen-share-toggle'))}
                       >
                         <ScreenShareIcon size={16} />
@@ -1683,7 +1704,7 @@ function App() {
                             aria-label={t.sidebarChannels.guestDisabled}
                             aria-disabled
                             className="h-8 w-8 rounded-md grid place-items-center"
-                            style={{ color: '#64748b', cursor: 'not-allowed' }}
+                            style={{ color: 'rgba(255,255,255,0.35)', cursor: 'not-allowed' }}
                             onClick={() => {}}
                           >
                             <ScreenShareIcon size={16} />
@@ -1696,7 +1717,7 @@ function App() {
                             aria-label={isScreenSharing ? t.voice.stopShare : t.voice.screenShare}
                             aria-pressed={isScreenSharing}
                             className="h-8 w-8 rounded-md grid place-items-center hover-surface cursor-pointer"
-                            style={{ color: isScreenSharing ? '#38bdf8' : '#cbd5e1' }}
+                            style={{ color: '#ffffff' }}
                             onClick={() => window.dispatchEvent(new CustomEvent('voice-screen-share-toggle'))}
                           >
                             <ScreenShareIcon size={16} />
@@ -1880,8 +1901,15 @@ function App() {
                     }}
                   />
                   <div
+                    id="context-menu-panel"
                     className="fixed z-50 min-w-[180px] rounded-md p-2 text-sm pointer-events-auto"
-                    style={{ top: menu.y, left: menu.x, background: 'var(--header-bg)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                    style={{
+                      top: menu.y,
+                      left: menu.x,
+                      background: 'var(--header-bg)',
+                      border: '1px solid var(--border)',
+                      color: 'var(--text-primary)',
+                    }}
                     onClick={(e) => e.stopPropagation()}
                   >
                     {menu.imageUrl ? (

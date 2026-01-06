@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import type { Socket } from 'socket.io-client'
 import { formatText, type UiText } from '../i18n'
 import { HeadsetIcon, MicIcon } from './icons/VoiceIcons'
+import { playSfx } from '../sfx'
 
 type User = {
   id: string
@@ -104,6 +105,12 @@ export default function VoicePanel({
   const [screenShareAvailable, setScreenShareAvailable] = useState<string[]>([])
   const [focusedShareId, setFocusedShareId] = useState<string | null>(null)
   const [hideFocusedCursor, setHideFocusedCursor] = useState(false)
+  const [showScreenShareSettings, setShowScreenShareSettings] = useState(false)
+  const [screenShareAudioMuted, setScreenShareAudioMuted] = useState(false)
+  const [screenShareResolution, setScreenShareResolution] = useState<'720p' | '1080p' | '1440p'>('1080p')
+  const [screenShareFrameRate, setScreenShareFrameRate] = useState<15 | 30 | 60>(30)
+  const [screenShareSubmenu, setScreenShareSubmenu] = useState<'resolution' | 'frameRate' | null>(null)
+  const prevJoinedRef = useRef(false)
   const forcedHeadsetRef = useRef(false)
   const micBeforeForceRef = useRef(false)
   const headsetBeforeForceRef = useRef(false)
@@ -114,6 +121,7 @@ export default function VoicePanel({
   const screenShareViewersRef = useRef<Set<string>>(new Set())
   const localShareIdRef = useRef<string | null>(null)
   const hideCursorTimerRef = useRef<number | null>(null)
+  const screenShareSettingsRef = useRef<HTMLDivElement | null>(null)
   const micContextRef = useRef<AudioContext | null>(null)
   const micGainRef = useRef<GainNode | null>(null)
   const micDestinationRef = useRef<MediaStreamAudioDestinationNode | null>(null)
@@ -371,6 +379,7 @@ export default function VoicePanel({
 
   const attachScreenShareStream = (stream: MediaStream) => {
     screenShareStreamRef.current = stream
+    stream.addEventListener('inactive', stopScreenShare)
     const track = stream.getVideoTracks()[0]
     if (track) {
       track.onended = () => {
@@ -422,12 +431,27 @@ export default function VoicePanel({
     setShowScreenSharePicker(false)
     setScreenShareSources([])
     try {
+      const resolution =
+        screenShareResolution === '720p'
+          ? { width: 1280, height: 720 }
+          : screenShareResolution === '1440p'
+            ? { width: 2560, height: 1440 }
+            : { width: 1920, height: 1080 }
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: false,
+        audio: screenShareAudioMuted
+          ? false
+          : ({
+              mandatory: {
+                chromeMediaSource: 'desktop',
+              },
+            } as any),
         video: {
           mandatory: {
             chromeMediaSource: 'desktop',
             chromeMediaSourceId: sourceId,
+            maxWidth: resolution.width,
+            maxHeight: resolution.height,
+            maxFrameRate: screenShareFrameRate,
           },
         },
       } as any)
@@ -458,10 +482,14 @@ export default function VoicePanel({
     const peer = peersRef.current.get(peerId)
     if (!peer) return
     if (screenShareSendersRef.current.has(peerId)) return
-    const track = stream.getVideoTracks()[0]
-    if (!track) return
-    const sender = peer.addTrack(track, stream)
+    const videoTrack = stream.getVideoTracks()[0]
+    if (!videoTrack) return
+    const sender = peer.addTrack(videoTrack, stream)
     screenShareSendersRef.current.set(peerId, sender)
+    const audioTrack = stream.getAudioTracks()[0]
+    if (audioTrack && !screenShareAudioMuted) {
+      peer.addTrack(audioTrack, stream)
+    }
     await renegotiatePeer(peerId)
   }
 
@@ -474,7 +502,20 @@ export default function VoicePanel({
       return
     }
     try {
-      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false })
+      const resolution =
+        screenShareResolution === '720p'
+          ? { width: 1280, height: 720 }
+          : screenShareResolution === '1440p'
+            ? { width: 2560, height: 1440 }
+            : { width: 1920, height: 1080 }
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          width: { ideal: resolution.width },
+          height: { ideal: resolution.height },
+          frameRate: { ideal: screenShareFrameRate, max: screenShareFrameRate },
+        },
+        audio: !screenShareAudioMuted,
+      })
       attachScreenShareStream(stream)
     } catch (error) {
       window.dispatchEvent(new CustomEvent('voice-screen-share-error', { detail: 'failed' }))
@@ -667,6 +708,25 @@ export default function VoicePanel({
   }, [channelId, joined, socket, user])
 
   useEffect(() => {
+    if (!showScreenShareSettings) return
+    const handleClick = (event: MouseEvent) => {
+      if (screenShareSettingsRef.current?.contains(event.target as Node)) return
+      setShowScreenShareSettings(false)
+      setScreenShareSubmenu(null)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [showScreenShareSettings])
+
+  useEffect(() => {
+    const stream = screenShareStreamRef.current
+    if (!stream) return
+    stream.getAudioTracks().forEach((track) => {
+      track.enabled = !screenShareAudioMuted
+    })
+  }, [screenShareAudioMuted])
+
+  useEffect(() => {
     onJoinStateChange?.(channelId, joined)
   }, [channelId, joined, onJoinStateChange])
 
@@ -701,6 +761,16 @@ export default function VoicePanel({
     if (!stream) return
     startSpeakingMonitor(socket.id, stream, micSensitivity)
   }, [joined, micSensitivity, socket?.id])
+
+  useEffect(() => {
+    if (!prevJoinedRef.current && joined) {
+      playSfx('voiceJoin')
+    }
+    if (prevJoinedRef.current && !joined) {
+      playSfx('voiceLeave')
+    }
+    prevJoinedRef.current = joined
+  }, [joined])
 
   useEffect(() => {
     if (hideCursorTimerRef.current) {
@@ -833,10 +903,19 @@ export default function VoicePanel({
                   setSelectedScreenSourceName('')
                 }}
               />
-              <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                onMouseDown={() => {
+                  setShowScreenSharePicker(false)
+                  setScreenShareSources([])
+                  setSelectedScreenSourceId(null)
+                  setSelectedScreenSourceName('')
+                }}
+              >
                 <div
                   className="w-full max-w-3xl rounded-2xl p-6 modal-panel"
-                  style={{ background: 'var(--header-bg)', border: '1px solid var(--border)' }}
+                  style={{ background: 'var(--header-bg)', border: '1px solid var(--border)', position: 'relative' }}
+                  onMouseDown={(event) => event.stopPropagation()}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div>
@@ -849,7 +928,7 @@ export default function VoicePanel({
                     </div>
                     <button
                       type="button"
-                      className="h-9 w-9 rounded-full grid place-items-center hover-surface"
+                      className="screen-share-close grid place-items-center"
                       aria-label={t.voice.screenShareSelectCancel}
                       onClick={() => {
                         setShowScreenSharePicker(false)
@@ -858,7 +937,7 @@ export default function VoicePanel({
                         setSelectedScreenSourceName('')
                       }}
                     >
-                      <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden>
+                      <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden>
                         <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                       </svg>
                     </button>
@@ -892,6 +971,100 @@ export default function VoicePanel({
                     <div className="text-sm truncate" style={{ color: 'var(--text-muted)' }}>
                       {selectedScreenSourceName || t.voice.screenShareSelectNone}
                     </div>
+                  </div>
+                  <div className="screen-share-settings-wrap" ref={screenShareSettingsRef}>
+                    <button
+                      type="button"
+                      className="screen-share-settings-button"
+                      aria-label={t.voice.screenShareSettings}
+                      onClick={() => setShowScreenShareSettings((prev) => !prev)}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                        <path d="M19.14 12.936c.03-.308.046-.62.046-.936s-.016-.628-.046-.936l2.036-1.58a.5.5 0 0 0 .12-.64l-1.928-3.34a.5.5 0 0 0-.6-.22l-2.4.96a7.94 7.94 0 0 0-1.62-.936l-.36-2.54a.5.5 0 0 0-.5-.42h-3.856a.5.5 0 0 0-.5.42l-.36 2.54a7.94 7.94 0 0 0-1.62.936l-2.4-.96a.5.5 0 0 0-.6.22l-1.928 3.34a.5.5 0 0 0 .12.64l2.036 1.58c-.03.308-.046.62-.046.936s.016.628.046.936l-2.036 1.58a.5.5 0 0 0-.12.64l1.928 3.34a.5.5 0 0 0 .6.22l2.4-.96c.5.39 1.04.712 1.62.936l.36 2.54a.5.5 0 0 0 .5.42h3.856a.5.5 0 0 0 .5-.42l.36-2.54c.58-.224 1.12-.546 1.62-.936l2.4.96a.5.5 0 0 0 .6-.22l1.928-3.34a.5.5 0 0 0-.12-.64l-2.036-1.58ZM12 15.5A3.5 3.5 0 1 1 15.5 12 3.5 3.5 0 0 1 12 15.5Z" />
+                      </svg>
+                    </button>
+                    {showScreenShareSettings ? (
+                      <div
+                        className="screen-share-settings-menu"
+                        onMouseLeave={() => setScreenShareSubmenu(null)}
+                      >
+                        <div
+                          className="screen-share-settings-row"
+                          onMouseEnter={() => setScreenShareSubmenu('resolution')}
+                        >
+                          <div className="screen-share-settings-item">
+                            <span>{t.voice.screenShareResolution}</span>
+                            <span className="screen-share-settings-current">{screenShareResolution}</span>
+                            <span className="screen-share-settings-arrow">›</span>
+                          </div>
+                        {screenShareSubmenu === 'resolution' ? (
+                          <div className="screen-share-submenu-wrap">
+                            <div className="screen-share-submenu">
+                              {(['720p', '1080p', '1440p'] as const).map((value) => (
+                                <button
+                                  key={value}
+                                  type="button"
+                                  className={`screen-share-submenu-item${
+                                    screenShareResolution === value ? ' is-active' : ''
+                                  }`}
+                                  onClick={() => {
+                                    setScreenShareResolution(value)
+                                    setScreenShareSubmenu(null)
+                                  }}
+                                >
+                                  {value}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
+                        </div>
+                        <div
+                          className="screen-share-settings-row"
+                          onMouseEnter={() => setScreenShareSubmenu('frameRate')}
+                        >
+                          <div className="screen-share-settings-item">
+                            <span>{t.voice.screenShareFrameRate}</span>
+                            <span className="screen-share-settings-current">{screenShareFrameRate}fps</span>
+                            <span className="screen-share-settings-arrow">›</span>
+                          </div>
+                        {screenShareSubmenu === 'frameRate' ? (
+                          <div className="screen-share-submenu-wrap">
+                            <div className="screen-share-submenu">
+                              {[15, 30, 60].map((value) => (
+                                <button
+                                  key={value}
+                                  type="button"
+                                  className={`screen-share-submenu-item${
+                                    screenShareFrameRate === value ? ' is-active' : ''
+                                  }`}
+                                  onClick={() => {
+                                    setScreenShareFrameRate(value as 15 | 30 | 60)
+                                    setScreenShareSubmenu(null)
+                                  }}
+                                >
+                                  {value}fps
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
+                        </div>
+                        <div className="screen-share-settings-divider" />
+                        <label
+                          className="screen-share-settings-toggle"
+                          onMouseEnter={() => setScreenShareSubmenu(null)}
+                        >
+                          <span>{t.voice.screenShareMuteAudio}</span>
+                          <input
+                            type="checkbox"
+                            checked={screenShareAudioMuted}
+                            onChange={(event) => setScreenShareAudioMuted(event.target.checked)}
+                          />
+                          <span className="screen-share-settings-check" />
+                        </label>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               </div>

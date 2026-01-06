@@ -74,6 +74,7 @@ export default function SidebarChannels({
     y: 0,
     channel: null,
   })
+  const channelMenuSizeRef = useRef({ width: 200, height: 140 })
   const [dragOverId, setDragOverId] = useState<string | null>(null)
   const [dragOverPos, setDragOverPos] = useState<'above' | 'below' | null>(null)
   const [categoryDragOverId, setCategoryDragOverId] = useState<string | null>(null)
@@ -85,6 +86,8 @@ export default function SidebarChannels({
   const dragIdRef = useRef<string | null>(null)
   const dragGroupRef = useRef<string | null>(null)
   const dragCategoryIdRef = useRef<string | null>(null)
+  const dragOriginOrderRef = useRef<number | null>(null)
+  const dragCategoryOriginOrderRef = useRef<number | null>(null)
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
       if (!wrapRef.current) return
@@ -103,6 +106,16 @@ export default function SidebarChannels({
     window.addEventListener('mousedown', closeMenu)
     return () => window.removeEventListener('mousedown', closeMenu)
   }, [])
+  
+  useEffect(() => {
+    if (!channelMenu.visible) return
+    const panel = document.getElementById('channel-context-menu')
+    if (!panel) return
+    const rect = panel.getBoundingClientRect()
+    if (rect.width && rect.height) {
+      channelMenuSizeRef.current = { width: rect.width, height: rect.height }
+    }
+  }, [channelMenu.visible, channelMenu.channel])
 
   useEffect(() => {
     if (!open) {
@@ -141,6 +154,24 @@ export default function SidebarChannels({
   const uncategorizedChannels = visibleChannels
     .filter((channel): channel is TextVoiceChannel => isTextOrVoice(channel) && !channel.categoryId)
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+  const categoryChannelMap = new Map<string, TextVoiceChannel[]>()
+  categories.forEach((category) => {
+    const categoryChannels = visibleChannels
+      .filter((channel): channel is TextVoiceChannel => isTextOrVoice(channel) && channel.categoryId === category.id)
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+    categoryChannelMap.set(category.id, categoryChannels)
+  })
+  const orderedKeys: string[] = []
+  uncategorizedChannels.forEach((channel) => orderedKeys.push(`ch:${channel.id}`))
+  categories.forEach((category) => {
+    orderedKeys.push(`cat:${category.id}`)
+    const categoryChannels = categoryChannelMap.get(category.id) || []
+    categoryChannels.forEach((channel) => orderedKeys.push(`ch:${channel.id}`))
+  })
+  const orderIndexMap = new Map<string, number>()
+  orderedKeys.forEach((key, index) => {
+    orderIndexMap.set(key, index)
+  })
 
   const computeReorder = (sourceIds: string[], draggedId: string, targetId: string, position: 'above' | 'below') => {
     if (!draggedId || !targetId || draggedId === targetId) return null
@@ -219,6 +250,7 @@ export default function SidebarChannels({
             if (!canManage) return
             dragIdRef.current = channel.id
             dragGroupRef.current = groupId
+            dragOriginOrderRef.current = orderIndexMap.get(`ch:${channel.id}`) ?? null
             setDragOverId(null)
             setDragOverPos(null)
             setChannelDropCategoryId(null)
@@ -230,9 +262,12 @@ export default function SidebarChannels({
           onDragEnd={() => {
             dragIdRef.current = null
             dragGroupRef.current = null
+            dragOriginOrderRef.current = null
             setDragOverId(null)
             setDragOverPos(null)
             setChannelDropCategoryId(null)
+            setCategoryDragOverId(null)
+            setCategoryDragOverPos(null)
           }}
           onDragOver={(e) => {
             if (!canManage || !dragIdRef.current) return
@@ -240,9 +275,10 @@ export default function SidebarChannels({
             if (e.dataTransfer) {
               e.dataTransfer.dropEffect = 'move'
             }
-            const fromIndex = ids.indexOf(dragIdRef.current)
-            const toIndex = ids.indexOf(channel.id)
-            const position = fromIndex !== -1 && toIndex !== -1 && fromIndex < toIndex ? 'below' : 'above'
+            const originIndex = dragOriginOrderRef.current
+            const targetIndex = orderIndexMap.get(`ch:${channel.id}`)
+            if (originIndex === null || targetIndex === undefined) return
+            const position = targetIndex < originIndex ? 'above' : 'below'
             const nextOrder = computeReorderWithInsert(ids, dragIdRef.current, channel.id, position)
             setDragOverId(nextOrder ? channel.id : null)
             setDragOverPos(nextOrder ? position : null)
@@ -256,9 +292,10 @@ export default function SidebarChannels({
             setDragOverId(null)
             setDragOverPos(null)
             if (!draggedId || draggedId === channel.id) return
-            const fromIndex = ids.indexOf(draggedId)
-            const toIndex = ids.indexOf(channel.id)
-            const position = fromIndex !== -1 && toIndex !== -1 && fromIndex < toIndex ? 'below' : 'above'
+            const originIndex = dragOriginOrderRef.current
+            const targetIndex = orderIndexMap.get(`ch:${channel.id}`)
+            if (originIndex === null || targetIndex === undefined) return
+            const position = targetIndex < originIndex ? 'above' : 'below'
             const nextOrder = computeReorderWithInsert(ids, draggedId, channel.id, position)
             if (!nextOrder) return
             onReorderChannels?.(nextOrder, groupId === 'uncategorized' ? null : groupId)
@@ -272,7 +309,12 @@ export default function SidebarChannels({
             if (!canManage) return
             e.preventDefault()
             setOpen(false)
-            setChannelMenu({ visible: true, x: e.clientX, y: e.clientY, channel: channel })
+            const width = Math.max(channelMenuSizeRef.current.width, 180)
+            const height = Math.max(channelMenuSizeRef.current.height, 120)
+            const margin = 12
+            const nextX = Math.min(Math.max(e.clientX, margin), Math.max(margin, window.innerWidth - width - margin))
+            const nextY = Math.min(Math.max(e.clientY, margin), Math.max(margin, window.innerHeight - height - margin))
+            setChannelMenu({ visible: true, x: nextX, y: nextY, channel: channel })
           }}
         >
           {canManage && dragOverId === channel.id && dragOverPos ? (
@@ -464,9 +506,27 @@ export default function SidebarChannels({
               : formatText(t.sidebarChannels.showHidden, { count: hiddenChannelsCount })}
           </button>
         ) : null}
-        <div className="space-y-4">
+          <div
+            className="space-y-4"
+            onDragOver={(event) => {
+              if (!canManage || !dragIdRef.current) return
+              event.preventDefault()
+              if (event.dataTransfer) {
+                event.dataTransfer.dropEffect = 'move'
+              }
+            }}
+          >
           {uncategorizedChannels.length > 0 ? (
-            <div className="space-y-1">
+            <div
+              className="space-y-1"
+              onDragOver={(event) => {
+                if (!canManage || !dragIdRef.current) return
+                event.preventDefault()
+                if (event.dataTransfer) {
+                  event.dataTransfer.dropEffect = 'move'
+                }
+              }}
+            >
               {uncategorizedChannels.map((channel, index) =>
                 renderChannelItem(channel, uncategorizedChannels, index, 'uncategorized')
               )}
@@ -478,6 +538,7 @@ export default function SidebarChannels({
               .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
             const categoryIds = categories.map((item) => item.id)
             const isLast = index === categories.length - 1
+            const prevCategoryId = index > 0 ? categories[index - 1].id : null
             return (
               <div key={category.id} className="space-y-1">
                 <div className="relative">
@@ -500,14 +561,19 @@ export default function SidebarChannels({
                     className="px-2 py-1 rounded-md cursor-pointer uppercase tracking-wide text-[11px] flex items-center justify-between gap-2"
                     style={{
                       color: 'var(--text-muted)',
-                      background: channelDropCategoryId === category.id ? 'color-mix(in oklch, var(--accent) 14%, transparent)' : 'transparent',
+                      background: 'transparent',
                     }}
                     draggable={canManage}
                     onContextMenu={(event) => {
                       if (!canManage) return
                       event.preventDefault()
                       setOpen(false)
-                      setChannelMenu({ visible: true, x: event.clientX, y: event.clientY, channel: category })
+                      const width = Math.max(channelMenuSizeRef.current.width, 180)
+                      const height = Math.max(channelMenuSizeRef.current.height, 120)
+                      const margin = 12
+                      const nextX = Math.min(Math.max(event.clientX, margin), Math.max(margin, window.innerWidth - width - margin))
+                      const nextY = Math.min(Math.max(event.clientY, margin), Math.max(margin, window.innerHeight - height - margin))
+                      setChannelMenu({ visible: true, x: nextX, y: nextY, channel: category })
                     }}
                     onDoubleClick={() => {
                       if (!canManage) return
@@ -518,6 +584,7 @@ export default function SidebarChannels({
                     onDragStart={(event) => {
                       if (!canManage) return
                       dragCategoryIdRef.current = category.id
+                      dragCategoryOriginOrderRef.current = orderIndexMap.get(`cat:${category.id}`) ?? null
                       setCategoryDragOverId(null)
                       setCategoryDragOverPos(null)
                       if (event.dataTransfer) {
@@ -527,6 +594,7 @@ export default function SidebarChannels({
                     }}
                     onDragEnd={() => {
                       dragCategoryIdRef.current = null
+                      dragCategoryOriginOrderRef.current = null
                       setCategoryDragOverId(null)
                       setCategoryDragOverPos(null)
                     }}
@@ -538,7 +606,10 @@ export default function SidebarChannels({
                         if (event.dataTransfer) {
                           event.dataTransfer.dropEffect = 'move'
                         }
-                        const position = isLast ? 'below' : 'above'
+                        const originIndex = dragCategoryOriginOrderRef.current
+                        const targetIndex = orderIndexMap.get(`cat:${category.id}`)
+                        if (originIndex === null || targetIndex === undefined) return
+                        const position = targetIndex < originIndex ? 'above' : 'below'
                         const nextOrder = computeReorder(categoryIds, dragCategoryIdRef.current, category.id, position)
                         setCategoryDragOverId(nextOrder ? category.id : null)
                         setCategoryDragOverPos(nextOrder ? position : null)
@@ -549,30 +620,57 @@ export default function SidebarChannels({
                       if (event.dataTransfer) {
                         event.dataTransfer.dropEffect = 'move'
                       }
+                      const originIndex = dragOriginOrderRef.current
+                      const targetIndex = orderIndexMap.get(`cat:${category.id}`)
+                      if (originIndex === null || targetIndex === undefined) return
+                      const position = targetIndex < originIndex ? 'above' : 'below'
                       setChannelDropCategoryId(category.id)
+                      setCategoryDragOverId(category.id)
+                      setCategoryDragOverPos(position)
                     }}
                     onDrop={(event) => {
                       event.preventDefault()
                       setChannelDropCategoryId(null)
+                      setCategoryDragOverId(null)
+                      setCategoryDragOverPos(null)
                       if (dragCategoryIdRef.current) {
                         const draggedId = dragCategoryIdRef.current || event.dataTransfer?.getData('text/plain')
+                        const originIndex = dragCategoryOriginOrderRef.current
                         dragCategoryIdRef.current = null
                         setCategoryDragOverId(null)
                         setCategoryDragOverPos(null)
                         if (!draggedId || draggedId === category.id) return
-                        const position = isLast ? 'below' : 'above'
+                        const targetIndex = orderIndexMap.get(`cat:${category.id}`)
+                        if (originIndex === null || targetIndex === undefined) return
+                        const position = targetIndex < originIndex ? 'above' : 'below'
                         const nextOrder = computeReorder(categoryIds, draggedId, category.id, position)
                         if (!nextOrder) return
                         onReorderCategories?.(nextOrder)
+                        dragCategoryOriginOrderRef.current = null
                         return
                       }
                       if (!dragIdRef.current) return
                       const draggedId = dragIdRef.current
                       dragIdRef.current = null
                       dragGroupRef.current = null
-                      const ids = categoryChannels.map((item) => item.id)
-                      const nextOrder = ids.includes(draggedId) ? ids : [...ids, draggedId]
-                      onReorderChannels?.(nextOrder, category.id)
+                      const position = categoryDragOverPos ?? 'below'
+                      const targetCategoryId = position === 'below' ? category.id : prevCategoryId
+                      const targetChannels =
+                        targetCategoryId === null
+                          ? uncategorizedChannels
+                          : visibleChannels
+                              .filter(
+                                (channel): channel is TextVoiceChannel =>
+                                  isTextOrVoice(channel) && channel.categoryId === targetCategoryId
+                              )
+                              .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+                      const filtered = targetChannels.map((item) => item.id).filter((id) => id !== draggedId)
+                      if (filtered.length === 0) {
+                        onReorderChannels?.([draggedId], targetCategoryId)
+                        return
+                      }
+                      const nextOrder = position === 'below' ? [draggedId, ...filtered] : [...filtered, draggedId]
+                      onReorderChannels?.(nextOrder, targetCategoryId)
                     }}
                     onDragLeave={() => {
                       if (!canManage) return
@@ -601,7 +699,16 @@ export default function SidebarChannels({
                     ) : null}
                   </div>
                 </div>
-                <div className="space-y-1">
+                <div
+                  className="space-y-1"
+                  onDragOver={(event) => {
+                    if (!canManage || !dragIdRef.current) return
+                    event.preventDefault()
+                    if (event.dataTransfer) {
+                      event.dataTransfer.dropEffect = 'move'
+                    }
+                  }}
+                >
                   {categoryChannels.map((channel, channelIndex) =>
                     renderChannelItem(channel, categoryChannels, channelIndex, category.id)
                   )}
@@ -623,8 +730,15 @@ export default function SidebarChannels({
                 }}
               />
               <div
+                id="channel-context-menu"
                 className="fixed z-50 min-w-[180px] rounded-md p-2 text-sm pointer-events-auto"
-                style={{ top: channelMenu.y, left: channelMenu.x, background: 'var(--header-bg)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                style={{
+                  top: channelMenu.y,
+                  left: channelMenu.x,
+                  background: 'var(--header-bg)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--text-primary)',
+                }}
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={(e) => e.stopPropagation()}
               >
@@ -661,6 +775,16 @@ export default function SidebarChannels({
                   }}
                 >
                   {t.sidebarChannels.channelDelete}
+                </button>
+                <div className="my-2 mx-2" style={{ height: '1px', background: 'var(--divider)', opacity: 0.6 }} />
+                <button
+                  className="w-full text-left px-3 py-2 hover-surface cursor-pointer"
+                  onClick={() => {
+                    navigator.clipboard.writeText(channelMenu.channel!.id)
+                    setChannelMenu({ visible: false, x: 0, y: 0, channel: null })
+                  }}
+                >
+                  채널 ID 복사하기
                 </button>
               </div>
             </>,
