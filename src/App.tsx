@@ -105,6 +105,12 @@ function App() {
   const [authReady, setAuthReady] = useState(false)
   const [menu, setMenu] = useState<{ visible: boolean; x: number; y: number; message: ChatMessage | null; imageUrl?: string | null }>({ visible: false, x: 0, y: 0, message: null, imageUrl: null })
   const menuSizeRef = useRef({ width: 220, height: 140 })
+  const [memberMenu, setMemberMenu] = useState<{ visible: boolean; x: number; y: number; member: ServerMember | null }>({
+    visible: false,
+    x: 0,
+    y: 0,
+    member: null,
+  })
   const [showMobileChannels, setShowMobileChannels] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showUserSettings, setShowUserSettings] = useState(false)
@@ -747,7 +753,9 @@ function App() {
       const width = Math.max(menuSizeRef.current.width, 180)
       const height = Math.max(menuSizeRef.current.height, padding + itemCount * itemHeight)
       const margin = 12
-      const nextX = Math.min(Math.max(x, margin), Math.max(margin, window.innerWidth - width - margin))
+      const prefersLeft = x + width + margin > window.innerWidth
+      const rawX = prefersLeft ? x - width : x
+      const nextX = Math.min(Math.max(rawX, margin), Math.max(margin, window.innerWidth - width - margin))
       const nextY = Math.min(Math.max(y, margin), Math.max(margin, window.innerHeight - height - margin))
       setMenu({ visible: true, x: nextX, y: nextY, message, imageUrl: imageUrl || null })
     }
@@ -1943,7 +1951,21 @@ function App() {
                 </div>
                 <div className="mt-3 space-y-2">
                   {serverMembers.map((member) => (
-                    <div key={member.id} className="flex items-center gap-2">
+                    <div
+                      key={member.id}
+                      className="flex items-center gap-2 rounded-md px-2 py-1 hover-surface cursor-pointer"
+                      onContextMenu={(event) => {
+                        event.preventDefault()
+                        const width = 180
+                        const height = 70
+                        const margin = 12
+                        const prefersLeft = event.clientX + width + margin > window.innerWidth
+                        const rawX = prefersLeft ? event.clientX - width : event.clientX
+                        const nextX = Math.min(Math.max(rawX, margin), Math.max(margin, window.innerWidth - width - margin))
+                        const nextY = Math.min(Math.max(event.clientY, margin), Math.max(margin, window.innerHeight - height - margin))
+                        setMemberMenu({ visible: true, x: nextX, y: nextY, member })
+                      }}
+                    >
                       <div
                         className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center"
                         style={{ background: 'var(--panel)' }}
@@ -2032,6 +2054,42 @@ function App() {
                         {t.app.deleteMessage}
                       </button>
                     )}
+                  </div>
+                </>,
+                document.getElementById('overlay-root') || document.body
+              )
+            : null}
+          {memberMenu.visible && memberMenu.member
+            ? createPortal(
+                <>
+                  <div
+                    className="fixed inset-0 z-40 pointer-events-auto"
+                    onMouseDown={() => setMemberMenu({ visible: false, x: 0, y: 0, member: null })}
+                    onContextMenu={(e) => {
+                      e.preventDefault()
+                      setMemberMenu({ visible: false, x: 0, y: 0, member: null })
+                    }}
+                  />
+                  <div
+                    className="fixed z-50 min-w-[180px] rounded-md p-2 text-sm pointer-events-auto"
+                    style={{
+                      top: memberMenu.y,
+                      left: memberMenu.x,
+                      background: 'var(--header-bg)',
+                      border: '1px solid var(--border)',
+                      color: 'var(--text-primary)',
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      className="w-full text-left px-3 py-2 hover-surface cursor-pointer"
+                      onClick={() => {
+                        navigator.clipboard.writeText(memberMenu.member!.id)
+                        setMemberMenu({ visible: false, x: 0, y: 0, member: null })
+                      }}
+                    >
+                      {t.app.copyUserId}
+                    </button>
                   </div>
                 </>,
                 document.getElementById('overlay-root') || document.body

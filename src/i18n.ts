@@ -16,6 +16,7 @@ export type UiText = {
     copyMessage: string
     copyImage: string
     saveImage: string
+    copyUserId: string
     deleteMessage: string
     someone: string
   }
@@ -227,6 +228,7 @@ const translations: TranslationMap = {
       copyMessage: 'Copy message',
       copyImage: 'Copy image',
       saveImage: 'Save image',
+      copyUserId: 'Copy user ID',
       deleteMessage: 'Delete message',
       someone: 'Someone',
     },
@@ -436,6 +438,7 @@ const translations: TranslationMap = {
       copyMessage: '메시지 복사',
       copyImage: '이미지 복사',
       saveImage: '이미지 저장',
+      copyUserId: '유저 ID 복사하기',
       deleteMessage: '메시지 삭제',
       someone: '누군가',
     },
@@ -645,6 +648,7 @@ const translations: TranslationMap = {
       copyMessage: '复制消息',
       copyImage: '复制图片',
       saveImage: '保存图片',
+      copyUserId: '复制用户 ID',
       deleteMessage: '删除消息',
       someone: '某人',
     },
@@ -854,6 +858,7 @@ const translations: TranslationMap = {
       copyMessage: '複製訊息',
       copyImage: '複製圖片',
       saveImage: '儲存圖片',
+      copyUserId: '複製使用者 ID',
       deleteMessage: '刪除訊息',
       someone: '某人',
     },
