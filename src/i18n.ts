@@ -140,6 +140,12 @@ export type UiText = {
     subtitleVoice: string
     subtitleLanguage: string
     nickname: string
+    displayNameLabel: string
+    displayNamePlaceholder: string
+    saveChanges: string
+    saving: string
+    changeAvatar: string
+    uploadingAvatar: string
     profileHint: string
     guestMode: string
     online: string
@@ -345,6 +351,12 @@ const translations: TranslationMap = {
       subtitleVoice: 'Adjust mic sensitivity and voice input.',
       subtitleLanguage: 'Choose the language to display.',
       nickname: 'Nickname',
+      displayNameLabel: 'Display name',
+      displayNamePlaceholder: 'Enter a display name',
+      saveChanges: 'Save changes',
+      saving: 'Saving…',
+      changeAvatar: 'Change avatar',
+      uploadingAvatar: 'Uploading…',
       profileHint: 'You can review your profile photo and info in settings.',
       guestMode: 'Guest mode',
       online: 'Online',
@@ -548,6 +560,12 @@ const translations: TranslationMap = {
       subtitleVoice: '마이크 민감도와 음성 입력을 조정하세요.',
       subtitleLanguage: '표시할 언어를 선택하세요.',
       nickname: '닉네임',
+      displayNameLabel: '디스플레이 이름',
+      displayNamePlaceholder: '디스플레이 이름을 입력하세요',
+      saveChanges: '변경 저장',
+      saving: '저장 중...',
+      changeAvatar: '프로필 사진 변경',
+      uploadingAvatar: '업로드 중...',
       profileHint: '설정 화면에서 프로필 사진과 정보를 확인할 수 있습니다.',
       guestMode: '게스트 모드',
       online: '온라인',
@@ -751,6 +769,12 @@ const translations: TranslationMap = {
       subtitleVoice: '调整麦克风灵敏度与语音输入。',
       subtitleLanguage: '选择要显示的语言。',
       nickname: '昵称',
+      displayNameLabel: '显示名称',
+      displayNamePlaceholder: '输入显示名称',
+      saveChanges: '保存更改',
+      saving: '保存中…',
+      changeAvatar: '更换头像',
+      uploadingAvatar: '上传中…',
       profileHint: '你可以在设置中查看头像与资料信息。',
       guestMode: '访客模式',
       online: '在线',
@@ -954,6 +978,12 @@ const translations: TranslationMap = {
       subtitleVoice: '調整麥克風敏感度與語輸入。',
       subtitleLanguage: '選擇要顯示的語言。',
       nickname: '暱稱',
+      displayNameLabel: '顯示名稱',
+      displayNamePlaceholder: '輸入顯示名稱',
+      saveChanges: '儲存變更',
+      saving: '儲存中…',
+      changeAvatar: '更換頭像',
+      uploadingAvatar: '上傳中…',
       profileHint: '你可以在設定中查看頭像與個人資訊。',
       guestMode: '訪客模式',
       online: '線上',

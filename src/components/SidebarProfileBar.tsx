@@ -26,6 +26,8 @@ type SidebarProfileBarProps = {
   isTestingMic: boolean
   onToggleMicTest: () => void
   micTestError: string
+  onUpdateProfile: (displayName: string) => Promise<void>
+  onUploadAvatar: (file: File) => Promise<void>
   renderSettings?: boolean
   hasVoicePanel?: boolean
 }
@@ -51,6 +53,8 @@ export default function SidebarProfileBar({
   isTestingMic,
   onToggleMicTest,
   micTestError,
+  onUpdateProfile,
+  onUploadAvatar,
   renderSettings = true,
   hasVoicePanel = false,
 }: SidebarProfileBarProps) {
@@ -196,6 +200,8 @@ export default function SidebarProfileBar({
           isTestingMic={isTestingMic}
           onToggleMicTest={onToggleMicTest}
           micTestError={micTestError}
+          onUpdateProfile={onUpdateProfile}
+          onUploadAvatar={onUploadAvatar}
         />
       ) : null}
     </>

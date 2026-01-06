@@ -1500,16 +1500,33 @@ function App() {
             onLanguageChange={setLanguage}
             micSensitivity={micSensitivity}
             onMicSensitivityChange={setMicSensitivity}
-              noiseSuppressionMode={noiseSuppressionMode}
-              onNoiseSuppressionModeChange={setNoiseSuppressionMode}
-              micLevelPercent={dbToPercent(micLevel)}
-              micLevelLabel={micLevel}
-              micSensitivityPercent={dbToPercent(micSensitivity)}
-              isTestingMic={isTestingMic}
-              onToggleMicTest={() => setIsTestingMic((prev) => !prev)}
-              micTestError={micTestError}
-              hasVoicePanel={!!voiceSidebarChannel}
-            />
+            noiseSuppressionMode={noiseSuppressionMode}
+            onNoiseSuppressionModeChange={setNoiseSuppressionMode}
+            micLevelPercent={dbToPercent(micLevel)}
+            micLevelLabel={micLevel}
+            micSensitivityPercent={dbToPercent(micSensitivity)}
+            isTestingMic={isTestingMic}
+            onToggleMicTest={() => setIsTestingMic((prev) => !prev)}
+            micTestError={micTestError}
+            hasVoicePanel={!!voiceSidebarChannel}
+            onUpdateProfile={async (displayName) => {
+              const res = await axios.patch(
+                `${serverBase}/api/users/me`,
+                { displayName },
+                { withCredentials: true },
+              )
+              setUser(res.data || null)
+            }}
+            onUploadAvatar={async (file) => {
+              const form = new FormData()
+              form.append('avatar', file)
+              const res = await axios.post(`${serverBase}/api/users/me/avatar`, form, {
+                withCredentials: true,
+                headers: { 'Content-Type': 'multipart/form-data' },
+              })
+              setUser(res.data || null)
+            }}
+          />
           </div>
         </div>
         <div className="flex-1 flex min-w-0 relative">
@@ -1763,6 +1780,23 @@ function App() {
                 micTestError={micTestError}
                 renderSettings={false}
                 hasVoicePanel={!!voiceSidebarChannel}
+                onUpdateProfile={async (displayName) => {
+                  const res = await axios.patch(
+                    `${serverBase}/api/users/me`,
+                    { displayName },
+                    { withCredentials: true },
+                  )
+                  setUser(res.data || null)
+                }}
+                onUploadAvatar={async (file) => {
+                  const form = new FormData()
+                  form.append('avatar', file)
+                  const res = await axios.post(`${serverBase}/api/users/me/avatar`, form, {
+                    withCredentials: true,
+                    headers: { 'Content-Type': 'multipart/form-data' },
+                  })
+                  setUser(res.data || null)
+                }}
               />
             </div>
           </div>

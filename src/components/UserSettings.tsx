@@ -30,6 +30,8 @@ type UserSettingsProps = {
   isTestingMic: boolean
   onToggleMicTest: () => void
   micTestError: string
+  onUpdateProfile: (displayName: string) => Promise<void>
+  onUploadAvatar: (file: File) => Promise<void>
 }
 
 export default function UserSettings({
@@ -52,12 +54,18 @@ export default function UserSettings({
   isTestingMic,
   onToggleMicTest,
   micTestError,
+  onUpdateProfile,
+  onUploadAvatar,
 }: UserSettingsProps) {
   const [isVisible, setIsVisible] = useState(showUserSettings)
   const [isClosing, setIsClosing] = useState(false)
   const closeTimerRef = useRef<number | null>(null)
   const [audioInputs, setAudioInputs] = useState<MediaDeviceInfo[]>([])
   const [audioOutputs, setAudioOutputs] = useState<MediaDeviceInfo[]>([])
+  const [displayNameDraft, setDisplayNameDraft] = useState('')
+  const [isSavingProfile, setIsSavingProfile] = useState(false)
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
+  const avatarInputRef = useRef<HTMLInputElement | null>(null)
   const [inputDeviceId, setInputDeviceId] = useState(() => {
     if (typeof window === 'undefined') return 'default'
     return window.localStorage.getItem('voice-input-device') || 'default'
@@ -94,6 +102,10 @@ export default function UserSettings({
     },
     []
   )
+
+  useEffect(() => {
+    setDisplayNameDraft(user?.displayName || user?.username || '')
+  }, [user?.displayName, user?.username])
 
   useEffect(() => {
     if (typeof navigator === 'undefined' || !navigator.mediaDevices?.enumerateDevices) return
@@ -230,18 +242,88 @@ export default function UserSettings({
             {settingsTab === 'profile' ? (
               <div className="rounded-xl p-6" style={{ background: 'var(--panel)' }}>
                 <div className="flex items-center gap-5">
-                  <div className="w-20 h-20 rounded-full overflow-hidden flex items-center justify-center" style={{ background: 'var(--input-bg)' }}>
+                  <button
+                    type="button"
+                    className="w-20 h-20 rounded-full overflow-hidden flex items-center justify-center"
+                    style={{ background: 'var(--input-bg)' }}
+                    onClick={() => {
+                      if (user?.isGuest) return
+                      avatarInputRef.current?.click()
+                    }}
+                    disabled={user?.isGuest}
+                  >
                     {user?.avatar ? (
                       <img src={user.avatar} alt={user.displayName || user.username} className="w-full h-full object-cover" />
                     ) : (
                       <span className="text-2xl font-semibold">{(user?.displayName || user?.username || 'G').slice(0, 1)}</span>
                     )}
-                  </div>
+                  </button>
                   <div>
                     <div className="text-sm opacity-70">{t.userSettings.nickname}</div>
                     <div className="text-lg font-semibold">{displayName}</div>
                     <div className="text-xs opacity-60 mt-1">{t.userSettings.profileHint}</div>
                   </div>
+                </div>
+                <div className="mt-6 space-y-3">
+                  <div className="text-sm font-semibold">{t.userSettings.displayNameLabel}</div>
+                  <input
+                    value={displayNameDraft}
+                    onChange={(event) => setDisplayNameDraft(event.target.value)}
+                    placeholder={t.userSettings.displayNamePlaceholder}
+                    className="w-full h-10 rounded-md px-3 text-sm"
+                    style={{ background: 'var(--input-bg)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
+                    disabled={user?.isGuest}
+                  />
+                  <div className="flex items-center justify-between">
+                    <button
+                      type="button"
+                      className="h-9 px-4 rounded-md text-sm font-semibold hover-surface"
+                      style={{ background: 'var(--accent)', color: '#1f1f1f' }}
+                      onClick={async () => {
+                        if (user?.isGuest) return
+                        const next = displayNameDraft.trim()
+                        if (!next) return
+                        setIsSavingProfile(true)
+                        try {
+                          await onUpdateProfile(next)
+                        } finally {
+                          setIsSavingProfile(false)
+                        }
+                      }}
+                      disabled={user?.isGuest || isSavingProfile}
+                    >
+                      {isSavingProfile ? t.userSettings.saving : t.userSettings.saveChanges}
+                    </button>
+                    <button
+                      type="button"
+                      className="h-9 px-4 rounded-md text-sm font-semibold hover-surface"
+                      style={{ border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                      onClick={() => {
+                        if (user?.isGuest) return
+                        avatarInputRef.current?.click()
+                      }}
+                      disabled={user?.isGuest || isUploadingAvatar}
+                    >
+                      {isUploadingAvatar ? t.userSettings.uploadingAvatar : t.userSettings.changeAvatar}
+                    </button>
+                  </div>
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    className="hidden"
+                    onChange={async (event) => {
+                      const file = event.target.files?.[0]
+                      if (!file) return
+                      setIsUploadingAvatar(true)
+                      try {
+                        await onUploadAvatar(file)
+                      } finally {
+                        setIsUploadingAvatar(false)
+                        event.target.value = ''
+                      }
+                    }}
+                  />
                 </div>
               </div>
             ) : settingsTab === 'voice' ? (
