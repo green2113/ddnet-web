@@ -19,6 +19,27 @@ export type UiText = {
     copyUserId: string
     deleteMessage: string
     someone: string
+    serverActionTitle: string
+    serverActionTitleCreate: string
+    serverActionTitleJoin: string
+    serverActionSelectDescription: string
+    serverActionCreateDescription: string
+    serverActionJoinDescription: string
+    serverActionNameHint: string
+    serverActionNameLabel: string
+    serverActionBack: string
+    serverActionCreateButton: string
+    serverActionJoinInstruction: string
+    serverActionJoinPlaceholder: string
+    serverActionJoinButton: string
+    serverActionJoinLoading: string
+    serverActionCreateFailed: string
+    serverActionJoinFailed: string
+    serverActionJoinMissing: string
+    serverActionJoinInvalid: string
+    serverActionJoinExpired: string
+    inviteLinkLoading: string
+    inviteLinkFailed: string
   }
   header: {
     channelListAria: string
@@ -231,6 +252,27 @@ const translations: TranslationMap = {
       copyUserId: 'Copy user ID',
       deleteMessage: 'Delete message',
       someone: 'Someone',
+      serverActionTitle: 'Server',
+      serverActionTitleCreate: 'Create server',
+      serverActionTitleJoin: 'Join server',
+      serverActionSelectDescription: 'Create a server or join one with an invite.',
+      serverActionCreateDescription: 'Create a server and invite your friends.',
+      serverActionJoinDescription: 'Join with an invite link or code.',
+      serverActionNameHint: 'You can change the server name anytime.',
+      serverActionNameLabel: 'Server name',
+      serverActionBack: 'Back',
+      serverActionCreateButton: 'Create',
+      serverActionJoinInstruction: 'Enter an invite link or code.',
+      serverActionJoinPlaceholder: 'Paste an invite link or code.',
+      serverActionJoinButton: 'Join',
+      serverActionJoinLoading: 'Joining...',
+      serverActionCreateFailed: 'Failed to create the server.',
+      serverActionJoinFailed: 'Unable to join the server.',
+      serverActionJoinMissing: 'Please enter an invite link or code.',
+      serverActionJoinInvalid: 'That invite link is invalid.',
+      serverActionJoinExpired: 'That invite link has expired.',
+      inviteLinkLoading: 'Creating link...',
+      inviteLinkFailed: 'Failed to create an invite link.',
     },
     header: {
       channelListAria: 'Channel list',
@@ -441,6 +483,27 @@ const translations: TranslationMap = {
       copyUserId: '유저 ID 복사하기',
       deleteMessage: '메시지 삭제',
       someone: '누군가',
+      serverActionTitle: '서버',
+      serverActionTitleCreate: '서버 만들기',
+      serverActionTitleJoin: '서버 들어가기',
+      serverActionSelectDescription: '서버를 직접 만들거나 초대 링크로 참여할 수 있어요.',
+      serverActionCreateDescription: '서버를 생성하고 친구들을 초대해 보세요.',
+      serverActionJoinDescription: '초대 링크나 코드를 입력해서 참여해요.',
+      serverActionNameHint: '서버 이름은 언제든지 변경할 수 있어요.',
+      serverActionNameLabel: '서버 이름',
+      serverActionBack: '뒤로',
+      serverActionCreateButton: '만들기',
+      serverActionJoinInstruction: '초대 링크 또는 코드를 입력해 주세요.',
+      serverActionJoinPlaceholder: '초대 링크 또는 코드를 넣어주세요.',
+      serverActionJoinButton: '입장하기',
+      serverActionJoinLoading: '입장 중...',
+      serverActionCreateFailed: '서버 생성에 실패했습니다.',
+      serverActionJoinFailed: '서버에 참가할 수 없습니다.',
+      serverActionJoinMissing: '초대 링크 또는 코드를 입력해 주세요.',
+      serverActionJoinInvalid: '유효하지 않은 초대 링크입니다.',
+      serverActionJoinExpired: '만료된 초대 링크입니다.',
+      inviteLinkLoading: '링크 만드는 중...',
+      inviteLinkFailed: '초대 링크를 생성하지 못했어요.',
     },
     header: {
       channelListAria: '채널 목록',
@@ -651,6 +714,27 @@ const translations: TranslationMap = {
       copyUserId: '复制用户 ID',
       deleteMessage: '删除消息',
       someone: '某人',
+      serverActionTitle: '服务器',
+      serverActionTitleCreate: '创建服务器',
+      serverActionTitleJoin: '加入服务器',
+      serverActionSelectDescription: '创建服务器或通过邀请链接加入。',
+      serverActionCreateDescription: '创建服务器并邀请朋友加入。',
+      serverActionJoinDescription: '通过邀请链接或代码加入。',
+      serverActionNameHint: '服务器名称可随时更改。',
+      serverActionNameLabel: '服务器名称',
+      serverActionBack: '返回',
+      serverActionCreateButton: '创建',
+      serverActionJoinInstruction: '请输入邀请链接或代码。',
+      serverActionJoinPlaceholder: '粘贴邀请链接或代码。',
+      serverActionJoinButton: '加入',
+      serverActionJoinLoading: '正在加入...',
+      serverActionCreateFailed: '创建服务器失败。',
+      serverActionJoinFailed: '无法加入服务器。',
+      serverActionJoinMissing: '请输入邀请链接或代码。',
+      serverActionJoinInvalid: '邀请链接无效。',
+      serverActionJoinExpired: '邀请链接已过期。',
+      inviteLinkLoading: '正在生成链接...',
+      inviteLinkFailed: '无法生成邀请链接。',
     },
     header: {
       channelListAria: '频道列表',
@@ -861,6 +945,27 @@ const translations: TranslationMap = {
       copyUserId: '複製使用者 ID',
       deleteMessage: '刪除訊息',
       someone: '某人',
+      serverActionTitle: '伺服器',
+      serverActionTitleCreate: '建立伺服器',
+      serverActionTitleJoin: '加入伺服器',
+      serverActionSelectDescription: '建立伺服器或透過邀請連結加入。',
+      serverActionCreateDescription: '建立伺服器並邀請朋友加入。',
+      serverActionJoinDescription: '透過邀請連結或代碼加入。',
+      serverActionNameHint: '伺服器名稱可隨時更改。',
+      serverActionNameLabel: '伺服器名稱',
+      serverActionBack: '返回',
+      serverActionCreateButton: '建立',
+      serverActionJoinInstruction: '請輸入邀請連結或代碼。',
+      serverActionJoinPlaceholder: '貼上邀請連結或代碼。',
+      serverActionJoinButton: '加入',
+      serverActionJoinLoading: '正在加入...',
+      serverActionCreateFailed: '建立伺服器失敗。',
+      serverActionJoinFailed: '無法加入伺服器。',
+      serverActionJoinMissing: '請輸入邀請連結或代碼。',
+      serverActionJoinInvalid: '邀請連結無效。',
+      serverActionJoinExpired: '邀請連結已過期。',
+      inviteLinkLoading: '正在產生連結...',
+      inviteLinkFailed: '無法產生邀請連結。',
     },
     header: {
       channelListAria: '頻道清單',

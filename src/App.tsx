@@ -1172,7 +1172,7 @@ function App() {
     }
     const code = parseInviteCode(joinInviteInput)
     if (!code) {
-      setJoinInviteError('초대 링크 또는 코드를 입력해 주세요.')
+      setJoinInviteError(t.app.serverActionJoinMissing)
       return
     }
     setJoinInviteError('')
@@ -1189,13 +1189,13 @@ function App() {
     } catch (e: any) {
       const status = e?.response?.status
       if (status === 404) {
-        setJoinInviteError('유효하지 않은 초대 링크입니다.')
+        setJoinInviteError(t.app.serverActionJoinInvalid)
       } else if (status === 410) {
-        setJoinInviteError('만료된 초대 링크입니다.')
+        setJoinInviteError(t.app.serverActionJoinExpired)
       } else if (status === 401) {
         setJoinInviteError('로그인이 필요합니다.')
       } else {
-        setJoinInviteError('서버에 참가할 수 없습니다.')
+        setJoinInviteError(t.app.serverActionJoinFailed)
       }
     } finally {
       setJoinInviteLoading(false)
@@ -1235,10 +1235,10 @@ function App() {
       if (url) {
         setInviteUrl(url)
       } else {
-        setInviteError('초대 링크를 만들지 못했어요.')
+        setInviteError(t.app.inviteLinkFailed)
       }
     } catch {
-      setInviteError('초대 링크를 만들지 못했어요.')
+      setInviteError(t.app.inviteLinkFailed)
     } finally {
       setInviteLoading(false)
     }
@@ -2323,7 +2323,11 @@ function App() {
                       </button>
                     ) : null}
                     <div className="text-xl font-semibold">
-                      {serverActionStep === 'create' ? '서버 만들기' : serverActionStep === 'join' ? '서버 들어가기' : '서버'}
+                      {serverActionStep === 'create'
+                        ? t.app.serverActionTitleCreate
+                        : serverActionStep === 'join'
+                          ? t.app.serverActionTitleJoin
+                          : t.app.serverActionTitle}
                     </div>
                   </div>
                   <button
@@ -2353,7 +2357,7 @@ function App() {
                   >
                     <div className="w-full shrink-0">
                       <div className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>
-                        서버를 직접 만들거나 초대 링크로 참여할 수 있어요.
+                        {t.app.serverActionSelectDescription}
                       </div>
                       <div className="grid gap-3">
                         {user?.isGuest ? (
@@ -2376,9 +2380,9 @@ function App() {
                               onClick={() => {}}
                             >
                               <div>
-                                <div className="text-[15px] font-semibold">서버 만들기</div>
+                                <div className="text-[15px] font-semibold">{t.app.serverActionTitleCreate}</div>
                                 <div className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-                                  서버를 생성하고 친구들을 초대해 보세요.
+                                  {t.app.serverActionCreateDescription}
                                 </div>
                               </div>
                               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -2406,9 +2410,9 @@ function App() {
                             }}
                           >
                             <div>
-                              <div className="text-[15px] font-semibold">서버 만들기</div>
+                              <div className="text-[15px] font-semibold">{t.app.serverActionTitleCreate}</div>
                               <div className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-                                서버를 생성하고 친구들을 초대해 보세요.
+                                {t.app.serverActionCreateDescription}
                               </div>
                             </div>
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -2429,9 +2433,9 @@ function App() {
                           onClick={() => openJoinServerModal()}
                         >
                           <div>
-                            <div className="text-[15px] font-semibold">서버 들어가기</div>
+                            <div className="text-[15px] font-semibold">{t.app.serverActionTitleJoin}</div>
                             <div className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-                              초대 링크나 코드를 입력해서 참여해요.
+                              {t.app.serverActionJoinDescription}
                             </div>
                           </div>
                           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -2442,9 +2446,9 @@ function App() {
                     </div>
                     <div className="w-full shrink-0">
                       <div className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>
-                        서버 이름은 언제든지 변경할 수 있어요.
+                        {t.app.serverActionNameHint}
                       </div>
-                      <div className="text-[15px] font-semibold mb-2">서버 이름</div>
+                      <div className="text-[15px] font-semibold mb-2">{t.app.serverActionNameLabel}</div>
                       <div className="flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: 'var(--panel)', border: '1px solid var(--border)' }}>
                         <input
                           value={createServerName}
@@ -2461,7 +2465,7 @@ function App() {
                           style={{ background: 'rgba(127,127,127,0.2)', color: 'var(--text-primary)' }}
                           onClick={() => setServerActionStep('select')}
                         >
-                          뒤로
+                          {t.app.serverActionBack}
                         </button>
                         <button
                           type="button"
@@ -2487,18 +2491,18 @@ function App() {
                               }
                               closeServerAction()
                             } catch {
-                              window.alert('서버 생성에 실패했습니다.')
+                              window.alert(t.app.serverActionCreateFailed)
                             }
                           }}
                           disabled={!createServerName.trim()}
                         >
-                          만들기
+                          {t.app.serverActionCreateButton}
                         </button>
                       </div>
                     </div>
                     <div className="w-full shrink-0">
                       <div className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>
-                        초대 링크 또는 코드를 입력해 주세요.
+                        {t.app.serverActionJoinInstruction}
                       </div>
                       <div className="flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: 'var(--panel)', border: '1px solid var(--border)' }}>
                         <input
@@ -2507,7 +2511,7 @@ function App() {
                             setJoinInviteInput(event.target.value)
                             if (joinInviteError) setJoinInviteError('')
                           }}
-                          placeholder="초대 링크 또는 코드를 넣어주세요."
+                          placeholder={t.app.serverActionJoinPlaceholder}
                           className="flex-1 bg-transparent outline-none text-sm"
                           style={{ color: 'var(--text-primary)' }}
                         />
@@ -2524,7 +2528,7 @@ function App() {
                           style={{ background: 'rgba(127,127,127,0.2)', color: 'var(--text-primary)' }}
                           onClick={() => setServerActionStep('select')}
                         >
-                          뒤로
+                          {t.app.serverActionBack}
                         </button>
                         <button
                           type="button"
@@ -2533,7 +2537,7 @@ function App() {
                           onClick={handleJoinServer}
                           disabled={!joinInviteInput.trim() || joinInviteLoading}
                         >
-                          {joinInviteLoading ? '입장 중...' : '입장하기'}
+                          {joinInviteLoading ? t.app.serverActionJoinLoading : t.app.serverActionJoinButton}
                         </button>
                       </div>
                     </div>
@@ -2575,7 +2579,7 @@ function App() {
                     readOnly
                     className="flex-1 bg-transparent outline-none text-sm"
                     style={{ color: 'var(--text-primary)' }}
-                    placeholder={inviteLoading ? '링크 만드는 중...' : '초대 링크를 생성하지 못했어요.'}
+                    placeholder={inviteLoading ? t.app.inviteLinkLoading : t.app.inviteLinkFailed}
                   />
                   <button
                     type="button"
