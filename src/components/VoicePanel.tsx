@@ -122,6 +122,7 @@ export default function VoicePanel({
   const localShareIdRef = useRef<string | null>(null)
   const hideCursorTimerRef = useRef<number | null>(null)
   const screenShareSettingsRef = useRef<HTMLDivElement | null>(null)
+  const prevMemberIdsRef = useRef<Set<string>>(new Set())
   const micContextRef = useRef<AudioContext | null>(null)
   const micGainRef = useRef<GainNode | null>(null)
   const micDestinationRef = useRef<MediaStreamAudioDestinationNode | null>(null)
@@ -745,6 +746,35 @@ export default function VoicePanel({
     }
     onSpeakingChange?.(channelId, speakingIds)
   }, [channelId, joined, onSpeakingChange, speakingIds])
+
+  useEffect(() => {
+    if (!joined) {
+      prevMemberIdsRef.current = new Set()
+      return
+    }
+    const currentIds = new Set(members.map((member) => member.id))
+    const previousIds = prevMemberIdsRef.current
+    const selfId = socket?.id
+    let hasOtherJoin = false
+    let hasOtherLeave = false
+    currentIds.forEach((id) => {
+      if (!previousIds.has(id) && id !== selfId) {
+        hasOtherJoin = true
+      }
+    })
+    previousIds.forEach((id) => {
+      if (!currentIds.has(id) && id !== selfId) {
+        hasOtherLeave = true
+      }
+    })
+    if (hasOtherJoin) {
+      playSfx('voiceJoinOther')
+    }
+    if (hasOtherLeave) {
+      playSfx('voiceLeaveOther')
+    }
+    prevMemberIdsRef.current = currentIds
+  }, [joined, members, socket?.id])
 
   useEffect(() => {
     if (!socket) return

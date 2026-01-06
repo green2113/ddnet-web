@@ -1,4 +1,4 @@
-type SfxName = 'micOn' | 'micOff' | 'headsetOn' | 'headsetOff' | 'voiceJoin' | 'voiceLeave'
+type SfxName = 'micOn' | 'micOff' | 'headsetOn' | 'headsetOff' | 'voiceJoin' | 'voiceJoinOther' | 'voiceLeave' | 'voiceLeaveOther'
 
 type Tone = {
   freq: number
@@ -48,9 +48,17 @@ const sfxMap: Record<SfxName, Tone[]> = {
     { freq: 520, duration: 0.12, gain: 0.07, type: 'sine', offset: 0 },
     { freq: 760, duration: 0.14, gain: 0.07, type: 'sine', offset: 0.06 },
   ],
+  voiceJoinOther: [
+    { freq: 680, duration: 0.1, gain: 0.06, type: 'triangle', offset: 0 },
+    { freq: 980, duration: 0.12, gain: 0.06, type: 'triangle', offset: 0.05 },
+  ],
   voiceLeave: [
     { freq: 760, duration: 0.12, gain: 0.07, type: 'sine', offset: 0 },
     { freq: 520, duration: 0.14, gain: 0.07, type: 'sine', offset: 0.06 },
+  ],
+  voiceLeaveOther: [
+    { freq: 520, duration: 0.1, gain: 0.06, type: 'triangle', offset: 0 },
+    { freq: 320, duration: 0.12, gain: 0.06, type: 'triangle', offset: 0.05 },
   ],
 }
 

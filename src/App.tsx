@@ -1315,13 +1315,6 @@ function App() {
                       className="w-full text-left px-3 py-2 rounded-md"
                       style={{ color: 'var(--text-muted)' }}
                     >
-                      친구
-                    </button>
-                    <button
-                      type="button"
-                      className="w-full text-left px-3 py-2 rounded-md"
-                      style={{ color: 'var(--text-muted)' }}
-                    >
                       메시지 요청
                     </button>
                   </div>
@@ -1835,20 +1828,7 @@ function App() {
                     <span className="text-sm" style={{ color: 'var(--text-muted)' }}>대화 찾기 또는 시작하기</span>
                   </div>
                 </div>
-                <div className="px-6 py-4 flex-1 overflow-y-auto space-y-3">
-                  {['Ari', 'B51', 'bigbeuro', 'chowondori', 'fwanny'].map((name) => (
-                    <div key={name} className="flex items-center justify-between rounded-xl px-4 py-3 hover-surface cursor-pointer" style={{ background: 'var(--panel)', border: '1px solid var(--border)' }}>
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-9 h-9 rounded-full" style={{ background: 'var(--input-bg)' }} />
-                        <div className="min-w-0">
-                          <div className="text-sm font-semibold truncate">{name}</div>
-                          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>온라인</div>
-                        </div>
-                      </div>
-                      <button className="h-8 w-8 rounded-full cursor-pointer hover-surface" style={{ background: 'var(--hover-bg)' }}>💬</button>
-                    </div>
-                  ))}
-                </div>
+                
               </div>
               <div className="w-[280px] shrink-0 p-4 space-y-3">
                 <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>현재 활동 중</div>
