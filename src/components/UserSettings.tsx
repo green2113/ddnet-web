@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { UiText } from '../i18n'
+import Tooltip from './Tooltip'
 
 export type UserSettingsUser = {
   id: string
@@ -242,22 +243,56 @@ export default function UserSettings({
             {settingsTab === 'profile' ? (
               <div className="rounded-xl p-6" style={{ background: 'var(--panel)' }}>
                 <div className="flex items-center gap-5">
-                  <button
-                    type="button"
-                    className="w-20 h-20 rounded-full overflow-hidden flex items-center justify-center"
-                    style={{ background: 'var(--input-bg)' }}
-                    onClick={() => {
-                      if (user?.isGuest) return
-                      avatarInputRef.current?.click()
-                    }}
-                    disabled={user?.isGuest}
-                  >
-                    {user?.avatar ? (
-                      <img src={user.avatar} alt={user.displayName || user.username} className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-2xl font-semibold">{(user?.displayName || user?.username || 'G').slice(0, 1)}</span>
-                    )}
-                  </button>
+                  {user?.isGuest ? (
+                    <Tooltip label={t.sidebarChannels.guestDisabled} side="top" offsetY={12}>
+                      <button
+                        type="button"
+                        className="w-20 h-20 rounded-full overflow-hidden flex items-center justify-center avatar-edit avatar-edit-disabled"
+                        style={{ background: 'var(--input-bg)' }}
+                        aria-disabled
+                        onClick={() => {}}
+                      >
+                        {user?.avatar ? (
+                          <img src={user.avatar} alt={user.displayName || user.username} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-2xl font-semibold">{(user?.displayName || user?.username || 'G').slice(0, 1)}</span>
+                        )}
+                        <span className="avatar-edit-label avatar-edit-label-disabled">
+                          <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden>
+                            <path
+                              d="M2.5 18.2V22h3.8l11.7-11.7-3.8-3.8L2.5 18.2Zm3.1 2.1H5v-.6l8.7-8.7.6.6-8.7 8.7ZM20.6 7.4c.4-.4.4-1.1 0-1.5l-2.5-2.5c-.4-.4-1.1-.4-1.5 0l-1.7 1.7 4 4 1.7-1.7Z"
+                              fill="currentColor"
+                            />
+                          </svg>
+                          <span className="avatar-edit-text">{t.userSettings.changeAvatar}</span>
+                        </span>
+                      </button>
+                    </Tooltip>
+                  ) : (
+                    <button
+                      type="button"
+                      className="w-20 h-20 rounded-full overflow-hidden flex items-center justify-center avatar-edit"
+                      style={{ background: 'var(--input-bg)' }}
+                      onClick={() => {
+                        avatarInputRef.current?.click()
+                      }}
+                    >
+                      {user?.avatar ? (
+                        <img src={user.avatar} alt={user.displayName || user.username} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-2xl font-semibold">{(user?.displayName || user?.username || 'G').slice(0, 1)}</span>
+                      )}
+                      <span className="avatar-edit-label">
+                        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden>
+                          <path
+                            d="M2.5 18.2V22h3.8l11.7-11.7-3.8-3.8L2.5 18.2Zm3.1 2.1H5v-.6l8.7-8.7.6.6-8.7 8.7ZM20.6 7.4c.4-.4.4-1.1 0-1.5l-2.5-2.5c-.4-.4-1.1-.4-1.5 0l-1.7 1.7 4 4 1.7-1.7Z"
+                            fill="currentColor"
+                          />
+                        </svg>
+                        <span className="avatar-edit-text">{t.userSettings.changeAvatar}</span>
+                      </span>
+                    </button>
+                  )}
                   <div>
                     <div className="text-sm opacity-70">{t.userSettings.nickname}</div>
                     <div className="text-lg font-semibold">{displayName}</div>
@@ -293,18 +328,6 @@ export default function UserSettings({
                       disabled={user?.isGuest || isSavingProfile}
                     >
                       {isSavingProfile ? t.userSettings.saving : t.userSettings.saveChanges}
-                    </button>
-                    <button
-                      type="button"
-                      className="h-9 px-4 rounded-md text-sm font-semibold hover-surface"
-                      style={{ border: '1px solid var(--border)', color: 'var(--text-primary)' }}
-                      onClick={() => {
-                        if (user?.isGuest) return
-                        avatarInputRef.current?.click()
-                      }}
-                      disabled={user?.isGuest || isUploadingAvatar}
-                    >
-                      {isUploadingAvatar ? t.userSettings.uploadingAvatar : t.userSettings.changeAvatar}
                     </button>
                   </div>
                   <input

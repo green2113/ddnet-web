@@ -47,6 +47,14 @@ type VoiceMembersByChannel = Record<string, VoiceMember[]>
 type UnreadByChannel = Record<string, boolean>
 type NoiseSuppressionMode = 'webrtc' | 'off'
 
+type ServerMember = {
+  id: string
+  username: string
+  displayName?: string
+  avatar?: string | null
+  isGuest?: boolean
+}
+
 type Channel = {
   id: string
   name: string
@@ -67,6 +75,7 @@ function App() {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [messageCache, setMessageCache] = useState<MessageCache>({})
   const [voiceMembersByChannel, setVoiceMembersByChannel] = useState<VoiceMembersByChannel>({})
+  const [serverMembers, setServerMembers] = useState<ServerMember[]>([])
   const [unreadByChannel, setUnreadByChannel] = useState<UnreadByChannel>({})
   const [loadingMessages, setLoadingMessages] = useState(true)
   const [loadError, setLoadError] = useState(false)
@@ -483,6 +492,28 @@ function App() {
     fetchChannels(activeServerId)
     fetchAdmins(activeServerId)
   }, [activeServerId, fetchChannels, fetchAdmins])
+
+  useEffect(() => {
+    if (!user || !activeServerId) {
+      setServerMembers([])
+      return
+    }
+    let cancelled = false
+    axios
+      .get(`${serverBase}/api/servers/${activeServerId}/members`, { withCredentials: true })
+      .then((res) => {
+        if (cancelled) return
+        const members = Array.isArray(res.data) ? res.data : []
+        setServerMembers(members.filter((member: ServerMember) => !member.isGuest))
+      })
+      .catch(() => {
+        if (cancelled) return
+        setServerMembers([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [activeServerId, serverBase, user])
 
   useEffect(() => {
     if (voiceSwitchTargetId) {
@@ -1881,27 +1912,58 @@ function App() {
               </div>
             </div>
           ) : isVoiceChannel ? null : (
-            <>
-              <MessageList
-                messages={messages}
-                adminIds={adminIds}
-                loading={loadingMessages}
-                error={loadError}
-                onRetry={() => fetchHistory(activeChannelId)}
-                t={t}
-              />
-              <Composer
-                value={input}
-                onChange={setInput}
-                onSend={sendMessage}
-                onAddAttachment={addAttachment}
-                onRemoveAttachment={removeAttachment}
-                uploading={uploading}
-                attachments={attachments}
-                channelName={activeChannel?.name || 'general'}
-                t={t}
-              />
-            </>
+            <div className="flex-1 min-h-0 flex">
+              <div className="flex-1 min-w-0 flex flex-col">
+                <MessageList
+                  messages={messages}
+                  adminIds={adminIds}
+                  loading={loadingMessages}
+                  error={loadError}
+                  onRetry={() => fetchHistory(activeChannelId)}
+                  t={t}
+                />
+                <Composer
+                  value={input}
+                  onChange={setInput}
+                  onSend={sendMessage}
+                  onAddAttachment={addAttachment}
+                  onRemoveAttachment={removeAttachment}
+                  uploading={uploading}
+                  attachments={attachments}
+                  channelName={activeChannel?.name || 'general'}
+                  t={t}
+                />
+              </div>
+              <aside
+                className="hidden lg:flex flex-col w-64 shrink-0 border-l px-4 py-4"
+                style={{ borderColor: 'var(--border)', background: 'var(--bg-app)' }}
+              >
+                <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                  {t.header.members} - {serverMembers.length}
+                </div>
+                <div className="mt-3 space-y-2">
+                  {serverMembers.map((member) => (
+                    <div key={member.id} className="flex items-center gap-2">
+                      <div
+                        className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center"
+                        style={{ background: 'var(--panel)' }}
+                      >
+                        {member.avatar ? (
+                          <img src={member.avatar} alt={member.username} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-xs font-semibold">
+                            {(member.displayName || member.username || 'U').slice(0, 1)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-sm truncate">{member.displayName || member.username}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </aside>
+            </div>
           )}
           {menu.visible && menu.message
             ? createPortal(

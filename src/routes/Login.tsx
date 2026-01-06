@@ -128,9 +128,8 @@ export default function Login() {
         }
         return
       }
-      const returnTo = localStorage.getItem('return_to') || '/'
       localStorage.removeItem('return_to')
-      navigate(returnTo, { replace: true })
+      navigate('/channels/@me', { replace: true })
     } catch {
       setError(t.login.errorGeneric)
     } finally {
