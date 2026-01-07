@@ -44,6 +44,8 @@ export type SidebarChannelsProps = {
   canManage?: boolean
   onOpenServerSettings?: () => void
   onCreateInvite?: () => void
+  onLeaveServer?: () => void
+  isOwner?: boolean
 }
 
 export default function SidebarChannels({
@@ -67,6 +69,8 @@ export default function SidebarChannels({
   canManage = false,
   onOpenServerSettings,
   onCreateInvite,
+  onLeaveServer,
+  isOwner = false,
 }: SidebarChannelsProps) {
   const [open, setOpen] = useState(false)
   const [showHiddenChannels, setShowHiddenChannels] = useState(false)
@@ -512,6 +516,21 @@ export default function SidebarChannels({
                   }}
                 />
                 <MenuItem icon="bell" label={t.sidebarChannels.notifications} bold />
+                {!isOwner ? (
+                  <>
+                    <div className="m-2" style={{ height: '1px', background: 'var(--divider)', opacity: 0.25 }} />
+                    <MenuItem
+                      icon="leave"
+                      label={t.sidebarChannels.leaveServer}
+                      bold
+                      tone="danger"
+                      onClick={() => {
+                        onLeaveServer?.()
+                        setOpen(false)
+                      }}
+                    />
+                  </>
+                ) : null}
               </div>,
               document.getElementById('overlay-root') || document.body
             )
@@ -847,19 +866,41 @@ function Icon({ name }: { name: string }) {
           />
         </svg>
       )
+    case 'leave':
+      return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+          <path d="M13 4a2 2 0 0 1 2 2v3h-2V6H6v12h7v-3h2v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h7z" />
+          <path d="M15.5 16a1 1 0 0 1-.7-1.7l2.3-2.3-2.3-2.3a1 1 0 1 1 1.4-1.4l4 4-4 4a1 1 0 0 1-.7.3z" />
+          <path d="M10 11h9v2h-9z" />
+        </svg>
+      )
     default:
       return null
   }
 }
 
-function MenuItem({ label, icon, bold, onClick }: { label: string; icon?: string; bold?: boolean; onClick?: () => void }) {
+function MenuItem({
+  label,
+  icon,
+  bold,
+  tone = 'default',
+  onClick,
+}: {
+  label: string
+  icon?: string
+  bold?: boolean
+  tone?: 'default' | 'danger'
+  onClick?: () => void
+}) {
+  const textColor = tone === 'danger' ? '#f87171' : 'var(--text-primary)'
+  const hoverColor = tone === 'danger' ? 'rgba(248,113,113,0.15)' : 'rgba(127,127,127,0.12)'
   return (
     <button
       type="button"
       className={`w-full text-left px-3 py-2 rounded cursor-pointer flex items-center gap-2 ${bold ? 'font-semibold' : ''}`}
-      style={{ background: 'transparent', color: 'var(--text-primary)', transition: 'background-color 150ms ease' }}
+      style={{ background: 'transparent', color: textColor, transition: 'background-color 150ms ease' }}
       onClick={onClick}
-      onMouseEnter={(e) => ((e.currentTarget.style.background as any) = 'rgba(127,127,127,0.12)')}
+      onMouseEnter={(e) => ((e.currentTarget.style.background as any) = hoverColor)}
       onMouseLeave={(e) => ((e.currentTarget.style.background as any) = 'transparent')}
     >
       <span className="truncate flex-1">{label}</span>

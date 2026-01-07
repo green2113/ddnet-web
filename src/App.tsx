@@ -118,6 +118,8 @@ function App() {
   const [showSettings, setShowSettings] = useState(false)
   const [showUserSettings, setShowUserSettings] = useState(false)
   const [showCreateChannel, setShowCreateChannel] = useState(false)
+  const [showLeaveServerConfirm, setShowLeaveServerConfirm] = useState(false)
+  const [leaveServerLoading, setLeaveServerLoading] = useState(false)
   const [createChannelClosing, setCreateChannelClosing] = useState(false)
   const createChannelCloseTimerRef = useRef<number | null>(null)
   const [createChannelType, setCreateChannelType] = useState<'text' | 'voice' | 'category'>('text')
@@ -172,6 +174,7 @@ function App() {
     () => servers.find((server) => server.id === activeServerId) || null,
     [servers, activeServerId]
   )
+  const isServerOwner = Boolean(activeServer?.ownerId && user?.id && activeServer.ownerId === user.id)
   const serverLabel = isMeView ? '메인 메뉴' : (activeServer?.name || '')
   const activeGuildId = isMeView ? '@me' : activeServerId
   const orderedServers = useMemo(() => {
@@ -1257,6 +1260,38 @@ function App() {
     }
   }
 
+  const openLeaveServerModal = () => {
+    if (!activeServerId) return
+    setShowLeaveServerConfirm(true)
+    setLeaveServerLoading(false)
+  }
+
+  const closeLeaveServerModal = () => {
+    if (leaveServerLoading) return
+    setShowLeaveServerConfirm(false)
+  }
+
+  const handleLeaveServerConfirm = async () => {
+    if (!activeServerId) return
+    setLeaveServerLoading(true)
+    try {
+      await axios.delete(`${serverBase}/api/servers/${activeServerId}/leave`, { withCredentials: true })
+      setServerOrder((prev) => prev.filter((id) => id !== activeServerId))
+      const list = await fetchServers()
+      if (Array.isArray(list) && list.length > 0) {
+        setActiveServerId(list[0].id)
+        navigate(`/channels/${list[0].id}`)
+      } else {
+        navigate('/channels/@me')
+      }
+      setShowLeaveServerConfirm(false)
+    } catch {
+      window.alert(t.sidebarChannels.leaveServerFailed)
+    } finally {
+      setLeaveServerLoading(false)
+    }
+  }
+
 
   const closeInviteModal = () => {
     if (inviteClosing) return
@@ -1429,11 +1464,12 @@ function App() {
               activeId={activeChannelId}
               joinedVoiceChannelId={joinedVoiceChannelId}
               serverName={activeServer?.name}
-                  voiceMembersByChannel={voiceMembersByChannel}
-                  voiceCallStartByChannel={voiceCallStartByChannel}
-                  voiceSpeakingByChannel={voiceSpeakingByChannel}
-                  unreadByChannel={unreadByChannel}
-                  t={t}
+              isOwner={isServerOwner}
+              voiceMembersByChannel={voiceMembersByChannel}
+              voiceCallStartByChannel={voiceCallStartByChannel}
+              voiceSpeakingByChannel={voiceSpeakingByChannel}
+              unreadByChannel={unreadByChannel}
+              t={t}
                   onSelect={(channelId) => {
                     handleSelectChannel(channelId)
                   }}
@@ -1465,9 +1501,10 @@ function App() {
                 }
               }}
               onCreateInvite={openInviteModal}
-                  onRenameChannel={(channelId, name) => {
-                    if (!canManageChannels) return
-                    if (!activeServerId) return
+              onLeaveServer={openLeaveServerModal}
+              onRenameChannel={(channelId, name) => {
+                if (!canManageChannels) return
+                if (!activeServerId) return
                     axios
                       .patch(`${serverBase}/api/servers/${activeServerId}/channels/${channelId}/name`, { name }, { withCredentials: true })
                       .then(refreshChannels)
@@ -1501,16 +1538,16 @@ function App() {
                       .then(refreshChannels)
                       .catch(() => {})
                   }}
-                  onReorderCategories={(orderedIds) => {
-                    if (!canManageChannels) return
-                    if (!activeServerId) return
-                    axios
-                      .patch(`${serverBase}/api/servers/${activeServerId}/categories/order`, { orderedIds }, { withCredentials: true })
-                      .then(refreshChannels)
-                      .catch(() => {})
-                  }}
-                  canManage={canManageChannels}
-                />
+              onReorderCategories={(orderedIds) => {
+                if (!canManageChannels) return
+                if (!activeServerId) return
+                axios
+                  .patch(`${serverBase}/api/servers/${activeServerId}/categories/order`, { orderedIds }, { withCredentials: true })
+                  .then(refreshChannels)
+                  .catch(() => {})
+              }}
+              canManage={canManageChannels}
+            />
               )}
             </div>
           </div>
@@ -1701,6 +1738,7 @@ function App() {
               activeId={activeChannelId}
               joinedVoiceChannelId={joinedVoiceChannelId}
               serverName={activeServer?.name}
+              isOwner={isServerOwner}
                   voiceMembersByChannel={voiceMembersByChannel}
                   voiceCallStartByChannel={voiceCallStartByChannel}
                   voiceSpeakingByChannel={voiceSpeakingByChannel}
@@ -1737,6 +1775,7 @@ function App() {
                 }
               }}
               onCreateInvite={openInviteModal}
+              onLeaveServer={openLeaveServerModal}
                   onRenameChannel={(channelId, name) => {
                     if (!canManageChannels) return
                     if (!activeServerId) return
@@ -2656,6 +2695,44 @@ function App() {
                 {inviteError ? (
                   <div className="text-xs mt-3" style={{ color: '#f87171' }}>{inviteError}</div>
                 ) : null}
+              </div>
+            </div>
+          ) : null}
+          {showLeaveServerConfirm ? (
+            <div
+              className="fixed inset-0 z-50 grid place-items-center modal-overlay"
+              style={{ background: 'rgba(0,0,0,0.6)' }}
+              onMouseDown={closeLeaveServerModal}
+            >
+              <div
+                className="w-[520px] max-w-[92vw] rounded-2xl p-6 modal-panel"
+                style={{ background: 'var(--header-bg)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                onMouseDown={(e) => e.stopPropagation()}
+              >
+                <div className="text-lg font-semibold">{t.sidebarChannels.leaveServerTitle}</div>
+                <div className="text-sm mt-2" style={{ color: 'var(--text-muted)' }}>
+                  {t.sidebarChannels.leaveServerPrompt}
+                </div>
+                <div className="mt-6 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    className="px-4 h-10 rounded-md cursor-pointer hover-surface"
+                    style={{ background: 'rgba(127,127,127,0.2)', color: 'var(--text-primary)' }}
+                    onClick={closeLeaveServerModal}
+                    disabled={leaveServerLoading}
+                  >
+                    {t.sidebarChannels.leaveServerCancel}
+                  </button>
+                  <button
+                    type="button"
+                    className="px-4 h-10 rounded-md text-white cursor-pointer hover-surface"
+                    style={{ background: '#ef4444' }}
+                    onClick={handleLeaveServerConfirm}
+                    disabled={leaveServerLoading}
+                  >
+                    {t.sidebarChannels.leaveServerConfirm}
+                  </button>
+                </div>
               </div>
             </div>
           ) : null}

@@ -106,6 +106,12 @@ export type UiText = {
     cancelCreate: string
     confirmCreate: string
     closeCreate: string
+    leaveServer: string
+    leaveServerTitle: string
+    leaveServerPrompt: string
+    leaveServerConfirm: string
+    leaveServerCancel: string
+    leaveServerFailed: string
   }
   sidebarGuilds: {
     add: string
@@ -339,6 +345,12 @@ const translations: TranslationMap = {
       cancelCreate: 'Cancel',
       confirmCreate: 'Create channel',
       closeCreate: 'Close',
+      leaveServer: 'Leave server',
+      leaveServerTitle: 'Leave this server?',
+      leaveServerPrompt: 'You will lose access to this server until you are invited again.',
+      leaveServerConfirm: 'Leave',
+      leaveServerCancel: 'Cancel',
+      leaveServerFailed: 'Failed to leave the server.',
     },
     sidebarGuilds: {
       add: 'Add',
@@ -570,6 +582,12 @@ const translations: TranslationMap = {
       cancelCreate: '취소',
       confirmCreate: '채널 만들기',
       closeCreate: '닫기',
+      leaveServer: '서버 나가기',
+      leaveServerTitle: '정말 나가시겠어요?',
+      leaveServerPrompt: '나가면 다시 초대받기 전까지 이 서버에 접근할 수 없어요.',
+      leaveServerConfirm: '나가기',
+      leaveServerCancel: '취소',
+      leaveServerFailed: '서버 나가기에 실패했어요.',
     },
     sidebarGuilds: {
       add: '추가',
@@ -801,6 +819,12 @@ const translations: TranslationMap = {
       cancelCreate: '取消',
       confirmCreate: '创建频道',
       closeCreate: '关闭',
+      leaveServer: '离开服务器',
+      leaveServerTitle: '确定要离开吗？',
+      leaveServerPrompt: '离开后需再次被邀请才能访问此服务器。',
+      leaveServerConfirm: '离开',
+      leaveServerCancel: '取消',
+      leaveServerFailed: '离开服务器失败。',
     },
     sidebarGuilds: {
       add: '新增',
@@ -1032,6 +1056,12 @@ const translations: TranslationMap = {
       cancelCreate: '取消',
       confirmCreate: '建立頻道',
       closeCreate: '關閉',
+      leaveServer: '離開伺服器',
+      leaveServerTitle: '確定要離開嗎？',
+      leaveServerPrompt: '離開後需再次受邀才能存取此伺服器。',
+      leaveServerConfirm: '離開',
+      leaveServerCancel: '取消',
+      leaveServerFailed: '離開伺服器失敗。',
     },
     sidebarGuilds: {
       add: '新增',
