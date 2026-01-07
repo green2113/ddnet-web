@@ -112,6 +112,8 @@ function App() {
     y: 0,
     member: null,
   })
+  const isNearBottomRef = useRef(true)
+  const forceScrollRef = useRef(false)
   const [showMobileChannels, setShowMobileChannels] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showUserSettings, setShowUserSettings] = useState(false)
@@ -238,9 +240,15 @@ function App() {
 
   const scrollMessagesToBottom = () => {
     requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const el = document.getElementById('messages-scroll')
+        if (el) el.scrollTop = el.scrollHeight
+      })
+    })
+    window.setTimeout(() => {
       const el = document.getElementById('messages-scroll')
       if (el) el.scrollTop = el.scrollHeight
-    })
+    }, 80)
   }
 
   const copyImageToClipboard = async (url: string) => {
@@ -802,10 +810,11 @@ function App() {
         const next = [...existing, msg]
         if (channelId === activeChannelRef.current) {
           setMessages(next)
-          requestAnimationFrame(() => {
-            const el = document.getElementById('messages-scroll')
-            if (el) el.scrollTop = el.scrollHeight
-          })
+          const shouldScroll = Boolean(forceScrollRef.current || isNearBottomRef.current)
+          if (shouldScroll) {
+            forceScrollRef.current = false
+            scrollMessagesToBottom()
+          }
           setUnreadByChannel((prevUnread) => ({ ...prevUnread, [channelId]: false }))
         } else {
           setUnreadByChannel((prevUnread) => ({ ...prevUnread, [channelId]: true }))
@@ -883,9 +892,54 @@ function App() {
   )
 
   useEffect(() => {
+    if (loadingMessages) return
     const el = document.getElementById('messages-scroll')
     if (el) el.scrollTop = el.scrollHeight
-  }, [messages])
+  }, [messages, loadingMessages])
+
+  useEffect(() => {
+    const handler = () => {
+      if (isNearBottomRef.current) {
+        scrollMessagesToBottom()
+      }
+    }
+    window.addEventListener('invite-card-ready', handler as EventListener)
+    return () => window.removeEventListener('invite-card-ready', handler as EventListener)
+  }, [])
+
+  useEffect(() => {
+    let raf = 0
+    let cleanup: (() => void) | null = null
+    const attach = () => {
+      const el = document.getElementById('messages-scroll')
+      if (!el) return false
+      const update = () => {
+        const distance = el.scrollHeight - el.scrollTop - el.clientHeight
+        isNearBottomRef.current = distance < 120
+      }
+      update()
+      const onScroll = () => {
+        if (raf) cancelAnimationFrame(raf)
+        raf = requestAnimationFrame(update)
+      }
+      el.addEventListener('scroll', onScroll)
+      cleanup = () => {
+        el.removeEventListener('scroll', onScroll)
+        if (raf) cancelAnimationFrame(raf)
+      }
+      return true
+    }
+    if (!attach()) {
+      const retry = window.setTimeout(() => {
+        attach()
+      }, 0)
+      cleanup = () => {
+        window.clearTimeout(retry)
+        if (raf) cancelAnimationFrame(raf)
+      }
+    }
+    return () => cleanup?.()
+  }, [])
 
   const refreshMe = () => {
     axios
@@ -920,6 +974,7 @@ function App() {
       requireLogin()
       return
     }
+    forceScrollRef.current = true
     if (attachments.length > 0) {
       const uploadedUrls: string[] = []
       setUploading(true)

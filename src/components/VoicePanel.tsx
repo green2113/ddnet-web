@@ -1135,16 +1135,7 @@ export default function VoicePanel({
         >
           {focusedShare ? (
             <div className="w-full h-full" onClick={() => setFocusedShareId(null)}>
-              <video
-                autoPlay
-                playsInline
-                muted={focusedShare.isLocal}
-                ref={(node) => {
-                  if (!node) return
-                  node.srcObject = focusedShare.stream
-                }}
-                className="focused-share-video"
-              />
+              <FocusedShareVideo stream={focusedShare.stream} muted={focusedShare.isLocal} />
             </div>
           ) : (
             <div className="w-full h-full flex items-center justify-center text-sm" style={{ color: 'var(--text-muted)' }}>
@@ -1294,4 +1285,18 @@ function ScreenShareCard({
       <video ref={videoRef} autoPlay playsInline muted={isLocal} className="w-full h-full object-cover" />
     </div>
   )
+}
+
+function FocusedShareVideo({ stream, muted }: { stream: MediaStream; muted?: boolean }) {
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
+    if (video.srcObject !== stream) {
+      video.srcObject = stream
+    }
+  }, [stream])
+
+  return <video ref={videoRef} autoPlay playsInline muted={muted} className="focused-share-video" />
 }

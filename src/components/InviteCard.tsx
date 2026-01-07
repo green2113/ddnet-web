@@ -67,6 +67,14 @@ export default function InviteCard({ code, url }: InviteCardProps) {
     }
   }, [baseUrl, invite?.server?.id])
 
+  useEffect(() => {
+    if (loading) return
+    const timer = window.setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('invite-card-ready'))
+    }, 0)
+    return () => window.clearTimeout(timer)
+  }, [loading, invite, error])
+
   const handleJoin = async () => {
     if (joining) return
     setJoining(true)
