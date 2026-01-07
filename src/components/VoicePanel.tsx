@@ -1206,6 +1206,14 @@ export default function VoicePanel({
                     maxWidth: 272,
                     width: '100%',
                   }}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    const rect = (event.currentTarget as HTMLDivElement).getBoundingClientRect()
+                    const ev = new CustomEvent('open-user-profile', {
+                      detail: { user: member, x: rect.right + 8, y: rect.top },
+                    })
+                    window.dispatchEvent(ev)
+                  }}
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-10 h-10 rounded-full overflow-hidden" style={{ background: 'var(--input-bg)' }}>

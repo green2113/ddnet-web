@@ -30,6 +30,7 @@ type SidebarProfileBarProps = {
   onUploadAvatar: (file: File) => Promise<void>
   renderSettings?: boolean
   hasVoicePanel?: boolean
+  isSpeaking?: boolean
 }
 
 export default function SidebarProfileBar({
@@ -57,6 +58,7 @@ export default function SidebarProfileBar({
   onUploadAvatar,
   renderSettings = true,
   hasVoicePanel = false,
+  isSpeaking = false,
 }: SidebarProfileBarProps) {
   const [micMuted, setMicMuted] = useState(() => {
     if (typeof window === 'undefined') return false
@@ -107,7 +109,10 @@ export default function SidebarProfileBar({
         }}
       >
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center" style={{ background: 'var(--input-bg)' }}>
+          <div
+            className={`w-9 h-9 rounded-full overflow-hidden flex items-center justify-center${isSpeaking && !micMuted ? ' profile-speaking-ring' : ''}`}
+            style={{ background: 'var(--input-bg)' }}
+          >
             {user?.avatar ? (
               <img src={user.avatar} alt={user.displayName || user.username} className="w-full h-full object-cover" />
             ) : (

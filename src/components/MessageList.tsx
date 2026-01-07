@@ -217,7 +217,16 @@ export default function MessageList({ messages, adminIds = [], loading = false, 
                   {isHead && (
                     <div
                       className="absolute left-2 rounded-full overflow-hidden"
-                      style={{ width: '40px', height: '40px', top: '3px', background: 'var(--input-bg)' }}
+                      style={{ width: '40px', height: '40px', top: '3px', background: 'var(--input-bg)', cursor: 'pointer' }}
+                      role="button"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        const rect = (event.currentTarget as HTMLDivElement).getBoundingClientRect()
+                        const ev = new CustomEvent('open-user-profile', {
+                          detail: { user: m.author, x: rect.right + 8, y: rect.top },
+                        })
+                        window.dispatchEvent(ev)
+                      }}
                     >
                       {m.author.avatar ? (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -236,7 +245,19 @@ export default function MessageList({ messages, adminIds = [], loading = false, 
                   <div className="min-w-0 pl-[52px]">
                     {isHead && (
                       <div className="flex items-baseline gap-2 flex-wrap">
-                        <span className="font-medium">{m.author.displayName || m.author.username}</span>
+                        <span
+                          className="font-medium cursor-pointer hover:underline"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            const rect = (event.currentTarget as HTMLSpanElement).getBoundingClientRect()
+                            const ev = new CustomEvent('open-user-profile', {
+                              detail: { user: m.author, x: rect.right + 8, y: rect.top },
+                            })
+                            window.dispatchEvent(ev)
+                          }}
+                        >
+                          {m.author.displayName || m.author.username}
+                        </span>
                         {isAdmin ? (
                           <span className="text-[11px] px-1.5 py-0.5 rounded uppercase" style={{ background: 'rgba(250,204,21,0.2)', color: '#facc15' }}>
                             {t.messageList.adminTag}

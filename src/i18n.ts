@@ -17,6 +17,17 @@ export type UiText = {
     copyImage: string
     saveImage: string
     copyUserId: string
+    kickUser: string
+    banUser: string
+    kickTitle: string
+    kickPrompt: string
+    banTitle: string
+    banPrompt: string
+    reasonLabel: string
+    reasonPlaceholder: string
+    moderationCancel: string
+    kickConfirm: string
+    banConfirm: string
     deleteMessage: string
     someone: string
     serverActionTitle: string
@@ -121,6 +132,25 @@ export type UiText = {
     serverProfile: string
     manage: string
     admins: string
+    bans: string
+    profileTitle: string
+    profileSubtitle: string
+    nameLabel: string
+    namePlaceholder: string
+    nameSave: string
+    nameSaving: string
+    nameRequired: string
+    nameSaveFailed: string
+    iconLabel: string
+    iconHint: string
+    iconChange: string
+    iconUploading: string
+    iconSaveFailed: string
+    previewTitle: string
+    bansTitle: string
+    bansSubtitle: string
+    bansEmpty: string
+    unban: string
     adminTitle: string
     adminSubtitle: string
     adminAdd: string
@@ -256,6 +286,17 @@ const translations: TranslationMap = {
       copyImage: 'Copy image',
       saveImage: 'Save image',
       copyUserId: 'Copy user ID',
+      kickUser: 'Kick {name}',
+      banUser: 'Ban {name}',
+      kickTitle: 'Kick {name} from the server',
+      kickPrompt: 'They can rejoin if they get a new invite.',
+      banTitle: 'Ban {name} from the server?',
+      banPrompt: 'They will not be able to join until unbanned.',
+      reasonLabel: 'Reason (optional)',
+      reasonPlaceholder: 'Add a short reason...',
+      moderationCancel: 'Cancel',
+      kickConfirm: 'Kick',
+      banConfirm: 'Ban',
       deleteMessage: 'Delete message',
       someone: 'Someone',
       serverActionTitle: 'Server',
@@ -360,6 +401,25 @@ const translations: TranslationMap = {
       serverProfile: 'Server profile',
       manage: 'Manage',
       admins: 'Admins',
+      bans: 'Bans',
+      profileTitle: 'Server profile',
+      profileSubtitle: 'Update the server name and icon.',
+      nameLabel: 'Server name',
+      namePlaceholder: 'Enter a server name',
+      nameSave: 'Save',
+      nameSaving: 'Saving...',
+      nameRequired: 'Server name is required.',
+      nameSaveFailed: 'Failed to update the server name.',
+      iconLabel: 'Server icon',
+      iconHint: 'Square image recommended (at least 256x256).',
+      iconChange: 'Change icon',
+      iconUploading: 'Uploading...',
+      iconSaveFailed: 'Failed to update the server icon.',
+      previewTitle: 'Preview',
+      bansTitle: 'Bans',
+      bansSubtitle: 'Manage banned users for this server.',
+      bansEmpty: 'No banned users.',
+      unban: 'Unban',
       adminTitle: 'Admins',
       adminSubtitle: 'Add or remove admin IDs.',
       adminAdd: 'Add admin',
@@ -492,7 +552,18 @@ const translations: TranslationMap = {
       copyMessage: '메시지 복사',
       copyImage: '이미지 복사',
       saveImage: '이미지 저장',
-      copyUserId: '유저 ID 복사하기',
+      copyUserId: '사용자 ID 복사하기',
+      kickUser: '{name}님 추방하기',
+      banUser: '{name}님 차단하기',
+      kickTitle: '{name}님 서버에서 추방하기',
+      kickPrompt: '새 초대를 받으면 다시 참가할 수 있어요.',
+      banTitle: '{name}님을 차단할까요?',
+      banPrompt: '차단을 해제하기 전까지 다시 들어올 수 없어요.',
+      reasonLabel: '사유 (선택)',
+      reasonPlaceholder: '사유를 간단히 적어주세요.',
+      moderationCancel: '취소',
+      kickConfirm: '추방하기',
+      banConfirm: '차단하기',
       deleteMessage: '메시지 삭제',
       someone: '누군가',
       serverActionTitle: '서버',
@@ -597,6 +668,25 @@ const translations: TranslationMap = {
       serverProfile: '서버 프로필',
       manage: '관리',
       admins: '관리자',
+      bans: '차단',
+      profileTitle: '서버 프로필',
+      profileSubtitle: '서버 이름과 아이콘을 변경할 수 있습니다.',
+      nameLabel: '서버 이름',
+      namePlaceholder: '서버 이름을 입력하세요',
+      nameSave: '저장',
+      nameSaving: '저장 중',
+      nameRequired: '서버 이름을 입력해주세요.',
+      nameSaveFailed: '서버 이름을 변경하지 못했어요.',
+      iconLabel: '서버 아이콘',
+      iconHint: '정사각형 이미지(최소 256x256)를 권장해요.',
+      iconChange: '아이콘 변경',
+      iconUploading: '업로드 중',
+      iconSaveFailed: '서버 아이콘을 변경하지 못했어요.',
+      previewTitle: '미리보기',
+      bansTitle: '차단',
+      bansSubtitle: '차단된 사용자를 관리할 수 있습니다.',
+      bansEmpty: '차단된 사용자가 없습니다.',
+      unban: '차단 해제',
       adminTitle: '관리자',
       adminSubtitle: '관리자 ID를 추가하거나 삭제할 수 있습니다.',
       adminAdd: '관리자 추가',
@@ -730,6 +820,17 @@ const translations: TranslationMap = {
       copyImage: '复制图片',
       saveImage: '保存图片',
       copyUserId: '复制用户 ID',
+      kickUser: '踢出 {name}',
+      banUser: '封禁 {name}',
+      kickTitle: '将 {name} 踢出服务器',
+      kickPrompt: '若收到新的邀请可重新加入。',
+      banTitle: '要封禁 {name} 吗？',
+      banPrompt: '在解除封禁前无法再次加入。',
+      reasonLabel: '原因（可选）',
+      reasonPlaceholder: '填写简短原因…',
+      moderationCancel: '取消',
+      kickConfirm: '踢出',
+      banConfirm: '封禁',
       deleteMessage: '删除消息',
       someone: '某人',
       serverActionTitle: '服务器',
@@ -834,6 +935,25 @@ const translations: TranslationMap = {
       serverProfile: '服务器资料',
       manage: '管理',
       admins: '管理员',
+      bans: '封禁',
+      profileTitle: '服务器资料',
+      profileSubtitle: '在此更新服务器名称与图标。',
+      nameLabel: '服务器名称',
+      namePlaceholder: '输入服务器名称',
+      nameSave: '保存',
+      nameSaving: '保存中',
+      nameRequired: '请输入服务器名称。',
+      nameSaveFailed: '无法更新服务器名称。',
+      iconLabel: '服务器图标',
+      iconHint: '推荐使用方形图片（至少 256x256）。',
+      iconChange: '更改图标',
+      iconUploading: '上传中',
+      iconSaveFailed: '无法更新服务器图标。',
+      previewTitle: '预览',
+      bansTitle: '封禁',
+      bansSubtitle: '管理此服务器的封禁用户。',
+      bansEmpty: '暂无封禁用户。',
+      unban: '解除封禁',
       adminTitle: '管理员',
       adminSubtitle: '添加或删除管理员 ID。',
       adminAdd: '添加管理员',
@@ -967,6 +1087,17 @@ const translations: TranslationMap = {
       copyImage: '複製圖片',
       saveImage: '儲存圖片',
       copyUserId: '複製使用者 ID',
+      kickUser: '踢出 {name}',
+      banUser: '封鎖 {name}',
+      kickTitle: '將 {name} 踢出伺服器',
+      kickPrompt: '若收到新邀請可再次加入。',
+      banTitle: '要封鎖 {name} 嗎？',
+      banPrompt: '在解除封鎖前無法再次加入。',
+      reasonLabel: '原因（選填）',
+      reasonPlaceholder: '輸入簡短原因…',
+      moderationCancel: '取消',
+      kickConfirm: '踢出',
+      banConfirm: '封鎖',
       deleteMessage: '刪除訊息',
       someone: '某人',
       serverActionTitle: '伺服器',
@@ -1071,6 +1202,25 @@ const translations: TranslationMap = {
       serverProfile: '伺服器資訊',
       manage: '管理',
       admins: '管理員',
+      bans: '封鎖',
+      profileTitle: '伺服器資訊',
+      profileSubtitle: '在此更新伺服器名稱與圖示。',
+      nameLabel: '伺服器名稱',
+      namePlaceholder: '輸入伺服器名稱',
+      nameSave: '儲存',
+      nameSaving: '儲存中',
+      nameRequired: '請輸入伺服器名稱。',
+      nameSaveFailed: '無法更新伺服器名稱。',
+      iconLabel: '伺服器圖示',
+      iconHint: '建議使用方形圖片（至少 256x256）。',
+      iconChange: '變更圖示',
+      iconUploading: '上傳中',
+      iconSaveFailed: '無法更新伺服器圖示。',
+      previewTitle: '預覽',
+      bansTitle: '封鎖',
+      bansSubtitle: '管理此伺服器的封鎖使用者。',
+      bansEmpty: '目前沒有封鎖使用者。',
+      unban: '解除封鎖',
       adminTitle: '管理員',
       adminSubtitle: '新增或移除管理員 ID。',
       adminAdd: '新增管理員',

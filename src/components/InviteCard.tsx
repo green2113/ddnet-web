@@ -98,7 +98,22 @@ export default function InviteCard({ code, url }: InviteCardProps) {
   }
 
   if (loading && !invite && !error) {
-    return null
+    return (
+      <div
+        className="max-w-[420px] rounded-xl p-3"
+        style={{ background: 'var(--panel)', border: '1px solid var(--border)', minHeight: '88px' }}
+      >
+        <div className="text-xs mb-2 skeleton" style={{ width: '140px', height: '12px' }} />
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-xl skeleton" />
+          <div className="min-w-0 flex-1">
+            <div className="skeleton" style={{ width: '160px', height: '14px', marginBottom: '6px' }} />
+            <div className="skeleton" style={{ width: '200px', height: '12px' }} />
+          </div>
+          <div className="h-8 w-[84px] rounded-md skeleton" />
+        </div>
+      </div>
+    )
   }
 
   const serverName = invite?.server?.name || 'Server'

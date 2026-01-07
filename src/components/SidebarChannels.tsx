@@ -395,7 +395,25 @@ export default function SidebarChannels({
             {sortedMembers.map((member) => {
               const isSpeaking = speakingIds.includes(member.id) && !member.muted && !member.deafened
               return (
-                <div key={member.id} className="flex items-center gap-2.5 text-[13px]">
+                <div
+                  key={member.id}
+                  className="flex items-center gap-2.5 text-[13px] cursor-pointer"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    const rect = (event.currentTarget as HTMLDivElement).getBoundingClientRect()
+                    const ev = new CustomEvent('open-user-profile', {
+                      detail: { user: member, x: rect.right + 8, y: rect.top },
+                    })
+                    window.dispatchEvent(ev)
+                  }}
+                  onMouseEnter={(event) => {
+                    event.currentTarget.style.background = 'color-mix(in oklch, var(--text-primary) 8%, transparent)'
+                  }}
+                  onMouseLeave={(event) => {
+                    event.currentTarget.style.background = 'transparent'
+                  }}
+                  style={{ borderRadius: '8px', padding: '4px 6px' }}
+                >
                   <div className={`voice-avatar voice-avatar-lg${isSpeaking ? ' voice-speaking-ring' : ''}`}>
                     <div className="voice-avatar-inner">
                       {member.avatar ? (

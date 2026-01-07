@@ -4,6 +4,7 @@ import Tooltip from './Tooltip'
 type Server = {
   id: string
   name: string
+  icon?: string | null
 }
 
 type Props = {
@@ -175,7 +176,11 @@ export default function SidebarGuilds({
                 }}
                 aria-label={server.name}
               >
-                {label}
+                {server.icon ? (
+                  <img src={server.icon} alt={server.name} className="w-full h-full object-cover rounded-2xl" />
+                ) : (
+                  label
+                )}
               </button>
             </Tooltip>
           </div>

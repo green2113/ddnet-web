@@ -68,6 +68,7 @@ type Server = {
   id: string
   name: string
   ownerId?: string
+  icon?: string | null
 }
 
 function App() {
@@ -77,11 +78,13 @@ function App() {
   const [voiceMembersByChannel, setVoiceMembersByChannel] = useState<VoiceMembersByChannel>({})
   const [voiceCallStartByChannel, setVoiceCallStartByChannel] = useState<Record<string, number>>({})
   const [serverMembers, setServerMembers] = useState<ServerMember[]>([])
+  const [serverBans, setServerBans] = useState<ServerMember[]>([])
   const [unreadByChannel, setUnreadByChannel] = useState<UnreadByChannel>({})
   const [loadingMessages, setLoadingMessages] = useState(true)
   const [loadError, setLoadError] = useState(false)
   const [channels, setChannels] = useState<Channel[]>([])
   const [adminIds, setAdminIds] = useState<string[]>([])
+  const canManageChannels = Boolean(user?.id && adminIds.includes(user.id))
   const [servers, setServers] = useState<Server[]>([])
   const [serverOrder, setServerOrder] = useState<string[]>([])
   const [activeServerId, setActiveServerId] = useState('')
@@ -97,6 +100,7 @@ function App() {
   const [uploading, setUploading] = useState(false)
   const [attachments, setAttachments] = useState<Array<{ id: string; file: File; name: string; isImage: boolean; previewUrl?: string }>>([])
   const socketRef = useRef<Socket | null>(null)
+  const [socketId, setSocketId] = useState<string | null>(null)
   const activeServerRef = useRef('')
   const activeChannelRef = useRef('')
   const lastHistoryChannelIdRef = useRef('')
@@ -114,6 +118,12 @@ function App() {
   })
   const [imageViewerUrl, setImageViewerUrl] = useState<string | null>(null)
   const [imageViewerClosing, setImageViewerClosing] = useState(false)
+  const [profileCard, setProfileCard] = useState<{
+    visible: boolean
+    x: number
+    y: number
+    user: { id: string; username?: string; displayName?: string; avatar?: string | null }
+  } | null>(null)
   const isNearBottomRef = useRef(true)
   const forceScrollRef = useRef(false)
   const [showMobileChannels, setShowMobileChannels] = useState(false)
@@ -121,6 +131,8 @@ function App() {
   const [showUserSettings, setShowUserSettings] = useState(false)
   const [showCreateChannel, setShowCreateChannel] = useState(false)
   const [showLeaveServerConfirm, setShowLeaveServerConfirm] = useState(false)
+  const [moderationAction, setModerationAction] = useState<{ type: 'kick' | 'ban'; member: ServerMember } | null>(null)
+  const [moderationReason, setModerationReason] = useState('')
   const [leaveServerLoading, setLeaveServerLoading] = useState(false)
   const [createChannelClosing, setCreateChannelClosing] = useState(false)
   const createChannelCloseTimerRef = useRef<number | null>(null)
@@ -165,7 +177,9 @@ function App() {
   const [isTestingMic, setIsTestingMic] = useState(false)
   const [micLevel, setMicLevel] = useState(-100)
   const [micTestError, setMicTestError] = useState('')
-  const [adminInput, setAdminInput] = useState('')
+  const [serverNameSaving, setServerNameSaving] = useState(false)
+  const [serverIconUploading, setServerIconUploading] = useState(false)
+  const [serverSettingsError, setServerSettingsError] = useState('')
   const { serverId: routeServerId, channelId: routeChannelId } = useParams()
   const location = useLocation()
   const navigate = useNavigate()
@@ -177,6 +191,10 @@ function App() {
     () => servers.find((server) => server.id === activeServerId) || null,
     [servers, activeServerId]
   )
+  useEffect(() => {
+    if (!showSettings) return
+    setServerSettingsError('')
+  }, [showSettings, activeServer?.name])
   const isServerOwner = Boolean(activeServer?.ownerId && user?.id && activeServer.ownerId === user.id)
   const serverLabel = isMeView ? '메인 메뉴' : (activeServer?.name || '')
   const activeGuildId = isMeView ? '@me' : activeServerId
@@ -408,6 +426,18 @@ function App() {
       .catch(() => {})
   }, [serverBase])
 
+  const fetchBans = useCallback((serverId: string) => {
+    if (!serverId) return
+    axios
+      .get(`${serverBase}/api/servers/${serverId}/bans`, { withCredentials: true })
+      .then((res) => {
+        if (Array.isArray(res.data)) {
+          setServerBans(res.data)
+        }
+      })
+      .catch(() => {})
+  }, [serverBase])
+
   useEffect(() => {
     setLoadingMessages(true)
     axios
@@ -513,6 +543,11 @@ function App() {
     fetchChannels(activeServerId)
     fetchAdmins(activeServerId)
   }, [activeServerId, fetchChannels, fetchAdmins])
+
+  useEffect(() => {
+    if (!showSettings || !activeServerId || !canManageChannels) return
+    fetchBans(activeServerId)
+  }, [showSettings, activeServerId, canManageChannels, fetchBans])
 
   useEffect(() => {
     if (!user || !activeServerId) {
@@ -795,6 +830,7 @@ function App() {
     })
     socketRef.current = socket
     socket.on('connect', () => {
+      setSocketId(socket.id || null)
       watchedVoiceRef.current.clear()
       const voiceIds = channelsRef.current.filter((channel) => channel.type === 'voice').map((channel) => channel.id)
       voiceIds.forEach((channelId) => {
@@ -802,11 +838,15 @@ function App() {
         socket.emit('voice:watch', { channelId })
       })
     })
+    socket.on('disconnect', () => setSocketId(null))
     socket.on('channels:update', (payload?: { serverId?: string }) => {
       const serverId = activeServerRef.current
       if (!serverId) return
       if (payload?.serverId && payload.serverId !== serverId) return
       fetchChannels(serverId)
+    })
+    socket.on('servers:update', () => {
+      fetchServers()
     })
     socket.on('chat:message', (msg: ChatMessage) => {
       const channelId = msg.channelId
@@ -864,7 +904,7 @@ function App() {
     return () => {
       socket.disconnect()
     }
-  }, [serverBase, user])
+  }, [fetchServers, serverBase, user])
 
   useEffect(() => {
     const socket = socketRef.current
@@ -988,6 +1028,36 @@ function App() {
     }
   }, [])
 
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<{
+        user?: { id: string; username?: string; displayName?: string; avatar?: string | null }
+        x?: number
+        y?: number
+      }>).detail
+      if (!detail?.user?.id) return
+      const width = 296
+      const height = 320
+      const margin = 12
+      const anchorX = typeof detail.x === 'number' ? detail.x : window.innerWidth / 2
+      const anchorY = typeof detail.y === 'number' ? detail.y : window.innerHeight / 2
+      const prefersLeft = anchorX + width + margin > window.innerWidth
+      const rawX = prefersLeft ? anchorX - width : anchorX
+      const nextX = Math.min(Math.max(rawX, margin), Math.max(margin, window.innerWidth - width - margin))
+      const nextY = Math.min(Math.max(anchorY, margin), Math.max(margin, window.innerHeight - height - margin))
+      setProfileCard({ visible: true, x: nextX, y: nextY, user: detail.user })
+    }
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setProfileCard(null)
+    }
+    window.addEventListener('open-user-profile', handler as EventListener)
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('open-user-profile', handler as EventListener)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [])
+
   const logout = async () => {
     await axios.post(`${serverBase}/auth/logout`, {}, { withCredentials: true })
     setUser(null)
@@ -1072,6 +1142,11 @@ function App() {
   const activeChannel = channels.find((channel) => channel.id === activeChannelId)
   const isVoiceChannel = activeChannel?.type === 'voice'
   const voiceSidebarChannel = joinedVoiceChannelId ? channels.find((channel) => channel.id === joinedVoiceChannelId) : null
+  const isSelfSpeaking = Boolean(
+    socketId &&
+      voiceSidebarChannel &&
+      voiceSpeakingByChannel[voiceSidebarChannel.id]?.includes(socketId)
+  )
 
   const closeVoiceSwitch = () => {
     if (voiceSwitchClosing) return
@@ -1089,7 +1164,6 @@ function App() {
     applyChannelSelect(targetId)
     closeVoiceSwitch()
   }
-  const canManageChannels = Boolean(user?.id && adminIds.includes(user.id))
   const voiceSwitchTarget = voiceSwitchTargetId ? channels.find((channel) => channel.id === voiceSwitchTargetId) : null
 
   const applyChannelSelect = (channelId: string) => {
@@ -1284,6 +1358,92 @@ function App() {
     }
   }
 
+  const handleKickMember = async (member: ServerMember) => {
+    if (!activeServerId || !canManageChannels) return
+    try {
+      await axios.post(
+        `${serverBase}/api/servers/${activeServerId}/kick`,
+        { userId: member.id },
+        { withCredentials: true },
+      )
+      setServerMembers((prev) => prev.filter((entry) => entry.id !== member.id))
+    } catch {
+      // ignore
+    }
+  }
+
+  const handleBanMember = async (member: ServerMember) => {
+    if (!activeServerId || !canManageChannels) return
+    try {
+      await axios.post(
+        `${serverBase}/api/servers/${activeServerId}/bans`,
+        { userId: member.id },
+        { withCredentials: true },
+      )
+      setServerMembers((prev) => prev.filter((entry) => entry.id !== member.id))
+      setServerBans((prev) => {
+        if (prev.some((entry) => entry.id === member.id)) return prev
+        return [...prev, member]
+      })
+    } catch {
+      // ignore
+    }
+  }
+
+  const handleUnbanMember = async (id: string) => {
+    if (!activeServerId || !canManageChannels) return
+    try {
+      await axios.delete(`${serverBase}/api/servers/${activeServerId}/bans/${id}`, { withCredentials: true })
+      setServerBans((prev) => prev.filter((entry) => entry.id !== id))
+    } catch {
+      // ignore
+    }
+  }
+
+  const handleUpdateServerName = async (name: string) => {
+    if (!activeServerId) return
+    setServerSettingsError('')
+    setServerNameSaving(true)
+    try {
+      const res = await axios.patch(
+        `${serverBase}/api/servers/${activeServerId}`,
+        { name },
+        { withCredentials: true },
+      )
+      const updated = res.data as Server | undefined
+      if (updated?.id) {
+        setServers((prev) => prev.map((server) => (server.id === updated.id ? updated : server)))
+      }
+    } catch (e: any) {
+      const status = e?.response?.status
+      setServerSettingsError(status === 400 ? t.serverSettings.nameRequired : t.serverSettings.nameSaveFailed)
+    } finally {
+      setServerNameSaving(false)
+    }
+  }
+
+  const handleUpdateServerIcon = async (file: File) => {
+    if (!activeServerId) return
+    setServerSettingsError('')
+    setServerIconUploading(true)
+    try {
+      const form = new FormData()
+      form.append('icon', file)
+      const res = await axios.post(`${serverBase}/api/servers/${activeServerId}/icon`, form, {
+        withCredentials: true,
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      const updated = res.data as Server | undefined
+      if (updated?.id) {
+        setServers((prev) => prev.map((server) => (server.id === updated.id ? updated : server)))
+      }
+    } catch {
+      setServerSettingsError(t.serverSettings.iconSaveFailed)
+    } finally {
+      setServerIconUploading(false)
+    }
+  }
+
   const openImageViewer = (url: string) => {
     if (imageViewerCloseTimerRef.current) {
       window.clearTimeout(imageViewerCloseTimerRef.current)
@@ -1312,6 +1472,11 @@ function App() {
   const closeLeaveServerModal = () => {
     if (leaveServerLoading) return
     setShowLeaveServerConfirm(false)
+  }
+
+  const closeModerationModal = () => {
+    setModerationAction(null)
+    setModerationReason('')
   }
 
   const handleLeaveServerConfirm = async () => {
@@ -1694,6 +1859,7 @@ function App() {
             onToggleMicTest={() => setIsTestingMic((prev) => !prev)}
             micTestError={micTestError}
             hasVoicePanel={!!voiceSidebarChannel}
+            isSpeaking={isSelfSpeaking}
             onUpdateProfile={async (displayName) => {
               const res = await axios.patch(
                 `${serverBase}/api/users/me`,
@@ -1968,6 +2134,7 @@ function App() {
                 micTestError={micTestError}
                 renderSettings={false}
                 hasVoicePanel={!!voiceSidebarChannel}
+                isSpeaking={isSelfSpeaking}
                 onUpdateProfile={async (displayName) => {
                   const res = await axios.patch(
                     `${serverBase}/api/users/me`,
@@ -2098,15 +2265,27 @@ function App() {
                 <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
                   {t.header.members} - {serverMembers.length}
                 </div>
-                <div className="mt-3 space-y-2">
+                <div className="mt-3 space-y-0">
                   {serverMembers.map((member) => (
                     <div
                       key={member.id}
                       className="flex items-center gap-2 rounded-md px-2 py-1 hover-surface cursor-pointer"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        const rect = (event.currentTarget as HTMLDivElement).getBoundingClientRect()
+                        const ev = new CustomEvent('open-user-profile', {
+                          detail: { user: member, x: rect.left - 8, y: rect.top },
+                        })
+                        window.dispatchEvent(ev)
+                      }}
                       onContextMenu={(event) => {
                         event.preventDefault()
-                        const width = 180
-                        const height = 70
+                        const showAdminActions = Boolean(canManageChannels && user && member.id !== user.id)
+                        const itemCount = 1 + (showAdminActions ? 2 : 0)
+                        const itemHeight = 34
+                        const padding = 16
+                        const width = 210
+                        const height = padding + itemCount * itemHeight
                         const margin = 12
                         const prefersLeft = event.clientX + width + margin > window.innerWidth
                         const rawX = prefersLeft ? event.clientX - width : event.clientX
@@ -2230,6 +2409,30 @@ function App() {
                     }}
                     onClick={(e) => e.stopPropagation()}
                   >
+                    {canManageChannels && user && memberMenu.member.id !== user.id ? (
+                      <>
+                        <button
+                          className="w-full text-left px-3 py-2 cursor-pointer member-menu-danger"
+                          onClick={() => {
+                            setModerationReason('')
+                            setModerationAction({ type: 'kick', member: memberMenu.member! })
+                            setMemberMenu({ visible: false, x: 0, y: 0, member: null })
+                          }}
+                        >
+                          {t.app.kickUser.replace('{name}', memberMenu.member.displayName || memberMenu.member.username)}
+                        </button>
+                        <button
+                          className="w-full text-left px-3 py-2 cursor-pointer member-menu-danger"
+                          onClick={() => {
+                            setModerationReason('')
+                            setModerationAction({ type: 'ban', member: memberMenu.member! })
+                            setMemberMenu({ visible: false, x: 0, y: 0, member: null })
+                          }}
+                        >
+                          {t.app.banUser.replace('{name}', memberMenu.member.displayName || memberMenu.member.username)}
+                        </button>
+                      </>
+                    ) : null}
                     <button
                       className="w-full text-left px-3 py-2 hover-surface cursor-pointer"
                       onClick={() => {
@@ -2779,6 +2982,80 @@ function App() {
               </div>
             </div>
           ) : null}
+          {moderationAction ? (
+            <div
+              className="fixed inset-0 z-50 grid place-items-center modal-overlay"
+              style={{ background: 'rgba(0,0,0,0.6)' }}
+              onMouseDown={closeModerationModal}
+            >
+              <div
+                className="w-[560px] max-w-[92vw] rounded-2xl p-6 modal-panel"
+                style={{ background: 'var(--header-bg)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                onMouseDown={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="text-lg font-semibold">
+                      {moderationAction.type === 'ban'
+                        ? t.app.banTitle.replace('{name}', moderationAction.member.displayName || moderationAction.member.username)
+                        : t.app.kickTitle.replace('{name}', moderationAction.member.displayName || moderationAction.member.username)}
+                    </div>
+                    <div className="text-sm mt-2" style={{ color: 'var(--text-muted)' }}>
+                      {moderationAction.type === 'ban' ? t.app.banPrompt : t.app.kickPrompt}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="h-8 w-8 rounded-full grid place-items-center hover-surface cursor-pointer"
+                    aria-label="close"
+                    onClick={closeModerationModal}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                      <path d="M6 6l12 12M18 6l-12 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="mt-5">
+                  <label className="text-xs uppercase" style={{ color: 'var(--text-muted)' }}>
+                    {t.app.reasonLabel}
+                  </label>
+                  <textarea
+                    value={moderationReason}
+                    onChange={(e) => setModerationReason(e.target.value)}
+                    className="w-full mt-2 h-24 rounded-lg px-3 py-2 text-sm"
+                    style={{ background: 'var(--panel)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                    placeholder={t.app.reasonPlaceholder}
+                  />
+                </div>
+                <div className="mt-6 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    className="px-4 h-10 rounded-md cursor-pointer hover-surface"
+                    style={{ background: 'rgba(127,127,127,0.2)', color: 'var(--text-primary)' }}
+                    onClick={closeModerationModal}
+                  >
+                    {t.app.moderationCancel}
+                  </button>
+                  <button
+                    type="button"
+                    className="px-4 h-10 rounded-md text-white cursor-pointer hover-surface"
+                    style={{ background: '#ef4444' }}
+                    onClick={async () => {
+                      if (!moderationAction) return
+                      if (moderationAction.type === 'ban') {
+                        await handleBanMember(moderationAction.member)
+                      } else {
+                        await handleKickMember(moderationAction.member)
+                      }
+                      closeModerationModal()
+                    }}
+                  >
+                    {moderationAction.type === 'ban' ? t.app.banConfirm : t.app.kickConfirm}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
           {imageViewerUrl ? (
             <div
               className={`fixed inset-0 z-50 grid place-items-center image-viewer-overlay${imageViewerClosing ? ' is-exiting' : ''}`}
@@ -2802,16 +3079,58 @@ function App() {
               </div>
             </div>
           ) : null}
+          {profileCard?.visible ? (
+            <>
+              <div
+                className="fixed inset-0 z-40"
+                onMouseDown={() => setProfileCard(null)}
+              />
+              <div
+                className="fixed z-50 profile-card"
+                style={{ top: profileCard.y, left: profileCard.x }}
+                onMouseDown={(event) => event.stopPropagation()}
+              >
+                <div className="profile-card-banner" />
+                <div className="profile-card-body">
+                  <div className="profile-card-avatar">
+                    {profileCard.user.avatar ? (
+                      <img src={profileCard.user.avatar} alt={profileCard.user.username || 'user'} />
+                    ) : (
+                      <span>
+                        {(profileCard.user.displayName || profileCard.user.username || 'U').slice(0, 1)}
+                      </span>
+                    )}
+                  </div>
+                  <div className="profile-card-name">
+                    {profileCard.user.displayName || profileCard.user.username || 'User'}
+                  </div>
+                  {profileCard.user.username ? (
+                    <div className="profile-card-username">
+                      {profileCard.user.username.startsWith('@') ? profileCard.user.username : `@${profileCard.user.username}`}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            </>
+          ) : null}
         </main>
       </div>
     </div>
     <ServerSettings
         showSettings={showSettings}
         canManage={canManageChannels}
+        serverName={activeServer?.name}
+        serverIcon={activeServer?.icon}
+        nameSaving={serverNameSaving}
+        iconUploading={serverIconUploading}
+        saveError={serverSettingsError}
         onCloseSettings={() => setShowSettings(false)}
-        adminInput={adminInput}
-        onAdminInputChange={setAdminInput}
+        onUpdateName={handleUpdateServerName}
+        onUpdateIcon={handleUpdateServerIcon}
         t={t}
+        serverMembers={serverMembers}
+        bannedMembers={serverBans}
+        onUnban={handleUnbanMember}
         onAddAdmin={(id) => {
           if (!canManageChannels) return
           if (!activeServerId) return
