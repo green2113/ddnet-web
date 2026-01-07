@@ -44,6 +44,8 @@ export default function MessageList({ messages, adminIds = [], loading = false, 
         const isAttachment = /\/attachments\//i.test(part)
         const cleanUrl = part.split('?')[0]
         const isImage = /\.(png|jpe?g|webp|gif)$/i.test(cleanUrl)
+        const isVideo = /\.(mp4|webm|mov)$/i.test(cleanUrl)
+        const isAudio = /\.(mp3|m4a|ogg|wav)$/i.test(cleanUrl)
         if (isAttachment && isImage) {
           return (
             <span key={`${part}-${idx}`} className="inline-flex">
@@ -51,14 +53,46 @@ export default function MessageList({ messages, adminIds = [], loading = false, 
                 src={part}
                 alt="attachment"
                 loading="lazy"
-                className="max-w-[360px] max-h-[360px] rounded-md"
+                className="max-w-[360px] max-h-[360px] rounded-md cursor-pointer"
                 style={{ border: '1px solid var(--border)' }}
+                onClick={(event: React.MouseEvent<HTMLImageElement>) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  const ev = new CustomEvent('open-image-viewer', { detail: { url: part } })
+                  window.dispatchEvent(ev)
+                }}
                 onContextMenu={(event: React.MouseEvent<HTMLImageElement>) => {
                   event.preventDefault()
                   event.stopPropagation()
                   const ev = new CustomEvent('open-msg-menu', { detail: { message, x: event.clientX, y: event.clientY, imageUrl: part } })
                   window.dispatchEvent(ev)
                 }}
+              />
+            </span>
+          )
+        }
+        if (isAttachment && isVideo) {
+          return (
+            <span key={`${part}-${idx}`} className="inline-flex">
+              <video
+                src={part}
+                controls
+                preload="metadata"
+                className="max-w-[360px] max-h-[360px] rounded-md"
+                style={{ border: '1px solid var(--border)', background: 'var(--panel)' }}
+              />
+            </span>
+          )
+        }
+        if (isAttachment && isAudio) {
+          return (
+            <span key={`${part}-${idx}`} className="inline-flex">
+              <audio
+                src={part}
+                controls
+                preload="metadata"
+                className="max-w-[360px]"
+                style={{ width: '360px', borderRadius: '8px' }}
               />
             </span>
           )

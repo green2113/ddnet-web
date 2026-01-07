@@ -112,6 +112,8 @@ function App() {
     y: 0,
     member: null,
   })
+  const [imageViewerUrl, setImageViewerUrl] = useState<string | null>(null)
+  const [imageViewerClosing, setImageViewerClosing] = useState(false)
   const isNearBottomRef = useRef(true)
   const forceScrollRef = useRef(false)
   const [showMobileChannels, setShowMobileChannels] = useState(false)
@@ -140,6 +142,7 @@ function App() {
   const [inviteUrl, setInviteUrl] = useState('')
   const [inviteError, setInviteError] = useState('')
   const [inviteCopied, setInviteCopied] = useState(false)
+  const imageViewerCloseTimerRef = useRef<number | null>(null)
   const [settingsTab, setSettingsTab] = useState<'profile' | 'voice' | 'language'>('profile')
   const [voiceSwitchTargetId, setVoiceSwitchTargetId] = useState<string | null>(null)
   const [voiceSwitchClosing, setVoiceSwitchClosing] = useState(false)
@@ -890,6 +893,9 @@ function App() {
       if (inviteCloseTimerRef.current) {
         window.clearTimeout(inviteCloseTimerRef.current)
       }
+      if (imageViewerCloseTimerRef.current) {
+        window.clearTimeout(imageViewerCloseTimerRef.current)
+      }
     },
     []
   )
@@ -963,6 +969,24 @@ function App() {
     window.addEventListener('auth-complete', handler as EventListener)
     return () => window.removeEventListener('auth-complete', handler as EventListener)
   }, [serverBase, fetchServers, fetchAdmins])
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<{ url?: string }>).detail
+      if (detail?.url) {
+        openImageViewer(detail.url)
+      }
+    }
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') closeImageViewer()
+    }
+    window.addEventListener('open-image-viewer', handler as EventListener)
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('open-image-viewer', handler as EventListener)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [])
 
   const logout = async () => {
     await axios.post(`${serverBase}/auth/logout`, {}, { withCredentials: true })
@@ -1258,6 +1282,25 @@ function App() {
     } finally {
       setJoinInviteLoading(false)
     }
+  }
+
+  const openImageViewer = (url: string) => {
+    if (imageViewerCloseTimerRef.current) {
+      window.clearTimeout(imageViewerCloseTimerRef.current)
+      imageViewerCloseTimerRef.current = null
+    }
+    setImageViewerClosing(false)
+    setImageViewerUrl(url)
+  }
+
+  const closeImageViewer = () => {
+    if (imageViewerClosing) return
+    setImageViewerClosing(true)
+    imageViewerCloseTimerRef.current = window.setTimeout(() => {
+      setImageViewerUrl(null)
+      setImageViewerClosing(false)
+      imageViewerCloseTimerRef.current = null
+    }, 180)
   }
 
   const openLeaveServerModal = () => {
@@ -2733,6 +2776,29 @@ function App() {
                     {t.sidebarChannels.leaveServerConfirm}
                   </button>
                 </div>
+              </div>
+            </div>
+          ) : null}
+          {imageViewerUrl ? (
+            <div
+              className={`fixed inset-0 z-50 grid place-items-center image-viewer-overlay${imageViewerClosing ? ' is-exiting' : ''}`}
+              onMouseDown={closeImageViewer}
+            >
+              <div
+                className={`relative image-viewer-panel${imageViewerClosing ? ' is-exiting' : ''}`}
+                onMouseDown={(event) => event.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  className="absolute top-3 right-3 h-9 w-9 rounded-lg grid place-items-center image-viewer-close"
+                  aria-label="close"
+                  onClick={closeImageViewer}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <path d="M6 6l12 12M18 6l-12 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                  </svg>
+                </button>
+                <img src={imageViewerUrl} alt="preview" className="image-viewer-image" />
               </div>
             </div>
           ) : null}

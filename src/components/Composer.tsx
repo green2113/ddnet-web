@@ -371,7 +371,7 @@ export default function Composer({
               if (file) onAddAttachment?.(file)
               if (event.target) event.target.value = ''
             }}
-            accept="image/*,application/pdf,text/plain,application/zip,application/x-zip-compressed"
+            accept="image/*,video/mp4,video/webm,video/quicktime,audio/mpeg,audio/mp4,audio/ogg,audio/wav,application/pdf,text/plain,application/zip,application/x-zip-compressed"
             disabled={disabled || uploading}
           />
           <button
