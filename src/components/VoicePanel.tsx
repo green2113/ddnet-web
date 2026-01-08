@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { Device as MediasoupDevice } from 'mediasoup-client'
+import * as protooClient from 'protoo-client'
 import type { Socket } from 'socket.io-client'
 import { formatText, type UiText } from '../i18n'
 import { HeadsetIcon, MicIcon } from './icons/VoiceIcons'
@@ -55,6 +57,27 @@ const getMemberLabel = (member: VoiceMember) => member.displayName || member.use
 const sortMembersByName = (members: VoiceMember[]) =>
   [...members].sort((a, b) => memberNameCollator.compare(getMemberLabel(a), getMemberLabel(b)))
 
+const buildSfuUrl = (base: string, channelId: string, peerId: string) => {
+  const trimmed = base.replace(/\/$/, '')
+  let wsBase = trimmed
+  if (wsBase.startsWith('https://')) {
+    wsBase = `wss://${wsBase.slice('https://'.length)}`
+  } else if (wsBase.startsWith('http://')) {
+    wsBase = `ws://${wsBase.slice('http://'.length)}`
+  } else if (!wsBase.startsWith('ws://') && !wsBase.startsWith('wss://')) {
+    wsBase = `wss://${wsBase}`
+  }
+  const url = new URL(wsBase)
+  url.searchParams.set('roomId', channelId)
+  url.searchParams.set('peerId', peerId)
+  return url.toString()
+}
+
+const getSfuDeviceInfo = () => ({
+  flag: 'unknown',
+  name: 'ddnet-web',
+})
+
 const emitMuteState = (micMuted: boolean, headsetMuted: boolean) => {
   if (typeof window === 'undefined') return
   window.dispatchEvent(new CustomEvent('voice-mute-update', { detail: { micMuted, headsetMuted } }))
@@ -74,6 +97,8 @@ export default function VoicePanel({
   onAutoJoinHandled,
   leaveSignal = 0,
 }: VoicePanelProps) {
+  const sfuBase = (import.meta as any).env?.VITE_SFU_URL as string | undefined
+  const useSfuAudio = true
   const [joined, setJoined] = useState(false)
   const [members, setMembers] = useState<VoiceMember[]>([])
   const [speakingIds, setSpeakingIds] = useState<string[]>([])
@@ -111,6 +136,7 @@ export default function VoicePanel({
   const [screenShareFrameRate, setScreenShareFrameRate] = useState<15 | 30 | 60>(30)
   const [screenShareSubmenu, setScreenShareSubmenu] = useState<'resolution' | 'frameRate' | null>(null)
   const [iceServers, setIceServers] = useState<RTCIceServer[]>(DEFAULT_ICE_SERVERS)
+  const [iceServersReady, setIceServersReady] = useState(false)
   const prevJoinedRef = useRef(false)
   const forcedHeadsetRef = useRef(false)
   const micBeforeForceRef = useRef(false)
@@ -124,6 +150,15 @@ export default function VoicePanel({
   const hideCursorTimerRef = useRef<number | null>(null)
   const screenShareSettingsRef = useRef<HTMLDivElement | null>(null)
   const prevMemberIdsRef = useRef<Set<string>>(new Set())
+  const sfuPeerRef = useRef<any>(null)
+  const sfuDeviceRef = useRef<MediasoupDevice | null>(null)
+  const sfuSendTransportRef = useRef<any>(null)
+  const sfuRecvTransportRef = useRef<any>(null)
+  const sfuProducerRef = useRef<any>(null)
+  const sfuConsumersRef = useRef<Map<string, any>>(new Map())
+  const sfuPausedConsumersRef = useRef<Set<string>>(new Set())
+  const headsetMutedRef = useRef(false)
+  const sfuConnectingRef = useRef<Promise<void> | null>(null)
   const micContextRef = useRef<AudioContext | null>(null)
   const micGainRef = useRef<GainNode | null>(null)
   const micDestinationRef = useRef<MediaStreamAudioDestinationNode | null>(null)
@@ -155,6 +190,9 @@ export default function VoicePanel({
         setIceServers(data.iceServers)
       })
       .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setIceServersReady(true)
+      })
     return () => {
       cancelled = true
     }
@@ -169,12 +207,7 @@ export default function VoicePanel({
     return Math.min(0, Math.max(-100, Math.round(db)))
   }
 
-  const cleanupPeer = (peerId: string) => {
-    const peer = peersRef.current.get(peerId)
-    if (peer) {
-      peer.close()
-      peersRef.current.delete(peerId)
-    }
+  const removeSpeakingMonitor = (peerId: string) => {
     const analyser = analyserRef.current.get(peerId)
     if (analyser) {
       cancelAnimationFrame(analyser.raf)
@@ -186,10 +219,24 @@ export default function VoicePanel({
       speakingRef.current.delete(peerId)
       setSpeakingIds(Array.from(speakingRef.current))
     }
+  }
+
+  const cleanupPeer = (peerId: string) => {
+    const peer = peersRef.current.get(peerId)
+    if (peer) {
+      peer.close()
+      peersRef.current.delete(peerId)
+    }
+    removeSpeakingMonitor(peerId)
     const audio = document.getElementById(`voice-audio-${peerId}`) as HTMLAudioElement | null
     if (audio) {
       audio.srcObject = null
       audio.remove()
+    }
+    const screenAudio = document.getElementById(`screen-audio-${peerId}`) as HTMLAudioElement | null
+    if (screenAudio) {
+      screenAudio.srcObject = null
+      screenAudio.remove()
     }
     if (screenShareSendersRef.current.has(peerId)) {
       screenShareSendersRef.current.delete(peerId)
@@ -198,6 +245,282 @@ export default function VoicePanel({
       screenShareViewersRef.current.delete(peerId)
     }
     setScreenShares((prev) => prev.filter((share) => share.id !== peerId))
+  }
+
+  const cleanupSfuAudio = (peerId: string) => {
+    const audio = document.getElementById(`sfu-audio-${peerId}`) as HTMLAudioElement | null
+    if (audio) {
+      audio.srcObject = null
+      audio.remove()
+    }
+    removeSpeakingMonitor(peerId)
+  }
+
+  const disconnectSfu = () => {
+    sfuProducerRef.current?.close()
+    sfuProducerRef.current = null
+    sfuSendTransportRef.current?.close()
+    sfuSendTransportRef.current = null
+    sfuRecvTransportRef.current?.close()
+    sfuRecvTransportRef.current = null
+    sfuConsumersRef.current.forEach((consumer) => {
+      consumer.close()
+    })
+    sfuConsumersRef.current.clear()
+    sfuPausedConsumersRef.current.clear()
+    document.querySelectorAll<HTMLAudioElement>('audio[id^="sfu-audio-"]').forEach((audio) => {
+      const peerId = audio.id.replace('sfu-audio-', '')
+      audio.srcObject = null
+      audio.remove()
+      removeSpeakingMonitor(peerId)
+    })
+    const peer = sfuPeerRef.current
+    sfuPeerRef.current = null
+    sfuDeviceRef.current = null
+    if (peer && !peer.closed) {
+      peer.close()
+    }
+  }
+
+  const attachSfuAudio = (peerId: string, consumer: any) => {
+    if (consumer.kind !== 'audio') return
+    const audioId = `sfu-audio-${peerId}`
+    let audio = document.getElementById(audioId) as HTMLAudioElement | null
+    if (!audio) {
+      audio = document.createElement('audio')
+      audio.id = audioId
+      audio.autoplay = true
+      audio.setAttribute('playsinline', 'true')
+      document.body.appendChild(audio)
+    }
+    const stream = new MediaStream([consumer.track])
+    applyOutputDevice(audio, outputDeviceId)
+    audio.srcObject = stream
+    startSpeakingMonitor(peerId, stream)
+  }
+
+  const handleSfuRequest = async (request: any, accept: () => void, reject: (code: number, reason?: string) => void) => {
+    if (request.method !== 'newConsumer') {
+      reject(403, 'Unsupported request')
+      return
+    }
+    const recvTransport = sfuRecvTransportRef.current
+    if (!recvTransport) {
+      reject(500, 'Missing recv transport')
+      return
+    }
+    const {
+      peerId,
+      consumerId,
+      producerId,
+      kind,
+      rtpParameters,
+      producerPaused,
+      appData,
+    } = request.data || {}
+    try {
+      const consumer = await recvTransport.consume({
+        id: consumerId,
+        producerId,
+        kind,
+        rtpParameters,
+        appData: { ...appData, peerId },
+      })
+      sfuConsumersRef.current.set(consumer.id, consumer)
+      consumer.on('transportclose', () => {
+        sfuConsumersRef.current.delete(consumer.id)
+      })
+      consumer.on('producerclose', () => {
+        sfuConsumersRef.current.delete(consumer.id)
+        if (peerId) cleanupSfuAudio(peerId)
+      })
+      if (producerPaused) {
+        consumer.pause()
+      }
+      if (peerId) {
+        attachSfuAudio(peerId, consumer)
+      }
+      if (headsetMutedRef.current) {
+        consumer.pause()
+        sfuPausedConsumersRef.current.add(consumer.id)
+        const peer = sfuPeerRef.current
+        peer?.request('pauseConsumer', { consumerId: consumer.id }).catch(() => {})
+      }
+      accept()
+    } catch (error) {
+      console.error('[sfu] failed to consume', error)
+      reject(500, 'Consume failed')
+    }
+  }
+
+  const handleSfuNotification = (notification: any) => {
+    const { method, data } = notification || {}
+    if (method === 'peerClosed') {
+      const peerId = data?.peerId as string | undefined
+      if (!peerId) return
+      sfuConsumersRef.current.forEach((consumer, consumerId) => {
+        const consumerPeerId = (consumer.appData as any)?.peerId
+        if (consumerPeerId === peerId) {
+          consumer.close()
+          sfuConsumersRef.current.delete(consumerId)
+        }
+      })
+      cleanupSfuAudio(peerId)
+      return
+    }
+    if (method === 'consumerClosed') {
+      const consumerId = data?.consumerId as string | undefined
+      if (!consumerId) return
+      const consumer = sfuConsumersRef.current.get(consumerId)
+      if (!consumer) return
+      const peerId = (consumer.appData as any)?.peerId as string | undefined
+      consumer.close()
+      sfuConsumersRef.current.delete(consumerId)
+      if (peerId) cleanupSfuAudio(peerId)
+      return
+    }
+    if (method === 'consumerPaused') {
+      const consumerId = data?.consumerId as string | undefined
+      const consumer = consumerId ? sfuConsumersRef.current.get(consumerId) : null
+      consumer?.pause()
+      return
+    }
+    if (method === 'consumerResumed') {
+      const consumerId = data?.consumerId as string | undefined
+      const consumer = consumerId ? sfuConsumersRef.current.get(consumerId) : null
+      consumer?.resume()
+    }
+  }
+
+  const connectSfu = async () => {
+    if (!useSfuAudio) return
+    if (!sfuBase) return
+    const peerId = socket?.id
+    if (!peerId || !user) return
+    if (sfuPeerRef.current) return
+    if (sfuConnectingRef.current) return sfuConnectingRef.current
+    const promise = (async () => {
+      const base = sfuBase
+      const sfuUrl = buildSfuUrl(base, channelId, peerId)
+      const transport = new protooClient.WebSocketTransport(sfuUrl)
+      const peer = new protooClient.Peer(transport)
+      sfuPeerRef.current = peer
+
+      const openPromise = new Promise<void>((resolve, reject) => {
+        const handleOpen = () => {
+          resolve()
+        }
+        const handleFailed = () => {
+          reject(new Error('SFU connection failed'))
+        }
+        const handleClose = () => {
+          reject(new Error('SFU connection closed'))
+        }
+        peer.on('open', handleOpen)
+        peer.on('failed', handleFailed)
+        peer.on('close', handleClose)
+      })
+
+      peer.on('request', handleSfuRequest)
+      peer.on('notification', handleSfuNotification)
+      peer.on('disconnected', () => {
+        disconnectSfu()
+      })
+
+      await openPromise
+
+      const device = new MediasoupDevice()
+      const routerCaps = await peer.request('getRouterRtpCapabilities')
+      const routerRtpCapabilities = routerCaps?.routerRtpCapabilities ?? routerCaps
+      await device.load({ routerRtpCapabilities })
+      sfuDeviceRef.current = device
+
+      const sendInfo = await peer.request('createWebRtcTransport', {
+        sctpCapabilities: device.sctpCapabilities,
+        forceTcp: false,
+        appData: { direction: 'producer' },
+      })
+      const sendTransport = device.createSendTransport({
+        id: sendInfo.transportId,
+        iceParameters: sendInfo.iceParameters,
+        iceCandidates: sendInfo.iceCandidates,
+        dtlsParameters: sendInfo.dtlsParameters,
+        sctpParameters: sendInfo.sctpParameters,
+        iceServers,
+      })
+      sendTransport.on('connect', ({ dtlsParameters }, callback, errback) => {
+        peer
+          .request('connectWebRtcTransport', { transportId: sendTransport.id, dtlsParameters })
+          .then(callback)
+          .catch(errback)
+      })
+      sendTransport.on('produce', ({ kind, rtpParameters, appData }, callback, errback) => {
+        peer
+          .request('produce', {
+            transportId: sendTransport.id,
+            kind,
+            rtpParameters,
+            appData,
+          })
+          .then((response: { producerId: string }) => callback({ id: response.producerId }))
+          .catch(errback)
+      })
+      sfuSendTransportRef.current = sendTransport
+
+      const recvInfo = await peer.request('createWebRtcTransport', {
+        sctpCapabilities: device.sctpCapabilities,
+        forceTcp: false,
+        appData: { direction: 'consumer' },
+      })
+      const recvTransport = device.createRecvTransport({
+        id: recvInfo.transportId,
+        iceParameters: recvInfo.iceParameters,
+        iceCandidates: recvInfo.iceCandidates,
+        dtlsParameters: recvInfo.dtlsParameters,
+        sctpParameters: recvInfo.sctpParameters,
+        iceServers,
+      })
+      recvTransport.on('connect', ({ dtlsParameters }, callback, errback) => {
+        peer
+          .request('connectWebRtcTransport', { transportId: recvTransport.id, dtlsParameters })
+          .then(callback)
+          .catch(errback)
+      })
+      sfuRecvTransportRef.current = recvTransport
+
+      await peer.request('join', {
+        displayName: user.displayName || user.username,
+        device: getSfuDeviceInfo(),
+        rtpCapabilities: device.rtpCapabilities,
+        sctpCapabilities: device.sctpCapabilities,
+      })
+
+      const track = localStreamRef.current?.getAudioTracks()[0]
+      if (track) {
+        const producer = await sendTransport.produce({
+          track,
+          appData: { source: 'audio' },
+        })
+        sfuProducerRef.current = producer
+        if (micMuted || headsetMuted) {
+          producer.pause()
+        }
+        producer.on('transportclose', () => {
+          if (sfuProducerRef.current === producer) sfuProducerRef.current = null
+        })
+      }
+    })()
+      .catch((error) => {
+        console.error('[sfu] connect failed', error)
+        disconnectSfu()
+      })
+      .finally(() => {
+        if (sfuConnectingRef.current === promise) {
+          sfuConnectingRef.current = null
+        }
+      })
+    sfuConnectingRef.current = promise
+    return promise
   }
 
   const startSpeakingMonitor = (peerId: string, stream: MediaStream, threshold?: number) => {
@@ -240,6 +563,9 @@ export default function VoicePanel({
   const leaveVoice = () => {
     if (socket && joined) {
       socket.emit('voice:leave', { channelId })
+    }
+    if (useSfuAudio) {
+      disconnectSfu()
     }
     if (screenShareStreamRef.current) {
       stopScreenShare()
@@ -341,9 +667,11 @@ export default function VoicePanel({
     const peer = new RTCPeerConnection({ iceServers })
     peersRef.current.set(peerId, peer)
 
-    localStreamRef.current?.getTracks().forEach((track) => {
-      peer.addTrack(track, localStreamRef.current as MediaStream)
-    })
+    if (!useSfuAudio) {
+      localStreamRef.current?.getTracks().forEach((track) => {
+        peer.addTrack(track, localStreamRef.current as MediaStream)
+      })
+    }
     peer.onicecandidate = (event) => {
       if (event.candidate) {
         socket.emit('voice:ice', { channelId, targetId: peerId, candidate: event.candidate })
@@ -359,7 +687,9 @@ export default function VoicePanel({
             return [...next, { id: peerId, stream, label: getMemberLabel(members.find((m) => m.id === peerId) || { id: peerId, username: peerId }) }]
           })
         } else {
-          const audioId = `voice-audio-${peerId}`
+          const isScreenAudio = stream.getVideoTracks().length > 0
+          if (useSfuAudio && !isScreenAudio) return
+          const audioId = useSfuAudio && isScreenAudio ? `screen-audio-${peerId}` : `voice-audio-${peerId}`
           let audio = document.getElementById(audioId) as HTMLAudioElement | null
           if (!audio) {
             audio = document.createElement('audio')
@@ -370,7 +700,9 @@ export default function VoicePanel({
           }
           applyOutputDevice(audio, outputDeviceId)
           audio.srcObject = stream
-          startSpeakingMonitor(peerId, stream)
+          if (!useSfuAudio || !isScreenAudio) {
+            startSpeakingMonitor(peerId, stream)
+          }
         }
       }
     }
@@ -383,9 +715,11 @@ export default function VoicePanel({
   }
 
   const updateOutputMute = (muted: boolean) => {
-    document.querySelectorAll<HTMLAudioElement>('audio[id^="voice-audio-"]').forEach((audio) => {
-      audio.muted = muted
-    })
+    document
+      .querySelectorAll<HTMLAudioElement>('audio[id^="voice-audio-"], audio[id^="screen-audio-"], audio[id^="sfu-audio-"]')
+      .forEach((audio) => {
+        audio.muted = muted
+      })
   }
 
   const applyOutputDevice = (audio: HTMLAudioElement, deviceId: string) => {
@@ -589,6 +923,10 @@ export default function VoicePanel({
       onRequireLogin?.()
       return
     }
+    if (useSfuAudio && !sfuBase) {
+      console.error('[voice] SFU URL is missing (VITE_SFU_URL)')
+      return
+    }
     if (joined) return
     try {
       const audioConstraints = {
@@ -634,6 +972,26 @@ export default function VoicePanel({
     onAutoJoinHandled?.()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoJoin, channelId, joined, user?.id])
+
+  useEffect(() => {
+    if (!useSfuAudio) return
+    if (!joined || !socket?.id || !user || !iceServersReady) return
+    void connectSfu()
+    return () => {
+      disconnectSfu()
+    }
+  }, [channelId, iceServersReady, joined, socket?.id, useSfuAudio, user?.id])
+
+  useEffect(() => {
+    if (!useSfuAudio) return
+    const producer = sfuProducerRef.current
+    if (!producer) return
+    if (micMuted || headsetMuted) {
+      producer.pause()
+    } else {
+      producer.resume()
+    }
+  }, [headsetMuted, micMuted, useSfuAudio])
 
   useEffect(() => {
     if (!socket) return
@@ -901,9 +1259,33 @@ export default function VoicePanel({
   }, [headsetMuted, micMuted])
 
   useEffect(() => {
-    document.querySelectorAll<HTMLAudioElement>('audio[id^="voice-audio-"]').forEach((audio) => {
-      applyOutputDevice(audio, outputDeviceId)
+    headsetMutedRef.current = headsetMuted
+    if (!useSfuAudio) return
+    const peer = sfuPeerRef.current
+    if (!peer) return
+    sfuConsumersRef.current.forEach((consumer) => {
+      if (consumer.kind !== 'audio') return
+      const consumerId = consumer.id as string
+      if (headsetMuted) {
+        if (!sfuPausedConsumersRef.current.has(consumerId)) {
+          sfuPausedConsumersRef.current.add(consumerId)
+          consumer.pause()
+          peer.request('pauseConsumer', { consumerId }).catch(() => {})
+        }
+      } else if (sfuPausedConsumersRef.current.has(consumerId)) {
+        sfuPausedConsumersRef.current.delete(consumerId)
+        consumer.resume()
+        peer.request('resumeConsumer', { consumerId }).catch(() => {})
+      }
     })
+  }, [headsetMuted, useSfuAudio])
+
+  useEffect(() => {
+    document
+      .querySelectorAll<HTMLAudioElement>('audio[id^="voice-audio-"], audio[id^="screen-audio-"], audio[id^="sfu-audio-"]')
+      .forEach((audio) => {
+        applyOutputDevice(audio, outputDeviceId)
+      })
   }, [outputDeviceId])
 
   useEffect(() => {

@@ -40,6 +40,8 @@
     "mongodb": "^7.0.0",
     "passport": "^0.7.0",
     "passport-discord": "^0.1.4",
+    "mediasoup-client": "^3.13.10",
+    "protoo-client": "^4.0.7",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-router-dom": "^6.30.1",
