@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { io, Socket } from 'socket.io-client'
 import axios from 'axios'
@@ -110,12 +110,15 @@ function App() {
   const [authReady, setAuthReady] = useState(false)
   const [menu, setMenu] = useState<{ visible: boolean; x: number; y: number; message: ChatMessage | null; imageUrl?: string | null }>({ visible: false, x: 0, y: 0, message: null, imageUrl: null })
   const menuSizeRef = useRef({ width: 220, height: 140 })
-  const [memberMenu, setMemberMenu] = useState<{ visible: boolean; x: number; y: number; member: ServerMember | null }>({
+  const [memberMenu, setMemberMenu] = useState<{ visible: boolean; x: number; y: number; anchorX: number; anchorY: number; member: ServerMember | null }>({
     visible: false,
     x: 0,
     y: 0,
+    anchorX: 0,
+    anchorY: 0,
     member: null,
   })
+  const memberMenuRef = useRef<HTMLDivElement | null>(null)
   const [imageViewerUrl, setImageViewerUrl] = useState<string | null>(null)
   const [imageViewerClosing, setImageViewerClosing] = useState(false)
   const [profileCard, setProfileCard] = useState<{
@@ -215,6 +218,21 @@ function App() {
       return prev
     })
   }, [])
+
+  useLayoutEffect(() => {
+    if (!memberMenu.visible) return
+    const el = memberMenuRef.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    const margin = 12
+    const prefersLeft = memberMenu.anchorX + rect.width + margin > window.innerWidth
+    const rawX = prefersLeft ? memberMenu.anchorX - rect.width : memberMenu.anchorX
+    const nextX = Math.min(Math.max(rawX, margin), Math.max(margin, window.innerWidth - rect.width - margin))
+    const nextY = Math.min(Math.max(memberMenu.anchorY, margin), Math.max(margin, window.innerHeight - rect.height - margin))
+    if (nextX !== memberMenu.x || nextY !== memberMenu.y) {
+      setMemberMenu((prev) => ({ ...prev, x: nextX, y: nextY }))
+    }
+  }, [memberMenu.visible, memberMenu.anchorX, memberMenu.anchorY, memberMenu.x, memberMenu.y])
 
   const handleSpeakingChange = useCallback((channelId: string, speakingIds: string[]) => {
     setVoiceSpeakingByChannel((prev) => ({ ...prev, [channelId]: speakingIds }))
@@ -2284,14 +2302,10 @@ function App() {
                         const itemCount = 1 + (showAdminActions ? 2 : 0)
                         const itemHeight = 34
                         const padding = 16
-                        const width = 210
-                        const height = padding + itemCount * itemHeight
                         const margin = 12
-                        const prefersLeft = event.clientX + width + margin > window.innerWidth
-                        const rawX = prefersLeft ? event.clientX - width : event.clientX
-                        const nextX = Math.min(Math.max(rawX, margin), Math.max(margin, window.innerWidth - width - margin))
-                        const nextY = Math.min(Math.max(event.clientY, margin), Math.max(margin, window.innerHeight - height - margin))
-                        setMemberMenu({ visible: true, x: nextX, y: nextY, member })
+                        const nextX = Math.min(Math.max(event.clientX, margin), Math.max(margin, window.innerWidth - margin))
+                        const nextY = Math.min(Math.max(event.clientY, margin), Math.max(margin, window.innerHeight - margin))
+                        setMemberMenu({ visible: true, x: nextX, y: nextY, anchorX: event.clientX, anchorY: event.clientY, member })
                       }}
                     >
                       <div
@@ -2392,17 +2406,19 @@ function App() {
                 <>
                   <div
                     className="fixed inset-0 z-40 pointer-events-auto"
-                    onMouseDown={() => setMemberMenu({ visible: false, x: 0, y: 0, member: null })}
+                    onMouseDown={() => setMemberMenu({ visible: false, x: 0, y: 0, anchorX: 0, anchorY: 0, member: null })}
                     onContextMenu={(e) => {
                       e.preventDefault()
-                      setMemberMenu({ visible: false, x: 0, y: 0, member: null })
+                      setMemberMenu({ visible: false, x: 0, y: 0, anchorX: 0, anchorY: 0, member: null })
                     }}
                   />
                   <div
-                    className="fixed z-50 min-w-[180px] rounded-md p-2 text-sm pointer-events-auto"
+                    className="fixed z-50 min-w-[160px] rounded-md p-2 text-sm pointer-events-auto member-menu"
+                    ref={memberMenuRef}
                     style={{
                       top: memberMenu.y,
                       left: memberMenu.x,
+                      maxWidth: 220,
                       background: 'var(--header-bg)',
                       border: '1px solid var(--border)',
                       color: 'var(--text-primary)',
@@ -2412,21 +2428,21 @@ function App() {
                     {canManageChannels && user && memberMenu.member.id !== user.id ? (
                       <>
                         <button
-                          className="w-full text-left px-3 py-2 cursor-pointer member-menu-danger"
+                          className="w-full text-left px-3 py-2 cursor-pointer member-menu-danger member-menu-item"
                           onClick={() => {
                             setModerationReason('')
                             setModerationAction({ type: 'kick', member: memberMenu.member! })
-                            setMemberMenu({ visible: false, x: 0, y: 0, member: null })
+                            setMemberMenu({ visible: false, x: 0, y: 0, anchorX: 0, anchorY: 0, member: null })
                           }}
                         >
                           {t.app.kickUser.replace('{name}', memberMenu.member.displayName || memberMenu.member.username)}
                         </button>
                         <button
-                          className="w-full text-left px-3 py-2 cursor-pointer member-menu-danger"
+                          className="w-full text-left px-3 py-2 cursor-pointer member-menu-danger member-menu-item"
                           onClick={() => {
                             setModerationReason('')
                             setModerationAction({ type: 'ban', member: memberMenu.member! })
-                            setMemberMenu({ visible: false, x: 0, y: 0, member: null })
+                            setMemberMenu({ visible: false, x: 0, y: 0, anchorX: 0, anchorY: 0, member: null })
                           }}
                         >
                           {t.app.banUser.replace('{name}', memberMenu.member.displayName || memberMenu.member.username)}
@@ -2434,10 +2450,10 @@ function App() {
                       </>
                     ) : null}
                     <button
-                      className="w-full text-left px-3 py-2 hover-surface cursor-pointer"
+                      className="w-full text-left px-3 py-2 hover-surface cursor-pointer member-menu-item"
                       onClick={() => {
                         navigator.clipboard.writeText(memberMenu.member!.id)
-                        setMemberMenu({ visible: false, x: 0, y: 0, member: null })
+                        setMemberMenu({ visible: false, x: 0, y: 0, anchorX: 0, anchorY: 0, member: null })
                       }}
                     >
                       {t.app.copyUserId}

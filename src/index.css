@@ -116,6 +116,12 @@ textarea::placeholder {
   background: rgba(248, 113, 113, 0.18);
 }
 
+.member-menu-item {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 a {
   color: var(--link);
 }

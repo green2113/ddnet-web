@@ -49,7 +49,7 @@ type VoicePanelProps = {
   leaveSignal?: number
 }
 
-const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }]
+const DEFAULT_ICE_SERVERS: RTCIceServer[] = [{ urls: 'stun:stun.l.google.com:19302' }]
 const memberNameCollator = new Intl.Collator('ko', { numeric: true, sensitivity: 'base' })
 const getMemberLabel = (member: VoiceMember) => member.displayName || member.username
 const sortMembersByName = (members: VoiceMember[]) =>
@@ -110,6 +110,7 @@ export default function VoicePanel({
   const [screenShareResolution, setScreenShareResolution] = useState<'720p' | '1080p' | '1440p'>('1080p')
   const [screenShareFrameRate, setScreenShareFrameRate] = useState<15 | 30 | 60>(30)
   const [screenShareSubmenu, setScreenShareSubmenu] = useState<'resolution' | 'frameRate' | null>(null)
+  const [iceServers, setIceServers] = useState<RTCIceServer[]>(DEFAULT_ICE_SERVERS)
   const prevJoinedRef = useRef(false)
   const forcedHeadsetRef = useRef(false)
   const micBeforeForceRef = useRef(false)
@@ -142,6 +143,22 @@ export default function VoicePanel({
     >
   >(new Map())
   const DEFAULT_SPEAKING_THRESHOLD = -60
+
+  useEffect(() => {
+    let cancelled = false
+    const base = (import.meta as any).env?.VITE_API_BASE as string | undefined
+    const serverBase = base ? base.replace(/\/$/, '') : ''
+    fetch(`${serverBase}/api/ice`, { credentials: 'include' })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (cancelled || !data?.iceServers) return
+        setIceServers(data.iceServers)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const normalizeLevel = (data: Float32Array) => {
     let sum = 0
@@ -321,7 +338,7 @@ export default function VoicePanel({
   const createPeer = async (peerId: string, initiate: boolean) => {
     if (!socket) return
     if (peersRef.current.has(peerId)) return
-    const peer = new RTCPeerConnection({ iceServers: ICE_SERVERS })
+    const peer = new RTCPeerConnection({ iceServers })
     peersRef.current.set(peerId, peer)
 
     localStreamRef.current?.getTracks().forEach((track) => {
