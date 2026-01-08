@@ -2298,7 +2298,6 @@ function App() {
                       }}
                       onContextMenu={(event) => {
                         event.preventDefault()
-                        const showAdminActions = Boolean(canManageChannels && user && member.id !== user.id)
                         const margin = 12
                         const nextX = Math.min(Math.max(event.clientX, margin), Math.max(margin, window.innerWidth - margin))
                         const nextY = Math.min(Math.max(event.clientY, margin), Math.max(margin, window.innerHeight - margin))
