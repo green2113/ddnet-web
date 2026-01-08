@@ -2299,9 +2299,6 @@ function App() {
                       onContextMenu={(event) => {
                         event.preventDefault()
                         const showAdminActions = Boolean(canManageChannels && user && member.id !== user.id)
-                        const itemCount = 1 + (showAdminActions ? 2 : 0)
-                        const itemHeight = 34
-                        const padding = 16
                         const margin = 12
                         const nextX = Math.min(Math.max(event.clientX, margin), Math.max(margin, window.innerWidth - margin))
                         const nextY = Math.min(Math.max(event.clientY, margin), Math.max(margin, window.innerHeight - margin))
