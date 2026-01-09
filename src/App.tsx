@@ -120,6 +120,7 @@ function App() {
   })
   const memberMenuRef = useRef<HTMLDivElement | null>(null)
   const [memberVolumes, setMemberVolumes] = useState<Record<string, number>>({})
+  const memberVolumeSyncTimersRef = useRef<Map<string, number>>(new Map())
   const [imageViewerUrl, setImageViewerUrl] = useState<string | null>(null)
   const [imageViewerClosing, setImageViewerClosing] = useState(false)
   const [profileCard, setProfileCard] = useState<{
@@ -159,6 +160,10 @@ function App() {
   const [inviteError, setInviteError] = useState('')
   const [inviteCopied, setInviteCopied] = useState(false)
   const imageViewerCloseTimerRef = useRef<number | null>(null)
+  const serverBase = useMemo(() => {
+    const api = (import.meta as any).env?.VITE_API_BASE as string | undefined
+    return api ? api.replace(/\/$/, '') : ''
+  }, [])
   const memberVolumeKey = useCallback((memberId: string) => `voice-member-volume:${memberId}`, [])
   const clampMemberVolume = useCallback((value: number) => Math.min(200, Math.max(0, Math.round(value))), [])
   const getStoredMemberVolume = useCallback(
@@ -169,6 +174,26 @@ function App() {
       return Number.isFinite(parsed) ? clampMemberVolume(parsed) : 100
     },
     [clampMemberVolume, memberVolumeKey]
+  )
+  const syncMemberVolume = useCallback(
+    (memberId: string, volume: number) => {
+      if (!user || user.isGuest) return
+      const timers = memberVolumeSyncTimersRef.current
+      const existing = timers.get(memberId)
+      if (existing) window.clearTimeout(existing)
+      const timer = window.setTimeout(() => {
+        axios
+          .patch(
+            `${serverBase}/api/users/me/voice-volumes`,
+            { targetId: memberId, volume },
+            { withCredentials: true },
+          )
+          .catch(() => {})
+        timers.delete(memberId)
+      }, 300)
+      timers.set(memberId, timer)
+    },
+    [serverBase, user]
   )
   const getMemberVolume = useCallback(
     (memberId: string) => memberVolumes[memberId] ?? getStoredMemberVolume(memberId),
@@ -194,9 +219,10 @@ function App() {
         window.localStorage.setItem(memberVolumeKey(memberId), String(next))
         window.dispatchEvent(new CustomEvent('voice-member-volume-change', { detail: { memberId, volume: next } }))
       }
+      syncMemberVolume(memberId, next)
       applyMemberVolumeToAudio(memberId, next)
     },
-    [applyMemberVolumeToAudio, clampMemberVolume, memberVolumeKey]
+    [applyMemberVolumeToAudio, clampMemberVolume, memberVolumeKey, syncMemberVolume]
   )
   const openMemberMenu = useCallback((member: ServerMember, clientX: number, clientY: number) => {
     const margin = 12
@@ -315,11 +341,6 @@ function App() {
     const clamped = Math.min(0, Math.max(-100, db))
     return Math.round(((clamped + 100) / 100) * 100)
   }
-
-  const serverBase = useMemo(() => {
-    const api = (import.meta as any).env?.VITE_API_BASE as string | undefined
-    return api ? api.replace(/\/$/, '') : ''
-  }, [])
 
   const requireLogin = useCallback(() => {
     if (location.pathname !== '/login') {
@@ -544,6 +565,36 @@ function App() {
       })
       .catch(() => {})
   }, [user, serverBase])
+
+  useEffect(() => {
+    if (!user || user.isGuest) {
+      setMemberVolumes({})
+      return
+    }
+    axios
+      .get(`${serverBase}/api/users/me/voice-volumes`, { withCredentials: true })
+      .then((res) => {
+        const volumes = res.data?.volumes
+        if (!volumes || typeof volumes !== 'object') return
+        setMemberVolumes(volumes)
+        if (typeof window !== 'undefined') {
+          const prefix = 'voice-member-volume:'
+          for (let i = window.localStorage.length - 1; i >= 0; i -= 1) {
+            const key = window.localStorage.key(i)
+            if (key && key.startsWith(prefix)) {
+              window.localStorage.removeItem(key)
+            }
+          }
+          Object.entries(volumes).forEach(([memberId, value]) => {
+            if (typeof value !== 'number') return
+            const normalized = Math.min(200, Math.max(0, Math.round(value)))
+            window.localStorage.setItem(memberVolumeKey(memberId), String(normalized))
+            window.dispatchEvent(new CustomEvent('voice-member-volume-change', { detail: { memberId, volume: normalized } }))
+          })
+        }
+      })
+      .catch(() => {})
+  }, [serverBase, user, memberVolumeKey])
 
   useEffect(() => {
     if (!user) return
