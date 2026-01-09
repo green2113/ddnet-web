@@ -406,6 +406,14 @@ export default function SidebarChannels({
                     })
                     window.dispatchEvent(ev)
                   }}
+                  onContextMenu={(event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    const ev = new CustomEvent('open-member-menu', {
+                      detail: { member, x: event.clientX, y: event.clientY },
+                    })
+                    window.dispatchEvent(ev)
+                  }}
                   onMouseEnter={(event) => {
                     event.currentTarget.style.background = 'color-mix(in oklch, var(--text-primary) 8%, transparent)'
                   }}

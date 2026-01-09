@@ -28,6 +28,7 @@ export type UiText = {
     moderationCancel: string
     kickConfirm: string
     banConfirm: string
+    userVolume: string
     deleteMessage: string
     someone: string
     serverActionTitle: string
@@ -126,6 +127,7 @@ export type UiText = {
   }
   sidebarGuilds: {
     add: string
+    addTooltip: string
   }
   serverSettings: {
     title: string
@@ -297,6 +299,7 @@ const translations: TranslationMap = {
       moderationCancel: 'Cancel',
       kickConfirm: 'Kick',
       banConfirm: 'Ban',
+      userVolume: 'User volume',
       deleteMessage: 'Delete message',
       someone: 'Someone',
       serverActionTitle: 'Server',
@@ -395,6 +398,7 @@ const translations: TranslationMap = {
     },
     sidebarGuilds: {
       add: 'Add',
+      addTooltip: 'Add server',
     },
     serverSettings: {
       title: 'DD Server',
@@ -564,6 +568,7 @@ const translations: TranslationMap = {
       moderationCancel: '취소',
       kickConfirm: '추방하기',
       banConfirm: '차단하기',
+      userVolume: '사용자 음량',
       deleteMessage: '메시지 삭제',
       someone: '누군가',
       serverActionTitle: '서버',
@@ -662,6 +667,7 @@ const translations: TranslationMap = {
     },
     sidebarGuilds: {
       add: '추가',
+      addTooltip: '서버 추가하기',
     },
     serverSettings: {
       title: 'DD Server',
@@ -831,6 +837,7 @@ const translations: TranslationMap = {
       moderationCancel: '取消',
       kickConfirm: '踢出',
       banConfirm: '封禁',
+      userVolume: '使用者音量',
       deleteMessage: '删除消息',
       someone: '某人',
       serverActionTitle: '服务器',
@@ -929,6 +936,7 @@ const translations: TranslationMap = {
     },
     sidebarGuilds: {
       add: '新增',
+      addTooltip: '新增伺服器',
     },
     serverSettings: {
       title: 'DD Server',
@@ -1098,6 +1106,7 @@ const translations: TranslationMap = {
       moderationCancel: '取消',
       kickConfirm: '踢出',
       banConfirm: '封鎖',
+      userVolume: '使用者音量',
       deleteMessage: '刪除訊息',
       someone: '某人',
       serverActionTitle: '伺服器',
@@ -1196,6 +1205,7 @@ const translations: TranslationMap = {
     },
     sidebarGuilds: {
       add: '新增',
+      addTooltip: '新增伺服器',
     },
     serverSettings: {
       title: 'DD Server',

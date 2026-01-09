@@ -17,6 +17,7 @@ type Props = {
   t: {
     sidebarGuilds: {
       add: string
+      addTooltip: string
     }
   }
 }
@@ -188,14 +189,16 @@ export default function SidebarGuilds({
       })}
       </div>
       <div className="w-11 h-[2px] rounded bg-black/10" />
-      <button
-        className="w-11 h-11 rounded-2xl grid place-items-center text-[20px] text-white cursor-pointer"
-        style={{ background: 'var(--input-bg)' }}
-        aria-label={t.sidebarGuilds.add}
-        onClick={onCreate}
-      >
-        +
-      </button>
+      <Tooltip label={t.sidebarGuilds.addTooltip} side="right">
+        <button
+          className="w-11 h-11 rounded-2xl grid place-items-center text-[20px] text-white cursor-pointer"
+          style={{ background: 'var(--input-bg)' }}
+          aria-label={t.sidebarGuilds.add}
+          onClick={onCreate}
+        >
+          +
+        </button>
+      </Tooltip>
     </aside>
   )
 }
