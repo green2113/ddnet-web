@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { createPortal } from 'react-dom'
 import { io, Socket } from 'socket.io-client'
 import axios from 'axios'
-import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Navigate, useLocation, useNavigate, useNavigationType, useParams } from 'react-router-dom'
 import SidebarGuilds from './components/SidebarGuilds'
 import SidebarChannels from './components/SidebarChannels'
 import SidebarProfileBar from './components/SidebarProfileBar'
@@ -119,6 +119,7 @@ function App() {
     member: null,
   })
   const memberMenuRef = useRef<HTMLDivElement | null>(null)
+  const [memberVolumes, setMemberVolumes] = useState<Record<string, number>>({})
   const [imageViewerUrl, setImageViewerUrl] = useState<string | null>(null)
   const [imageViewerClosing, setImageViewerClosing] = useState(false)
   const [profileCard, setProfileCard] = useState<{
@@ -158,6 +159,51 @@ function App() {
   const [inviteError, setInviteError] = useState('')
   const [inviteCopied, setInviteCopied] = useState(false)
   const imageViewerCloseTimerRef = useRef<number | null>(null)
+  const memberVolumeKey = useCallback((memberId: string) => `voice-member-volume:${memberId}`, [])
+  const clampMemberVolume = useCallback((value: number) => Math.min(200, Math.max(0, Math.round(value))), [])
+  const getStoredMemberVolume = useCallback(
+    (memberId: string) => {
+      if (typeof window === 'undefined') return 100
+      const raw = window.localStorage.getItem(memberVolumeKey(memberId))
+      const parsed = Number(raw)
+      return Number.isFinite(parsed) ? clampMemberVolume(parsed) : 100
+    },
+    [clampMemberVolume, memberVolumeKey]
+  )
+  const getMemberVolume = useCallback(
+    (memberId: string) => memberVolumes[memberId] ?? getStoredMemberVolume(memberId),
+    [getStoredMemberVolume, memberVolumes]
+  )
+  const applyMemberVolumeToAudio = useCallback(
+    (memberId: string, volume: number) => {
+      if (typeof document === 'undefined') return
+      const normalized = clampMemberVolume(volume) / 100
+      const audioIds = [`voice-audio-${memberId}`, `sfu-audio-${memberId}`]
+      audioIds.forEach((id) => {
+        const audio = document.getElementById(id) as HTMLAudioElement | null
+        if (audio) audio.volume = normalized
+      })
+    },
+    [clampMemberVolume]
+  )
+  const updateMemberVolume = useCallback(
+    (memberId: string, volume: number) => {
+      const next = clampMemberVolume(volume)
+      setMemberVolumes((prev) => ({ ...prev, [memberId]: next }))
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(memberVolumeKey(memberId), String(next))
+        window.dispatchEvent(new CustomEvent('voice-member-volume-change', { detail: { memberId, volume: next } }))
+      }
+      applyMemberVolumeToAudio(memberId, next)
+    },
+    [applyMemberVolumeToAudio, clampMemberVolume, memberVolumeKey]
+  )
+  const openMemberMenu = useCallback((member: ServerMember, clientX: number, clientY: number) => {
+    const margin = 12
+    const nextX = Math.min(Math.max(clientX, margin), Math.max(margin, window.innerWidth - margin))
+    const nextY = Math.min(Math.max(clientY, margin), Math.max(margin, window.innerHeight - margin))
+    setMemberMenu({ visible: true, x: nextX, y: nextY, anchorX: clientX, anchorY: clientY, member })
+  }, [])
   const [settingsTab, setSettingsTab] = useState<'profile' | 'voice' | 'language'>('profile')
   const [voiceSwitchTargetId, setVoiceSwitchTargetId] = useState<string | null>(null)
   const [voiceSwitchClosing, setVoiceSwitchClosing] = useState(false)
@@ -186,6 +232,9 @@ function App() {
   const { serverId: routeServerId, channelId: routeChannelId } = useParams()
   const location = useLocation()
   const navigate = useNavigate()
+  const navigationType = useNavigationType()
+
+  const memberMenuVolume = memberMenu.member ? getMemberVolume(memberMenu.member.id) : 100
   const micTestStreamRef = useRef<MediaStream | null>(null)
   const micTestContextRef = useRef<AudioContext | null>(null)
   const micTestAnimationRef = useRef<number | null>(null)
@@ -659,11 +708,12 @@ function App() {
   useEffect(() => {
     const isMeRoute = location.pathname === '/channels/@me' || location.pathname.startsWith('/channels/@me/')
     if (isMeView || routeServerId === '@me' || isMeRoute) return
+    if (navigationType === 'POP') return
     if (!activeChannelId || !activeServerId) return
     if (routeChannelId !== activeChannelId || routeServerId !== activeServerId) {
       navigate(`/channels/${activeServerId}/${activeChannelId}`, { replace: true })
     }
-  }, [activeChannelId, activeServerId, navigate, routeChannelId, routeServerId, isMeView, location.pathname])
+  }, [activeChannelId, activeServerId, navigate, routeChannelId, routeServerId, isMeView, location.pathname, navigationType])
 
   useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default') {
@@ -1075,6 +1125,20 @@ function App() {
       window.removeEventListener('keydown', onKey)
     }
   }, [])
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<{ member?: ServerMember; x?: number; y?: number }>).detail
+      if (!detail?.member) return
+      const clientX = typeof detail.x === 'number' ? detail.x : window.innerWidth / 2
+      const clientY = typeof detail.y === 'number' ? detail.y : window.innerHeight / 2
+      openMemberMenu(detail.member, clientX, clientY)
+    }
+    window.addEventListener('open-member-menu', handler as EventListener)
+    return () => {
+      window.removeEventListener('open-member-menu', handler as EventListener)
+    }
+  }, [openMemberMenu])
 
   const logout = async () => {
     await axios.post(`${serverBase}/auth/logout`, {}, { withCredentials: true })
@@ -2298,10 +2362,7 @@ function App() {
                       }}
                       onContextMenu={(event) => {
                         event.preventDefault()
-                        const margin = 12
-                        const nextX = Math.min(Math.max(event.clientX, margin), Math.max(margin, window.innerWidth - margin))
-                        const nextY = Math.min(Math.max(event.clientY, margin), Math.max(margin, window.innerHeight - margin))
-                        setMemberMenu({ visible: true, x: nextX, y: nextY, anchorX: event.clientX, anchorY: event.clientY, member })
+                        openMemberMenu(member, event.clientX, event.clientY)
                       }}
                     >
                       <div
@@ -2421,6 +2482,36 @@ function App() {
                     }}
                     onClick={(e) => e.stopPropagation()}
                   >
+                    {user && memberMenu.member.id !== user.id ? (
+                      <div className="px-3 py-2">
+                        <div className="flex items-center justify-between">
+                          <div className="text-[12px] font-semibold" style={{ color: 'var(--text-muted)' }}>
+                            {t.app.userVolume}
+                          </div>
+                          <div className="text-[12px]" style={{ color: 'var(--text-muted)' }}>
+                            {memberMenuVolume}
+                          </div>
+                        </div>
+                        <div className="member-volume-wrap mt-2">
+                          <input
+                            className="member-volume-range"
+                            type="range"
+                            min={0}
+                            max={200}
+                            value={memberMenuVolume}
+                            onChange={(event) => {
+                              updateMemberVolume(memberMenu.member!.id, Number(event.target.value))
+                            }}
+                            style={{
+                              background: `linear-gradient(to right, var(--accent) 0%, var(--accent) ${memberMenuVolume / 2}%, color-mix(in oklch, var(--text-primary) 20%, transparent) ${memberMenuVolume / 2}%, color-mix(in oklch, var(--text-primary) 20%, transparent) 100%)`,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ) : null}
+                    {canManageChannels && user && memberMenu.member.id !== user.id ? (
+                      <div className="member-menu-divider" />
+                    ) : null}
                     {canManageChannels && user && memberMenu.member.id !== user.id ? (
                       <>
                         <button
@@ -2445,6 +2536,7 @@ function App() {
                         </button>
                       </>
                     ) : null}
+                    <div className="member-menu-divider" />
                     <button
                       className="w-full text-left px-3 py-2 hover-surface cursor-pointer member-menu-item"
                       onClick={() => {

@@ -122,6 +122,70 @@ textarea::placeholder {
   text-overflow: ellipsis;
 }
 
+.member-menu-divider {
+  height: 1px;
+  margin: 6px 6px;
+  background: var(--border);
+}
+
+.member-volume-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  outline: none;
+  transition: none;
+}
+
+.member-volume-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: none;
+  cursor: pointer;
+  transition: none;
+  transform-origin: center;
+}
+
+.member-volume-range::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: none;
+  cursor: pointer;
+  transition: none;
+  transform-origin: center;
+}
+
+.member-volume-range:hover {
+  transform: none;
+}
+
+.member-volume-range:hover::-webkit-slider-thumb {
+  width: 16px;
+  height: 16px;
+  transform: none;
+}
+
+.member-volume-range:hover::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  transform: none;
+}
+
+.member-volume-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  --thumb-size: 16px;
+}
+
+
 a {
   color: var(--link);
 }
