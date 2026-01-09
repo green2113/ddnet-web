@@ -391,7 +391,7 @@ export default function SidebarChannels({
           ) : null}
         </div>
         {isVoice && members.length > 0 ? (
-          <div className="pl-6 space-y-1.5">
+          <div className="pl-6 space-y-0">
             {sortedMembers.map((member) => {
               const isSpeaking = speakingIds.includes(member.id) && !member.muted && !member.deafened
               return (
