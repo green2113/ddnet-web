@@ -12,6 +12,16 @@ type ServerSettingsProps = {
   onCloseSettings: () => void
   onUpdateName?: (name: string) => void
   onUpdateIcon?: (file: File) => void
+  invites: Array<{
+    code: string
+    serverId: string
+    createdBy: string
+    createdAt: number
+    expiresAt?: number | null
+    expired?: boolean
+    uses?: number
+  }>
+  onDeleteInvite?: (code: string) => void
   onAddAdmin?: (id: string) => void
   onRemoveAdmin?: (id: string) => void
   adminIds: string[]
@@ -32,6 +42,8 @@ type ServerSettingsProps = {
     serverSettings: {
       title: string
       serverProfile: string
+      users: string
+      invites: string
       manage: string
       admins: string
       bans: string
@@ -47,6 +59,16 @@ type ServerSettingsProps = {
       iconChange: string
       iconUploading: string
       previewTitle: string
+      invitesTitle: string
+      invitesSubtitle: string
+      inviteEmpty: string
+      inviteCreator: string
+      inviteCode: string
+      inviteCreatedAt: string
+      inviteExpires: string
+      inviteNoExpire: string
+      inviteExpired: string
+      inviteDelete: string
       bansTitle: string
       bansSubtitle: string
       bansEmpty: string
@@ -74,6 +96,8 @@ export default function ServerSettings({
   onCloseSettings,
   onUpdateName,
   onUpdateIcon,
+  invites,
+  onDeleteInvite,
   onAddAdmin,
   onRemoveAdmin,
   adminIds,
@@ -84,7 +108,7 @@ export default function ServerSettings({
 }: ServerSettingsProps) {
   const [nameValue, setNameValue] = useState(serverName || '')
   const [localError, setLocalError] = useState('')
-  const [activeTab, setActiveTab] = useState<'profile' | 'admins' | 'bans'>('profile')
+  const [activeTab, setActiveTab] = useState<'profile' | 'admins' | 'bans' | 'invites'>('profile')
   const [closing, setClosing] = useState(false)
   const [showMemberList, setShowMemberList] = useState(false)
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null)
@@ -181,6 +205,25 @@ export default function ServerSettings({
   }
 
   const serverInitial = (serverName || 'S').slice(0, 1).toUpperCase()
+  const formatInviteDate = (value?: number | null) => {
+    if (!value) return '-'
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return '-'
+    return date.toLocaleString()
+  }
+  const formatInviteRemaining = (value?: number | null) => {
+    if (!value) return t.serverSettings.inviteNoExpire
+    const diff = value - Date.now()
+    if (diff <= 0) return t.serverSettings.inviteExpired
+    const totalSeconds = Math.floor(diff / 1000)
+    const days = Math.floor(totalSeconds / 86400)
+    const hours = Math.floor((totalSeconds % 86400) / 3600)
+    const minutes = Math.floor((totalSeconds % 3600) / 60)
+    const seconds = totalSeconds % 60
+    const pad = (num: number) => String(num).padStart(2, '0')
+    if (days > 0) return `${days}d ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
+    return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
+  }
 
   return createPortal(
     <div className={`server-settings-overlay${closing ? ' is-closing' : ''}`} onMouseDown={handleClose}>
@@ -192,6 +235,13 @@ export default function ServerSettings({
             onClick={() => setActiveTab('profile')}
           >
             {t.serverSettings.serverProfile}
+          </button>
+          <div className="server-settings-nav-section">{t.serverSettings.users}</div>
+          <button
+            className={`server-settings-nav-item${activeTab === 'invites' ? ' is-active' : ''}`}
+            onClick={() => setActiveTab('invites')}
+          >
+            {t.serverSettings.invites}
           </button>
           <div className="server-settings-nav-section">{t.serverSettings.manage}</div>
           <button
@@ -215,6 +265,8 @@ export default function ServerSettings({
                   ? t.serverSettings.adminTitle
                   : activeTab === 'bans'
                     ? t.serverSettings.bansTitle
+                    : activeTab === 'invites'
+                      ? t.serverSettings.invitesTitle
                     : t.serverSettings.profileTitle}
               </div>
               <div className="server-settings-subtitle">
@@ -222,6 +274,8 @@ export default function ServerSettings({
                   ? t.serverSettings.adminSubtitle
                   : activeTab === 'bans'
                     ? t.serverSettings.bansSubtitle
+                    : activeTab === 'invites'
+                      ? t.serverSettings.invitesSubtitle
                     : t.serverSettings.profileSubtitle}
               </div>
             </div>
@@ -299,6 +353,64 @@ export default function ServerSettings({
                   </div>
                   
                 </div>
+              </div>
+            </div>
+          ) : activeTab === 'invites' ? (
+            <div className="server-settings-form">
+              <div className="server-settings-section">
+                {invites.length === 0 ? (
+                  <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                    {t.serverSettings.inviteEmpty}
+                  </div>
+                ) : (
+                  <div className="server-settings-invite-table">
+                    <div className="server-settings-invite-head">
+                      <span>{t.serverSettings.inviteCreator}</span>
+                      <span>{t.serverSettings.inviteCode}</span>
+                      <span>{t.serverSettings.inviteCreatedAt}</span>
+                      <span>{t.serverSettings.inviteExpires}</span>
+                    </div>
+                    <div className="server-settings-invite-body">
+                      {invites.map((invite) => {
+                        const creator = serverMembers.find((member) => member.id === invite.createdBy)
+                        const display = creator?.displayName || creator?.username || invite.createdBy
+                        const username = creator?.username
+                          ? creator.username.startsWith('@')
+                            ? creator.username
+                            : `@${creator.username}`
+                          : invite.createdBy
+                        return (
+                          <div key={invite.code} className="server-settings-invite-row">
+                            <div className="server-settings-invite-user">
+                              <div className="server-settings-member-avatar">
+                                {creator?.avatar ? (
+                                  <img src={creator.avatar} alt={display} />
+                                ) : (
+                                  <span>{String(display).slice(0, 1)}</span>
+                                )}
+                              </div>
+                              <div className="server-settings-invite-user-meta">
+                                <div className="server-settings-invite-name">{display}</div>
+                                <div className="server-settings-invite-username">{username}</div>
+                              </div>
+                            </div>
+                            <div className="server-settings-invite-code">{invite.code}</div>
+                            <div className="server-settings-invite-date">{formatInviteDate(invite.createdAt)}</div>
+                            <div className="server-settings-invite-expire">{formatInviteRemaining(invite.expiresAt)}</div>
+                            <button
+                              type="button"
+                              className="server-settings-invite-remove"
+                              onClick={() => onDeleteInvite?.(invite.code)}
+                              aria-label={`${t.serverSettings.inviteDelete}: ${invite.code}`}
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           ) : activeTab === 'admins' ? (

@@ -132,6 +132,8 @@ export type UiText = {
   serverSettings: {
     title: string
     serverProfile: string
+    users: string
+    invites: string
     manage: string
     admins: string
     bans: string
@@ -149,6 +151,16 @@ export type UiText = {
     iconUploading: string
     iconSaveFailed: string
     previewTitle: string
+    invitesTitle: string
+    invitesSubtitle: string
+    inviteEmpty: string
+    inviteCreator: string
+    inviteCode: string
+    inviteCreatedAt: string
+    inviteExpires: string
+    inviteNoExpire: string
+    inviteExpired: string
+    inviteDelete: string
     bansTitle: string
     bansSubtitle: string
     bansEmpty: string
@@ -403,6 +415,8 @@ const translations: TranslationMap = {
     serverSettings: {
       title: 'DD Server',
       serverProfile: 'Server profile',
+      users: 'Users',
+      invites: 'Invites',
       manage: 'Manage',
       admins: 'Admins',
       bans: 'Bans',
@@ -420,6 +434,16 @@ const translations: TranslationMap = {
       iconUploading: 'Uploading...',
       iconSaveFailed: 'Failed to update the server icon.',
       previewTitle: 'Preview',
+      invitesTitle: 'Invites',
+      invitesSubtitle: 'See and revoke invite links for this server.',
+      inviteEmpty: 'No invites yet.',
+      inviteCreator: 'Creator',
+      inviteCode: 'Invite code',
+      inviteCreatedAt: 'Created',
+      inviteExpires: 'Expires',
+      inviteNoExpire: 'Never',
+      inviteExpired: 'Expired',
+      inviteDelete: 'Delete invite',
       bansTitle: 'Bans',
       bansSubtitle: 'Manage banned users for this server.',
       bansEmpty: 'No banned users.',
@@ -672,6 +696,8 @@ const translations: TranslationMap = {
     serverSettings: {
       title: 'DD Server',
       serverProfile: '서버 프로필',
+      users: '유저',
+      invites: '초대',
       manage: '관리',
       admins: '관리자',
       bans: '차단',
@@ -689,6 +715,16 @@ const translations: TranslationMap = {
       iconUploading: '업로드 중',
       iconSaveFailed: '서버 아이콘을 변경하지 못했어요.',
       previewTitle: '미리보기',
+      invitesTitle: '초대',
+      invitesSubtitle: '이 서버에서 만들어진 초대 링크를 확인하세요.',
+      inviteEmpty: '아직 만든 초대장이 없습니다.',
+      inviteCreator: '초대자',
+      inviteCode: '초대 코드',
+      inviteCreatedAt: '생성 시간',
+      inviteExpires: '남은 시간',
+      inviteNoExpire: '무기한',
+      inviteExpired: '만료됨',
+      inviteDelete: '초대장 삭제',
       bansTitle: '차단',
       bansSubtitle: '차단된 사용자를 관리할 수 있습니다.',
       bansEmpty: '차단된 사용자가 없습니다.',
@@ -941,6 +977,8 @@ const translations: TranslationMap = {
     serverSettings: {
       title: 'DD Server',
       serverProfile: '服务器资料',
+      users: '用户',
+      invites: '邀请',
       manage: '管理',
       admins: '管理员',
       bans: '封禁',
@@ -958,6 +996,16 @@ const translations: TranslationMap = {
       iconUploading: '上传中',
       iconSaveFailed: '无法更新服务器图标。',
       previewTitle: '预览',
+      invitesTitle: '邀请',
+      invitesSubtitle: '查看并管理此服务器的邀请链接。',
+      inviteEmpty: '暂无邀请链接。',
+      inviteCreator: '邀请者',
+      inviteCode: '邀请代码',
+      inviteCreatedAt: '创建时间',
+      inviteExpires: '剩余时间',
+      inviteNoExpire: '永久',
+      inviteExpired: '已过期',
+      inviteDelete: '删除邀请',
       bansTitle: '封禁',
       bansSubtitle: '管理此服务器的封禁用户。',
       bansEmpty: '暂无封禁用户。',
@@ -1210,6 +1258,8 @@ const translations: TranslationMap = {
     serverSettings: {
       title: 'DD Server',
       serverProfile: '伺服器資訊',
+      users: '使用者',
+      invites: '邀請',
       manage: '管理',
       admins: '管理員',
       bans: '封鎖',
@@ -1227,6 +1277,16 @@ const translations: TranslationMap = {
       iconUploading: '上傳中',
       iconSaveFailed: '無法更新伺服器圖示。',
       previewTitle: '預覽',
+      invitesTitle: '邀請',
+      invitesSubtitle: '查看並管理此伺服器的邀請連結。',
+      inviteEmpty: '目前沒有邀請連結。',
+      inviteCreator: '邀請者',
+      inviteCode: '邀請碼',
+      inviteCreatedAt: '建立時間',
+      inviteExpires: '剩餘時間',
+      inviteNoExpire: '永久',
+      inviteExpired: '已過期',
+      inviteDelete: '刪除邀請',
       bansTitle: '封鎖',
       bansSubtitle: '管理此伺服器的封鎖使用者。',
       bansEmpty: '目前沒有封鎖使用者。',

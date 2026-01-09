@@ -255,6 +255,15 @@ function App() {
   const [serverNameSaving, setServerNameSaving] = useState(false)
   const [serverIconUploading, setServerIconUploading] = useState(false)
   const [serverSettingsError, setServerSettingsError] = useState('')
+  const [serverInvites, setServerInvites] = useState<Array<{
+    code: string
+    serverId: string
+    createdBy: string
+    createdAt: number
+    expiresAt?: number | null
+    expired?: boolean
+    uses?: number
+  }>>([])
   const { serverId: routeServerId, channelId: routeChannelId } = useParams()
   const location = useLocation()
   const navigate = useNavigate()
@@ -526,6 +535,18 @@ function App() {
       .catch(() => {})
   }, [serverBase])
 
+  const fetchInvites = useCallback((serverId: string) => {
+    if (!serverId) return
+    axios
+      .get(`${serverBase}/api/servers/${serverId}/invites`, { withCredentials: true })
+      .then((res) => {
+        if (Array.isArray(res.data)) {
+          setServerInvites(res.data)
+        }
+      })
+      .catch(() => {})
+  }, [serverBase])
+
   useEffect(() => {
     setLoadingMessages(true)
     axios
@@ -546,6 +567,7 @@ function App() {
       setAdminIds([])
       setChannels([])
       setActiveChannelId('')
+      setServerInvites([])
       return
     }
     fetchServers()
@@ -657,6 +679,7 @@ function App() {
     setMessageCache({})
     setMessages([])
     setUnreadByChannel({})
+    setServerInvites([])
     lastHistoryChannelIdRef.current = ''
     fetchChannels(activeServerId)
     fetchAdmins(activeServerId)
@@ -665,7 +688,8 @@ function App() {
   useEffect(() => {
     if (!showSettings || !activeServerId || !canManageChannels) return
     fetchBans(activeServerId)
-  }, [showSettings, activeServerId, canManageChannels, fetchBans])
+    fetchInvites(activeServerId)
+  }, [showSettings, activeServerId, canManageChannels, fetchBans, fetchInvites])
 
   useEffect(() => {
     if (!user || !activeServerId) {
@@ -1533,6 +1557,16 @@ function App() {
     }
   }
 
+  const handleDeleteInvite = async (code: string) => {
+    if (!activeServerId || !canManageChannels) return
+    try {
+      await axios.delete(`${serverBase}/api/servers/${activeServerId}/invites/${code}`, { withCredentials: true })
+      setServerInvites((prev) => prev.filter((invite) => invite.code !== code))
+    } catch {
+      // ignore
+    }
+  }
+
   const handleUpdateServerName = async (name: string) => {
     if (!activeServerId) return
     setServerSettingsError('')
@@ -1665,6 +1699,9 @@ function App() {
       const url = res.data?.url as string | undefined
       if (url) {
         setInviteUrl(url)
+        if (res.data?.code) {
+          setServerInvites((prev) => [res.data, ...prev])
+        }
       } else {
         setInviteError(t.app.inviteLinkFailed)
       }
@@ -3286,6 +3323,8 @@ function App() {
         serverMembers={serverMembers}
         bannedMembers={serverBans}
         onUnban={handleUnbanMember}
+        invites={serverInvites}
+        onDeleteInvite={handleDeleteInvite}
         onAddAdmin={(id) => {
           if (!canManageChannels) return
           if (!activeServerId) return
