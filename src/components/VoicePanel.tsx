@@ -145,7 +145,11 @@ export default function VoicePanel({
   const [hideFocusedCursor, setHideFocusedCursor] = useState(false)
   const [showScreenShareSettings, setShowScreenShareSettings] = useState(false)
   const [screenShareAudioMuted, setScreenShareAudioMuted] = useState(false)
-  const [screenShareResolution, setScreenShareResolution] = useState<'720p' | '1080p' | '1440p'>('1080p')
+  const [screenShareResolution, setScreenShareResolution] = useState<'720p' | '1080p' | '1440p'>(() => {
+    if (typeof window === 'undefined') return '720p'
+    const electronAPI = (window as any)?.electronAPI
+    return electronAPI?.getDesktopSources ? '1080p' : '720p'
+  })
   const [screenShareFrameRate, setScreenShareFrameRate] = useState<15 | 30 | 60>(30)
   const [screenShareSubmenu, setScreenShareSubmenu] = useState<'resolution' | 'frameRate' | null>(null)
   const [iceServers, setIceServers] = useState<RTCIceServer[]>(DEFAULT_ICE_SERVERS)
