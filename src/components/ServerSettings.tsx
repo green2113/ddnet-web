@@ -110,6 +110,7 @@ export default function ServerSettings({
   const [localError, setLocalError] = useState('')
   const [activeTab, setActiveTab] = useState<'profile' | 'admins' | 'bans' | 'invites'>('profile')
   const [closing, setClosing] = useState(false)
+  const [inviteTick, setInviteTick] = useState(Date.now())
   const [showMemberList, setShowMemberList] = useState(false)
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null)
   const [memberQuery, setMemberQuery] = useState('')
@@ -123,10 +124,17 @@ export default function ServerSettings({
     setLocalError('')
     setActiveTab('profile')
     setClosing(false)
+    setInviteTick(Date.now())
     setShowMemberList(false)
     setSelectedMemberId(null)
     setMemberQuery('')
   }, [serverName, showSettings])
+
+  useEffect(() => {
+    if (!showSettings || activeTab !== 'invites') return
+    const timer = window.setInterval(() => setInviteTick(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [showSettings, activeTab])
 
   useEffect(() => {
     const handler = (event: MouseEvent) => {
@@ -213,7 +221,7 @@ export default function ServerSettings({
   }
   const formatInviteRemaining = (value?: number | null) => {
     if (!value) return t.serverSettings.inviteNoExpire
-    const diff = value - Date.now()
+    const diff = value - inviteTick
     if (diff <= 0) return t.serverSettings.inviteExpired
     const totalSeconds = Math.floor(diff / 1000)
     const days = Math.floor(totalSeconds / 86400)

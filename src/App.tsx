@@ -119,8 +119,6 @@ function App() {
     member: null,
   })
   const memberMenuRef = useRef<HTMLDivElement | null>(null)
-  const [memberVolumes, setMemberVolumes] = useState<Record<string, number>>({})
-  const memberVolumeSyncTimersRef = useRef<Map<string, number>>(new Map())
   const [imageViewerUrl, setImageViewerUrl] = useState<string | null>(null)
   const [imageViewerClosing, setImageViewerClosing] = useState(false)
   const [profileCard, setProfileCard] = useState<{
@@ -164,66 +162,6 @@ function App() {
     const api = (import.meta as any).env?.VITE_API_BASE as string | undefined
     return api ? api.replace(/\/$/, '') : ''
   }, [])
-  const memberVolumeKey = useCallback((memberId: string) => `voice-member-volume:${memberId}`, [])
-  const clampMemberVolume = useCallback((value: number) => Math.min(200, Math.max(0, Math.round(value))), [])
-  const getStoredMemberVolume = useCallback(
-    (memberId: string) => {
-      if (typeof window === 'undefined') return 100
-      const raw = window.localStorage.getItem(memberVolumeKey(memberId))
-      const parsed = Number(raw)
-      return Number.isFinite(parsed) ? clampMemberVolume(parsed) : 100
-    },
-    [clampMemberVolume, memberVolumeKey]
-  )
-  const syncMemberVolume = useCallback(
-    (memberId: string, volume: number) => {
-      if (!user || user.isGuest) return
-      const timers = memberVolumeSyncTimersRef.current
-      const existing = timers.get(memberId)
-      if (existing) window.clearTimeout(existing)
-      const timer = window.setTimeout(() => {
-        axios
-          .patch(
-            `${serverBase}/api/users/me/voice-volumes`,
-            { targetId: memberId, volume },
-            { withCredentials: true },
-          )
-          .catch(() => {})
-        timers.delete(memberId)
-      }, 300)
-      timers.set(memberId, timer)
-    },
-    [serverBase, user]
-  )
-  const getMemberVolume = useCallback(
-    (memberId: string) => memberVolumes[memberId] ?? getStoredMemberVolume(memberId),
-    [getStoredMemberVolume, memberVolumes]
-  )
-  const applyMemberVolumeToAudio = useCallback(
-    (memberId: string, volume: number) => {
-      if (typeof document === 'undefined') return
-      const normalized = clampMemberVolume(volume) / 100
-      const audioIds = [`voice-audio-${memberId}`, `sfu-audio-${memberId}`]
-      audioIds.forEach((id) => {
-        const audio = document.getElementById(id) as HTMLAudioElement | null
-        if (audio) audio.volume = normalized
-      })
-    },
-    [clampMemberVolume]
-  )
-  const updateMemberVolume = useCallback(
-    (memberId: string, volume: number) => {
-      const next = clampMemberVolume(volume)
-      setMemberVolumes((prev) => ({ ...prev, [memberId]: next }))
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem(memberVolumeKey(memberId), String(next))
-        window.dispatchEvent(new CustomEvent('voice-member-volume-change', { detail: { memberId, volume: next } }))
-      }
-      syncMemberVolume(memberId, next)
-      applyMemberVolumeToAudio(memberId, next)
-    },
-    [applyMemberVolumeToAudio, clampMemberVolume, memberVolumeKey, syncMemberVolume]
-  )
   const openMemberMenu = useCallback((member: ServerMember, clientX: number, clientY: number) => {
     const margin = 12
     const nextX = Math.min(Math.max(clientX, margin), Math.max(margin, window.innerWidth - margin))
@@ -269,7 +207,6 @@ function App() {
   const navigate = useNavigate()
   const navigationType = useNavigationType()
 
-  const memberMenuVolume = memberMenu.member ? getMemberVolume(memberMenu.member.id) : 100
   const micTestStreamRef = useRef<MediaStream | null>(null)
   const micTestContextRef = useRef<AudioContext | null>(null)
   const micTestAnimationRef = useRef<number | null>(null)
@@ -587,36 +524,6 @@ function App() {
       })
       .catch(() => {})
   }, [user, serverBase])
-
-  useEffect(() => {
-    if (!user || user.isGuest) {
-      setMemberVolumes({})
-      return
-    }
-    axios
-      .get(`${serverBase}/api/users/me/voice-volumes`, { withCredentials: true })
-      .then((res) => {
-        const volumes = res.data?.volumes
-        if (!volumes || typeof volumes !== 'object') return
-        setMemberVolumes(volumes)
-        if (typeof window !== 'undefined') {
-          const prefix = 'voice-member-volume:'
-          for (let i = window.localStorage.length - 1; i >= 0; i -= 1) {
-            const key = window.localStorage.key(i)
-            if (key && key.startsWith(prefix)) {
-              window.localStorage.removeItem(key)
-            }
-          }
-          Object.entries(volumes).forEach(([memberId, value]) => {
-            if (typeof value !== 'number') return
-            const normalized = Math.min(200, Math.max(0, Math.round(value)))
-            window.localStorage.setItem(memberVolumeKey(memberId), String(normalized))
-            window.dispatchEvent(new CustomEvent('voice-member-volume-change', { detail: { memberId, volume: normalized } }))
-          })
-        }
-      })
-      .catch(() => {})
-  }, [serverBase, user, memberVolumeKey])
 
   useEffect(() => {
     if (!user) return
@@ -2570,33 +2477,6 @@ function App() {
                     }}
                     onClick={(e) => e.stopPropagation()}
                   >
-                    {user && memberMenu.member.id !== user.id ? (
-                      <div className="px-3 py-2">
-                        <div className="flex items-center justify-between">
-                          <div className="text-[12px] font-semibold" style={{ color: 'var(--text-muted)' }}>
-                            {t.app.userVolume}
-                          </div>
-                          <div className="text-[12px]" style={{ color: 'var(--text-muted)' }}>
-                            {memberMenuVolume}
-                          </div>
-                        </div>
-                        <div className="member-volume-wrap mt-2">
-                          <input
-                            className="member-volume-range"
-                            type="range"
-                            min={0}
-                            max={200}
-                            value={memberMenuVolume}
-                            onChange={(event) => {
-                              updateMemberVolume(memberMenu.member!.id, Number(event.target.value))
-                            }}
-                            style={{
-                              background: `linear-gradient(to right, var(--accent) 0%, var(--accent) ${memberMenuVolume / 2}%, color-mix(in oklch, var(--text-primary) 20%, transparent) ${memberMenuVolume / 2}%, color-mix(in oklch, var(--text-primary) 20%, transparent) 100%)`,
-                            }}
-                          />
-                        </div>
-                      </div>
-                    ) : null}
                     {canManageChannels && user && memberMenu.member.id !== user.id ? (
                       <div className="member-menu-divider" />
                     ) : null}

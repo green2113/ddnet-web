@@ -78,19 +78,6 @@ const getSfuDeviceInfo = () => ({
   name: 'ddnet-web',
 })
 
-const memberVolumeKey = (memberId: string) => `voice-member-volume:${memberId}`
-const clampMemberVolume = (value: number) => Math.min(200, Math.max(0, Math.round(value)))
-const getStoredMemberVolume = (memberId: string) => {
-  if (typeof window === 'undefined') return 100
-  const raw = window.localStorage.getItem(memberVolumeKey(memberId))
-  const parsed = Number(raw)
-  return Number.isFinite(parsed) ? clampMemberVolume(parsed) : 100
-}
-const applyStoredVolume = (audio: HTMLAudioElement | null, memberId: string) => {
-  if (!audio) return
-  audio.volume = getStoredMemberVolume(memberId) / 100
-}
-
 const emitMuteState = (micMuted: boolean, headsetMuted: boolean) => {
   if (typeof window === 'undefined') return
   window.dispatchEvent(new CustomEvent('voice-mute-update', { detail: { micMuted, headsetMuted } }))
@@ -308,10 +295,8 @@ export default function VoicePanel({
       audio.id = audioId
       audio.autoplay = true
       audio.setAttribute('playsinline', 'true')
-      applyStoredVolume(audio, peerId)
       document.body.appendChild(audio)
     }
-    applyStoredVolume(audio, peerId)
     const stream = new MediaStream([consumer.track])
     applyOutputDevice(audio, outputDeviceId)
     audio.srcObject = stream
@@ -679,23 +664,6 @@ export default function VoicePanel({
     speakingThresholdRef.current.set(socket.id, micSensitivity)
   }, [micSensitivity, socket?.id])
 
-  useEffect(() => {
-    const handler = (event: Event) => {
-      const detail = (event as CustomEvent<{ memberId?: string; volume?: number }>).detail
-      if (!detail?.memberId) return
-      const next = clampMemberVolume(detail.volume ?? 100) / 100
-      const audioIds = [`voice-audio-${detail.memberId}`, `sfu-audio-${detail.memberId}`]
-      audioIds.forEach((id) => {
-        const audio = document.getElementById(id) as HTMLAudioElement | null
-        if (audio) audio.volume = next
-      })
-    }
-    window.addEventListener('voice-member-volume-change', handler as EventListener)
-    return () => {
-      window.removeEventListener('voice-member-volume-change', handler as EventListener)
-    }
-  }, [])
-
 
   const createPeer = async (peerId: string, initiate: boolean) => {
     if (!socket) return
@@ -733,9 +701,6 @@ export default function VoicePanel({
             audio.autoplay = true
             audio.setAttribute('playsinline', 'true')
             document.body.appendChild(audio)
-          }
-          if (!isScreenAudio) {
-            applyStoredVolume(audio, peerId)
           }
           applyOutputDevice(audio, outputDeviceId)
           audio.srcObject = stream
