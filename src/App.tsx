@@ -32,8 +32,6 @@ type ChatMessage = {
   source: 'ddnet' | 'discord' | 'web'
 }
 
-type MessageCache = Record<string, ChatMessage[]>
-
 type VoiceMember = {
   id: string
   username: string
@@ -93,7 +91,6 @@ type JoinedVoiceChannelInfo = {
 function App() {
   const [user, setUser] = useState<User | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [, setMessageCache] = useState<MessageCache>({})
   const [voiceMembersByChannel, setVoiceMembersByChannel] = useState<VoiceMembersByChannel>({})
   const [voiceCallStartByChannel, setVoiceCallStartByChannel] = useState<Record<string, number>>({})
   const [serverMembers, setServerMembers] = useState<ServerMember[]>([])
@@ -485,7 +482,6 @@ function App() {
         if (Array.isArray(res.data)) {
           const trimmed = res.data.slice(-200)
           setMessages(trimmed)
-          setMessageCache((prev) => ({ ...prev, [channelId]: trimmed }))
           if (!options?.silent) {
             scrollMessagesToBottom()
           }
@@ -743,7 +739,6 @@ function App() {
       setChannels([])
     }
     setActiveChannelId('')
-    setMessageCache({})
     setMessages([])
     setUnreadByChannel({})
     setServerInvites([])
@@ -866,7 +861,8 @@ function App() {
   }, [activeChannelId, activeServerId, navigate, routeChannelId, routeServerId, isMeView, location.pathname, navigationType])
 
   useEffect(() => {
-    if (!isMeView) return
+    const isMeRoute = location.pathname === '/channels/@me' || location.pathname.startsWith('/channels/@me/')
+    if (!isMeView || !isMeRoute) return
     if (navigationType === 'POP') return
     const target = activeDmChannelId ? `/channels/@me/${activeDmChannelId}` : '/channels/@me'
     if (location.pathname !== target) {
@@ -1077,22 +1073,17 @@ function App() {
     socket.on('chat:message', (msg: ChatMessage) => {
       const channelId = msg.channelId
       if (!channelId) return
-      setMessageCache((prev) => {
-        const existing = prev[channelId] || []
-        const next = [...existing, msg].slice(-200)
-        if (channelId === activeChannelRef.current) {
-          setMessages(next)
-          const shouldScroll = Boolean(forceScrollRef.current || isNearBottomRef.current)
-          if (shouldScroll) {
-            forceScrollRef.current = false
-            scrollMessagesToBottom()
-          }
-          setUnreadByChannel((prevUnread) => ({ ...prevUnread, [channelId]: false }))
-        } else {
-          setUnreadByChannel((prevUnread) => ({ ...prevUnread, [channelId]: true }))
+      if (channelId === activeChannelRef.current) {
+        setMessages((prev) => [...prev, msg].slice(-200))
+        const shouldScroll = Boolean(forceScrollRef.current || isNearBottomRef.current)
+        if (shouldScroll) {
+          forceScrollRef.current = false
+          scrollMessagesToBottom()
         }
-        return { ...prev, [channelId]: next }
-      })
+        setUnreadByChannel((prevUnread) => ({ ...prevUnread, [channelId]: false }))
+      } else {
+        setUnreadByChannel((prevUnread) => ({ ...prevUnread, [channelId]: true }))
+      }
       const isOwn = user && msg.author?.id === user.id
       const hasFocus = document.visibilityState === 'visible'
       if (!isOwn && !hasFocus && 'Notification' in window && Notification.permission === 'granted') {
@@ -1102,18 +1093,9 @@ function App() {
     })
     socket.on('chat:delete', (id: string) => {
       if (!id) return
-      setMessageCache((prev) => {
-        const next: MessageCache = {}
-        Object.entries(prev).forEach(([channelId, list]) => {
-          const updated = list.filter((m) => m.id !== id)
-          next[channelId] = updated
-        })
-        const activeList = activeChannelRef.current ? next[activeChannelRef.current] : null
-        if (activeList) {
-          setMessages(activeList)
-        }
-        return next
-      })
+      if (activeChannelRef.current) {
+        setMessages((prev) => prev.filter((m) => m.id !== id))
+      }
     })
     socket.on('voice:members', (payload: { channelId: string; members: VoiceMember[]; startedAt?: number | null }) => {
       if (!payload?.channelId) return
