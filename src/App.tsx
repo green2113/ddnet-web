@@ -93,7 +93,7 @@ type JoinedVoiceChannelInfo = {
 function App() {
   const [user, setUser] = useState<User | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [messageCache, setMessageCache] = useState<MessageCache>({})
+  const [, setMessageCache] = useState<MessageCache>({})
   const [voiceMembersByChannel, setVoiceMembersByChannel] = useState<VoiceMembersByChannel>({})
   const [voiceCallStartByChannel, setVoiceCallStartByChannel] = useState<Record<string, number>>({})
   const [serverMembers, setServerMembers] = useState<ServerMember[]>([])
