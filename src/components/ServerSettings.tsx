@@ -131,7 +131,7 @@ export default function ServerSettings({
   }, [serverName, showSettings])
 
   useEffect(() => {
-    if (!showSettings || activeTab !== 'invites') return
+    if (!showSettings) return
     const timer = window.setInterval(() => setInviteTick(Date.now()), 1000)
     return () => window.clearInterval(timer)
   }, [showSettings, activeTab])

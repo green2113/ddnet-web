@@ -55,6 +55,19 @@ type ServerMember = {
   isGuest?: boolean
 }
 
+type FriendRequest = {
+  id: string
+  direction: 'incoming' | 'outgoing'
+  createdAt: number
+  user: ServerMember
+}
+
+type DmChannel = {
+  id: string
+  createdAt?: number
+  user: ServerMember | null
+}
+
 type Channel = {
   id: string
   name: string
@@ -71,6 +84,12 @@ type Server = {
   icon?: string | null
 }
 
+type JoinedVoiceChannelInfo = {
+  id: string
+  name: string
+  serverId: string
+}
+
 function App() {
   const [user, setUser] = useState<User | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -79,6 +98,9 @@ function App() {
   const [voiceCallStartByChannel, setVoiceCallStartByChannel] = useState<Record<string, number>>({})
   const [serverMembers, setServerMembers] = useState<ServerMember[]>([])
   const [serverBans, setServerBans] = useState<ServerMember[]>([])
+  const [friends, setFriends] = useState<ServerMember[]>([])
+  const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([])
+  const [dmChannels, setDmChannels] = useState<DmChannel[]>([])
   const [unreadByChannel, setUnreadByChannel] = useState<UnreadByChannel>({})
   const [loadingMessages, setLoadingMessages] = useState(true)
   const [loadError, setLoadError] = useState(false)
@@ -90,15 +112,23 @@ function App() {
   const [activeServerId, setActiveServerId] = useState('')
   const [isMeView, setIsMeView] = useState(false)
   const [activeChannelId, setActiveChannelId] = useState('')
+  const [activeDmChannelId, setActiveDmChannelId] = useState('')
   const [voiceChannelId, setVoiceChannelId] = useState('')
   const [joinedVoiceChannelId, setJoinedVoiceChannelId] = useState('')
+  const [joinedVoiceChannelInfo, setJoinedVoiceChannelInfo] = useState<JoinedVoiceChannelInfo | null>(null)
   const [voiceLeaveSignal, setVoiceLeaveSignal] = useState(0)
   const [isScreenSharing, setIsScreenSharing] = useState(false)
+  const [hideVoiceHeader, setHideVoiceHeader] = useState(false)
   const [voiceSpeakingByChannel, setVoiceSpeakingByChannel] = useState<Record<string, string[]>>({})
   const [autoJoinVoiceChannelId, setAutoJoinVoiceChannelId] = useState<string | null>(null)
   const [input, setInput] = useState('')
   const [uploading, setUploading] = useState(false)
   const [attachments, setAttachments] = useState<Array<{ id: string; file: File; name: string; isImage: boolean; previewUrl?: string }>>([])
+  const [homeTab, setHomeTab] = useState<'online' | 'pending' | 'add'>('online')
+  const [friendInput, setFriendInput] = useState('')
+  const [friendError, setFriendError] = useState('')
+  const [friendLoading, setFriendLoading] = useState(false)
+  const friendInputRef = useRef<HTMLInputElement | null>(null)
   const socketRef = useRef<Socket | null>(null)
   const [socketId, setSocketId] = useState<string | null>(null)
   const activeServerRef = useRef('')
@@ -162,6 +192,37 @@ function App() {
     const api = (import.meta as any).env?.VITE_API_BASE as string | undefined
     return api ? api.replace(/\/$/, '') : ''
   }, [])
+  const lastChannelByServerRef = useRef<Record<string, string>>({})
+  const getLastChannelForServer = useCallback((serverId: string) => {
+    if (!serverId) return ''
+    if (typeof window === 'undefined') return lastChannelByServerRef.current[serverId] || ''
+    return window.localStorage.getItem(`last-channel:${serverId}`) || lastChannelByServerRef.current[serverId] || ''
+  }, [])
+  const setLastChannelForServer = useCallback((serverId: string, channelId: string) => {
+    if (!serverId || !channelId) return
+    lastChannelByServerRef.current[serverId] = channelId
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(`last-channel:${serverId}`, channelId)
+    }
+  }, [])
+  const parseJson = (value: string | null) => {
+    if (!value) return null
+    try {
+      return JSON.parse(value)
+    } catch {
+      return null
+    }
+  }
+  const getCachedChannels = useCallback((serverId: string) => {
+    if (!serverId || typeof window === 'undefined') return [] as Channel[]
+    const raw = window.localStorage.getItem(`channels:${serverId}`)
+    const parsed = parseJson(raw)
+    return Array.isArray(parsed) ? (parsed as Channel[]) : ([] as Channel[])
+  }, [])
+  const saveCachedChannels = useCallback((serverId: string, list: Channel[]) => {
+    if (!serverId || typeof window === 'undefined') return
+    window.localStorage.setItem(`channels:${serverId}`, JSON.stringify(list))
+  }, [])
   const openMemberMenu = useCallback((member: ServerMember, clientX: number, clientY: number) => {
     const margin = 12
     const nextX = Math.min(Math.max(clientX, margin), Math.max(margin, window.innerWidth - margin))
@@ -222,6 +283,11 @@ function App() {
   const isServerOwner = Boolean(activeServer?.ownerId && user?.id && activeServer.ownerId === user.id)
   const serverLabel = isMeView ? '메인 메뉴' : (activeServer?.name || '')
   const activeGuildId = isMeView ? '@me' : activeServerId
+  const currentChannelId = isMeView ? activeDmChannelId : activeChannelId
+  const activeDmChannel = useMemo(
+    () => dmChannels.find((channel) => channel.id === activeDmChannelId) || null,
+    [dmChannels, activeDmChannelId],
+  )
   const orderedServers = useMemo(() => {
     if (!serverOrder.length) return servers
     const orderSet = new Set(serverOrder)
@@ -238,7 +304,17 @@ function App() {
       if (prev === channelId) return ''
       return prev
     })
-  }, [])
+    if (joined) {
+      const channel = channels.find((item) => item.id === channelId)
+      const name = channel?.name || 'voice'
+      setJoinedVoiceChannelInfo({ id: channelId, name, serverId: activeServerId })
+    } else {
+      setJoinedVoiceChannelInfo((prev) => {
+        if (!prev || prev.id !== channelId) return prev
+        return null
+      })
+    }
+  }, [activeServerId, channels])
 
   useLayoutEffect(() => {
     if (!memberMenu.visible) return
@@ -397,23 +473,32 @@ function App() {
     return () => observer.disconnect()
   }, [])
 
-  const fetchHistory = (channelId: string) => {
+  const fetchHistory = (channelId: string, options?: { silent?: boolean }) => {
     if (!channelId) return
-    setLoadingMessages(true)
-    setLoadError(false)
+    if (!options?.silent) {
+      setLoadingMessages(true)
+      setLoadError(false)
+    }
     axios
       .get(`${serverBase}/api/history`, { params: { limit: 200, channelId }, withCredentials: true })
       .then((res) => {
         if (Array.isArray(res.data)) {
-          setMessages(res.data)
-          setMessageCache((prev) => ({ ...prev, [channelId]: res.data }))
-          scrollMessagesToBottom()
+          const trimmed = res.data.slice(-200)
+          setMessages(trimmed)
+          setMessageCache((prev) => ({ ...prev, [channelId]: trimmed }))
+          if (!options?.silent) {
+            scrollMessagesToBottom()
+          }
         }
-        setLoadingMessages(false)
+        if (!options?.silent) {
+          setLoadingMessages(false)
+        }
       })
       .catch(() => {
-        setLoadError(true)
-        setLoadingMessages(false)
+        if (!options?.silent) {
+          setLoadError(true)
+          setLoadingMessages(false)
+        }
       })
   }
 
@@ -438,10 +523,11 @@ function App() {
       .then((res) => {
         if (Array.isArray(res.data)) {
           setChannels(res.data)
+          saveCachedChannels(serverId, res.data)
         }
       })
       .catch(() => {})
-  }, [serverBase])
+  }, [serverBase, saveCachedChannels])
 
   const refreshChannels = useCallback(() => {
     if (!activeServerId) return
@@ -484,6 +570,57 @@ function App() {
       .catch(() => {})
   }, [serverBase])
 
+  const fetchFriends = useCallback(() => {
+    if (!user || user.isGuest) {
+      setFriends([])
+      return
+    }
+    axios
+      .get(`${serverBase}/api/friends`, { withCredentials: true })
+      .then((res) => {
+        if (Array.isArray(res.data)) {
+          setFriends(res.data)
+        }
+      })
+      .catch(() => {
+        setFriends([])
+      })
+  }, [serverBase, user])
+
+  const fetchFriendRequests = useCallback(() => {
+    if (!user || user.isGuest) {
+      setFriendRequests([])
+      return
+    }
+    axios
+      .get(`${serverBase}/api/friends/requests`, { withCredentials: true })
+      .then((res) => {
+        if (Array.isArray(res.data)) {
+          setFriendRequests(res.data)
+        }
+      })
+      .catch(() => {
+        setFriendRequests([])
+      })
+  }, [serverBase, user])
+
+  const fetchDmChannels = useCallback(() => {
+    if (!user || user.isGuest) {
+      setDmChannels([])
+      return
+    }
+    axios
+      .get(`${serverBase}/api/dms`, { withCredentials: true })
+      .then((res) => {
+        if (Array.isArray(res.data)) {
+          setDmChannels(res.data)
+        }
+      })
+      .catch(() => {
+        setDmChannels([])
+      })
+  }, [serverBase, user])
+
   useEffect(() => {
     setLoadingMessages(true)
     axios
@@ -509,6 +646,23 @@ function App() {
     }
     fetchServers()
   }, [user, fetchServers])
+
+  useEffect(() => {
+    if (!user || user.isGuest) {
+      setFriends([])
+      setFriendRequests([])
+      setDmChannels([])
+      return
+    }
+    fetchFriends()
+    fetchFriendRequests()
+    fetchDmChannels()
+  }, [user, fetchFriends, fetchFriendRequests, fetchDmChannels])
+
+  useEffect(() => {
+    if (homeTab !== 'add') return
+    friendInputRef.current?.focus()
+  }, [homeTab])
 
   useEffect(() => {
     if (!user) {
@@ -556,9 +710,11 @@ function App() {
       setAdminIds([])
       setChannels([])
       setActiveChannelId('')
+      setActiveDmChannelId(routeChannelId || '')
       return
     }
     setIsMeView(false)
+    setActiveDmChannelId('')
     if (!servers.length) return
     const requested = routeServerId && servers.find((server) => server.id === routeServerId)
     if (requested) {
@@ -580,9 +736,13 @@ function App() {
 
   useEffect(() => {
     if (!activeServerId) return
-    setChannels([])
+    const cached = getCachedChannels(activeServerId)
+    if (cached.length) {
+      setChannels(cached)
+    } else {
+      setChannels([])
+    }
     setActiveChannelId('')
-    setVoiceChannelId('')
     setMessageCache({})
     setMessages([])
     setUnreadByChannel({})
@@ -590,7 +750,7 @@ function App() {
     lastHistoryChannelIdRef.current = ''
     fetchChannels(activeServerId)
     fetchAdmins(activeServerId)
-  }, [activeServerId, fetchChannels, fetchAdmins])
+  }, [activeServerId, fetchChannels, fetchAdmins, getCachedChannels])
 
   useEffect(() => {
     if (!showSettings || !activeServerId || !canManageChannels) return
@@ -647,11 +807,16 @@ function App() {
       setActiveChannelId(requested.id)
       return
     }
+    const lastChannelId = activeServerId ? getLastChannelForServer(activeServerId) : ''
+    if (lastChannelId && channels.find((channel) => channel.id === lastChannelId && channel.type !== 'category')) {
+      setActiveChannelId(lastChannelId)
+      return
+    }
     const firstChannel = channels.find((channel) => channel.type !== 'category')
     if (!activeChannelId || !channels.find((channel) => channel.id === activeChannelId && channel.type !== 'category')) {
       if (firstChannel) setActiveChannelId(firstChannel.id)
     }
-  }, [channels, activeChannelId, routeChannelId, routeServerId, activeServerId])
+  }, [channels, activeChannelId, routeChannelId, routeServerId, activeServerId, getLastChannelForServer])
 
   useEffect(() => {
     const active = channels.find((channel) => channel.id === activeChannelId)
@@ -664,28 +829,31 @@ function App() {
     activeServerRef.current = activeServerId
   }, [activeServerId])
 
-  useEffect(() => {
-    activeChannelRef.current = activeChannelId
-    if (activeChannelId) {
+  useLayoutEffect(() => {
+    activeChannelRef.current = currentChannelId
+    if (!isMeView && activeChannelId) {
       setUnreadByChannel((prev) => ({ ...prev, [activeChannelId]: false }))
     }
+    setMessages([])
+    setLoadingMessages(Boolean(currentChannelId))
+    setLoadError(false)
     const active = channels.find((channel) => channel.id === activeChannelId)
-    if (activeChannelId && active?.type !== 'voice') {
-      if (lastHistoryChannelIdRef.current !== activeChannelId) {
-        lastHistoryChannelIdRef.current = activeChannelId
-        const cached = messageCache[activeChannelId]
-        if (cached) {
-          setMessages(cached)
-          scrollMessagesToBottom()
-        } else {
-          setMessages([])
-          fetchHistory(activeChannelId)
-        }
+    const isVoice = !isMeView && active?.type === 'voice'
+    if (!isMeView && activeServerId && activeChannelId && active?.type !== 'category') {
+      setLastChannelForServer(activeServerId, activeChannelId)
+    }
+    if (currentChannelId && !isVoice) {
+      if (lastHistoryChannelIdRef.current !== currentChannelId) {
+        lastHistoryChannelIdRef.current = currentChannelId
       }
-    } else if (active?.type === 'voice') {
+      fetchHistory(currentChannelId)
+    } else if (isVoice) {
       lastHistoryChannelIdRef.current = ''
     }
-  }, [activeChannelId, channels, messageCache])
+    if (!currentChannelId) {
+      setLoadingMessages(false)
+    }
+  }, [activeChannelId, channels, activeServerId, currentChannelId, isMeView, setLastChannelForServer])
 
   useEffect(() => {
     const isMeRoute = location.pathname === '/channels/@me' || location.pathname.startsWith('/channels/@me/')
@@ -696,6 +864,15 @@ function App() {
       navigate(`/channels/${activeServerId}/${activeChannelId}`, { replace: true })
     }
   }, [activeChannelId, activeServerId, navigate, routeChannelId, routeServerId, isMeView, location.pathname, navigationType])
+
+  useEffect(() => {
+    if (!isMeView) return
+    if (navigationType === 'POP') return
+    const target = activeDmChannelId ? `/channels/@me/${activeDmChannelId}` : '/channels/@me'
+    if (location.pathname !== target) {
+      navigate(target, { replace: true })
+    }
+  }, [activeDmChannelId, isMeView, location.pathname, navigate, navigationType])
 
   useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default') {
@@ -768,7 +945,6 @@ function App() {
       setIsScreenSharing(false)
     }
   }, [joinedVoiceChannelId])
-
 
   useEffect(() => {
     if (!micTestError) return
@@ -903,7 +1079,7 @@ function App() {
       if (!channelId) return
       setMessageCache((prev) => {
         const existing = prev[channelId] || []
-        const next = [...existing, msg]
+        const next = [...existing, msg].slice(-200)
         if (channelId === activeChannelRef.current) {
           setMessages(next)
           const shouldScroll = Boolean(forceScrollRef.current || isNearBottomRef.current)
@@ -929,7 +1105,8 @@ function App() {
       setMessageCache((prev) => {
         const next: MessageCache = {}
         Object.entries(prev).forEach(([channelId, list]) => {
-          next[channelId] = list.filter((m) => m.id !== id)
+          const updated = list.filter((m) => m.id !== id)
+          next[channelId] = updated
         })
         const activeList = activeChannelRef.current ? next[activeChannelRef.current] : null
         if (activeList) {
@@ -1128,9 +1305,75 @@ function App() {
     requireLogin()
   }
 
+  const submitFriendRequest = async () => {
+    if (!friendInput.trim()) return
+    if (!user) {
+      requireLogin()
+      return
+    }
+    if (user.isGuest) return
+    setFriendLoading(true)
+    setFriendError('')
+    try {
+      await axios.post(
+        `${serverBase}/api/friends/requests`,
+        { username: friendInput.trim() },
+        { withCredentials: true },
+      )
+      setFriendInput('')
+      fetchFriendRequests()
+      fetchFriends()
+      fetchDmChannels()
+    } catch (err: any) {
+      const message = err?.response?.data?.error
+      setFriendError(typeof message === 'string' ? message : t.home.friendAddFailed)
+    } finally {
+      setFriendLoading(false)
+    }
+  }
+
+  const acceptFriendRequest = async (requestId: string) => {
+    if (!requestId) return
+    try {
+      await axios.post(`${serverBase}/api/friends/requests/${requestId}/accept`, {}, { withCredentials: true })
+      fetchFriendRequests()
+      fetchFriends()
+      fetchDmChannels()
+    } catch {
+      // ignore
+    }
+  }
+
+  const rejectFriendRequest = async (requestId: string) => {
+    if (!requestId) return
+    try {
+      await axios.post(`${serverBase}/api/friends/requests/${requestId}/reject`, {}, { withCredentials: true })
+      fetchFriendRequests()
+    } catch {
+      // ignore
+    }
+  }
+
+  const removeFriend = async (friendId: string) => {
+    if (!friendId) return
+    try {
+      await axios.delete(`${serverBase}/api/friends/${friendId}`, { withCredentials: true })
+      fetchFriends()
+      fetchDmChannels()
+    } catch {
+      // ignore
+    }
+  }
+
+  const handleSelectDmChannel = (channelId: string) => {
+    if (!channelId) return
+    setActiveDmChannelId(channelId)
+    navigate(`/channels/@me/${channelId}`)
+  }
+
   const sendMessage = async () => {
     if (!input.trim() && attachments.length === 0) return
-    if (!activeChannelId) return
+    if (!currentChannelId) return
     if (!user) {
       requireLogin()
       return
@@ -1143,7 +1386,7 @@ function App() {
         for (const item of attachments) {
           const form = new FormData()
           form.append('file', item.file)
-          form.append('channelId', activeChannelId)
+          form.append('channelId', currentChannelId)
           const res = await axios.post(`${serverBase}/api/upload`, form, { withCredentials: true })
           const url = res.data?.url as string | undefined
           if (url) uploadedUrls.push(url)
@@ -1153,7 +1396,7 @@ function App() {
         if (uploadedUrls.length) parts.push(uploadedUrls.join('\n'))
         socketRef.current?.emit('chat:send', {
           content: parts.join('\n'),
-          channelId: activeChannelId,
+          channelId: currentChannelId,
           source: 'web',
         })
         setInput('')
@@ -1172,14 +1415,14 @@ function App() {
     }
     socketRef.current?.emit('chat:send', {
       content: input,
-      channelId: activeChannelId,
+      channelId: currentChannelId,
       source: 'web',
     })
     setInput('')
   }
 
   const addAttachment = (file: File) => {
-    if (!activeChannelId) return
+    if (!currentChannelId) return
     if (file.size > 50 * 1024 * 1024) {
       window.alert('파일 크기가 50MB를 초과합니다.')
       return
@@ -1204,8 +1447,16 @@ function App() {
   }
 
   const activeChannel = channels.find((channel) => channel.id === activeChannelId)
-  const isVoiceChannel = activeChannel?.type === 'voice'
-  const voiceSidebarChannel = joinedVoiceChannelId ? channels.find((channel) => channel.id === joinedVoiceChannelId) : null
+  const isVoiceChannel = !isMeView && activeChannel?.type === 'voice'
+  const currentChannelName = isMeView
+    ? activeDmChannel?.user?.displayName || activeDmChannel?.user?.username || '다이렉트 메시지'
+    : (activeChannel?.name || 'general')
+  const joinedChannel = joinedVoiceChannelId ? channels.find((channel) => channel.id === joinedVoiceChannelId) : null
+  const voiceSidebarChannel = joinedVoiceChannelInfo
+    ? joinedVoiceChannelInfo
+    : joinedChannel
+      ? { id: joinedChannel.id, name: joinedChannel.name, serverId: activeServerId }
+      : null
   const isSelfSpeaking = Boolean(
     socketId &&
       voiceSidebarChannel &&
@@ -1235,6 +1486,7 @@ function App() {
     setActiveChannelId(channelId)
     setUnreadByChannel((prev) => ({ ...prev, [channelId]: false }))
     if (activeServerId) {
+      setLastChannelForServer(activeServerId, channelId)
       navigate(`/channels/${activeServerId}/${channelId}`)
     } else {
       navigate(`/`)
@@ -1268,10 +1520,17 @@ function App() {
     }, 180)
   }
   const headerTitle = isMeView ? (
-    <div className="flex items-center gap-2 min-w-0">
-      <span style={{ color: 'var(--text-muted)' }}>🏠</span>
-      <span className="truncate">홈</span>
-    </div>
+    activeDmChannelId ? (
+      <div className="flex items-center gap-2 min-w-0">
+        <span style={{ color: 'var(--text-muted)' }}>@</span>
+        <span className="truncate">{currentChannelName}</span>
+      </div>
+    ) : (
+      <div className="flex items-center gap-2 min-w-0">
+        <span style={{ color: 'var(--text-muted)' }}>🏠</span>
+        <span className="truncate">홈</span>
+      </div>
+    )
   ) : (
     <div className="flex items-center gap-2 min-w-0">
       {isVoiceChannel ? (
@@ -1298,6 +1557,16 @@ function App() {
     if (serverId === activeServerId) return
     setActiveServerId(serverId)
     navigate(`/channels/${serverId}`)
+  }
+
+  const handleOpenVoiceSidebar = () => {
+    if (!voiceSidebarChannel) return
+    const targetServerId = voiceSidebarChannel.serverId
+    if (targetServerId && targetServerId !== activeServerId) {
+      navigate(`/channels/${targetServerId}/${voiceSidebarChannel.id}`)
+      return
+    }
+    handleSelectChannel(voiceSidebarChannel.id)
   }
 
   const openCreateServerModal = () => {
@@ -1730,17 +1999,68 @@ function App() {
                     <button
                       type="button"
                       className="w-full text-left px-3 py-2 rounded-md"
-                      style={{ background: 'var(--hover-bg)', color: 'var(--text-primary)' }}
+                      style={{ background: !activeDmChannelId ? 'var(--hover-bg)' : 'transparent', color: 'var(--text-primary)' }}
+                      onClick={() => {
+                        setHomeTab('online')
+                        navigate('/channels/@me')
+                      }}
                     >
-                      홈
+                      {t.home.friends}
                     </button>
                     <button
                       type="button"
                       className="w-full text-left px-3 py-2 rounded-md"
                       style={{ color: 'var(--text-muted)' }}
+                      onClick={() => {
+                        setHomeTab('pending')
+                        navigate('/channels/@me')
+                      }}
                     >
-                      메시지 요청
+                      {t.home.messageRequests}
                     </button>
+                    <div className="border-t" style={{ borderColor: 'var(--border)' }} />
+                    <div className="flex items-center justify-between px-2 text-xs font-semibold tracking-wide uppercase" style={{ color: 'var(--text-muted)' }}>
+                      <span>{t.home.directMessages}</span>
+                      <button
+                        type="button"
+                        className="h-6 w-6 rounded-md grid place-items-center hover-surface cursor-pointer"
+                        onClick={() => {
+                          setHomeTab('online')
+                          friendInputRef.current?.focus()
+                        }}
+                        aria-label={t.home.addFriend}
+                      >
+                        +
+                      </button>
+                    </div>
+                    <div className="space-y-1">
+                      {dmChannels.map((dm) => (
+                        <button
+                          key={dm.id}
+                          type="button"
+                          className="w-full text-left px-3 py-2 rounded-md flex items-center gap-2"
+                          style={{
+                            background: activeDmChannelId === dm.id ? 'var(--hover-bg)' : 'transparent',
+                            color: 'var(--text-primary)',
+                          }}
+                          onClick={() => handleSelectDmChannel(dm.id)}
+                        >
+                          <div className="w-7 h-7 rounded-full overflow-hidden flex items-center justify-center" style={{ background: 'var(--input-bg)' }}>
+                            {dm.user?.avatar ? (
+                              <img src={dm.user.avatar} alt={dm.user.displayName || dm.user.username} className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="text-xs font-semibold">{(dm.user?.displayName || dm.user?.username || '?').slice(0, 1)}</span>
+                            )}
+                          </div>
+                          <span className="truncate text-sm">{dm.user?.displayName || dm.user?.username || t.home.directFallback}</span>
+                        </button>
+                      ))}
+                      {dmChannels.length === 0 ? (
+                        <div className="px-3 py-2 text-xs" style={{ color: 'var(--text-muted)' }}>
+                          {t.home.directEmpty}
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -1854,14 +2174,14 @@ function App() {
                   <div className="text-[11px] font-semibold" style={{ color: '#22c55e' }}>
                     {t.voice.title}
                   </div>
-                  <button
-                    type="button"
-                    className="text-sm truncate text-left cursor-pointer hover:underline"
-                    style={{ color: 'var(--text-primary)' }}
-                    onClick={() => handleSelectChannel(voiceSidebarChannel.id)}
-                  >
-                    {voiceSidebarChannel.name}
-                  </button>
+                    <button
+                      type="button"
+                      className="text-sm truncate text-left cursor-pointer hover:underline"
+                      style={{ color: 'var(--text-primary)' }}
+                      onClick={handleOpenVoiceSidebar}
+                    >
+                      {voiceSidebarChannel.name}
+                    </button>
                 </div>
                 <div className="flex items-center gap-2">
                   {user?.isGuest ? (
@@ -1998,24 +2318,73 @@ function App() {
                     <button
                       type="button"
                       className="w-full text-left px-3 py-2 rounded-md"
-                      style={{ background: 'var(--hover-bg)', color: 'var(--text-primary)' }}
+                      style={{ background: !activeDmChannelId ? 'var(--hover-bg)' : 'transparent', color: 'var(--text-primary)' }}
+                      onClick={() => {
+                        setHomeTab('online')
+                        navigate('/channels/@me')
+                        setShowMobileChannels(false)
+                      }}
                     >
-                      홈
+                      {t.home.friends}
                     </button>
                     <button
                       type="button"
                       className="w-full text-left px-3 py-2 rounded-md"
                       style={{ color: 'var(--text-muted)' }}
+                      onClick={() => {
+                        setHomeTab('pending')
+                        navigate('/channels/@me')
+                        setShowMobileChannels(false)
+                      }}
                     >
-                      친구
+                      {t.home.messageRequests}
                     </button>
-                    <button
-                      type="button"
-                      className="w-full text-left px-3 py-2 rounded-md"
-                      style={{ color: 'var(--text-muted)' }}
-                    >
-                      메시지 요청
-                    </button>
+                    <div className="border-t" style={{ borderColor: 'var(--border)' }} />
+                    <div className="flex items-center justify-between px-2 text-xs font-semibold tracking-wide uppercase" style={{ color: 'var(--text-muted)' }}>
+                      <span>{t.home.directMessages}</span>
+                      <button
+                        type="button"
+                        className="h-6 w-6 rounded-md grid place-items-center hover-surface cursor-pointer"
+                        onClick={() => {
+                          setHomeTab('online')
+                          friendInputRef.current?.focus()
+                        }}
+                        aria-label={t.home.addFriend}
+                      >
+                        +
+                      </button>
+                    </div>
+                    <div className="space-y-1">
+                      {dmChannels.map((dm) => (
+                        <button
+                          key={dm.id}
+                          type="button"
+                          className="w-full text-left px-3 py-2 rounded-md flex items-center gap-2"
+                          style={{
+                            background: activeDmChannelId === dm.id ? 'var(--hover-bg)' : 'transparent',
+                            color: 'var(--text-primary)',
+                          }}
+                          onClick={() => {
+                            handleSelectDmChannel(dm.id)
+                            setShowMobileChannels(false)
+                          }}
+                        >
+                          <div className="w-7 h-7 rounded-full overflow-hidden flex items-center justify-center" style={{ background: 'var(--input-bg)' }}>
+                            {dm.user?.avatar ? (
+                              <img src={dm.user.avatar} alt={dm.user.displayName || dm.user.username} className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="text-xs font-semibold">{(dm.user?.displayName || dm.user?.username || '?').slice(0, 1)}</span>
+                            )}
+                          </div>
+                          <span className="truncate text-sm">{dm.user?.displayName || dm.user?.username || t.home.directFallback}</span>
+                        </button>
+                      ))}
+                      {dmChannels.length === 0 ? (
+                        <div className="px-3 py-2 text-xs" style={{ color: 'var(--text-muted)' }}>
+                          {t.home.directEmpty}
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -2132,7 +2501,7 @@ function App() {
                         type="button"
                         className="text-sm truncate text-left cursor-pointer hover:underline"
                         style={{ color: 'var(--text-primary)' }}
-                        onClick={() => handleSelectChannel(voiceSidebarChannel.id)}
+                        onClick={handleOpenVoiceSidebar}
                       >
                         {voiceSidebarChannel.name}
                       </button>
@@ -2234,16 +2603,18 @@ function App() {
           </div>
         </div>
         <main className="flex-1 flex flex-col min-w-0">
-          <Header
-            title={headerTitle}
-            isDark={isDark}
-            onLight={() => setIsDark(false)}
-            onDark={() => setIsDark(true)}
-            user={user}
-            onToggleChannels={() => setShowMobileChannels((prev) => !prev)}
-            t={t}
-          />
-          {!isMeView && voiceChannelId ? (
+          {!(isVoiceChannel && hideVoiceHeader) ? (
+            <Header
+              title={headerTitle}
+              isDark={isDark}
+              onLight={() => setIsDark(false)}
+              onDark={() => setIsDark(true)}
+              user={user}
+              onToggleChannels={() => setShowMobileChannels((prev) => !prev)}
+              t={t}
+            />
+          ) : null}
+          {voiceChannelId ? (
             <div
               className="flex-1 min-h-0 flex"
               style={{ display: isVoiceChannel ? 'flex' : 'none' }}
@@ -2255,6 +2626,7 @@ function App() {
                 noiseSuppressionMode={noiseSuppressionMode}
                 t={t}
                 autoJoin={autoJoinVoiceChannelId === voiceChannelId}
+                onFocusedShareChange={setHideVoiceHeader}
                 onAutoJoinHandled={() => {
                   setAutoJoinVoiceChannelId(null)
                 }}
@@ -2267,44 +2639,200 @@ function App() {
               />
             </div>
           ) : null}
-          {isMeView ? (
+          {isMeView && !activeDmChannelId ? (
             <div className="flex-1 flex min-h-0">
               <div className="flex-1 min-w-0 flex flex-col border-r" style={{ borderColor: 'var(--border)' }}>
                 <div className="px-6 pt-5 pb-3 border-b" style={{ borderColor: 'var(--border)' }}>
-                  <div className="flex items-center gap-3">
-                    <div className="text-lg font-semibold">친구</div>
-                    <button
-                      type="button"
-                      className="h-8 px-3 rounded-md text-sm font-semibold cursor-pointer hover-surface"
-                      style={{ background: 'var(--accent)', color: '#111' }}
-                    >
-                      친구 추가하기
-                    </button>
-                  </div>
-                  <div className="mt-3 flex items-center gap-2 text-sm">
-                    <button className="px-3 h-8 rounded-md cursor-pointer hover-surface" style={{ background: 'var(--hover-bg)', color: 'var(--text-primary)' }}>온라인</button>
-                    <button className="px-3 h-8 rounded-md cursor-pointer hover-surface" style={{ color: 'var(--text-muted)' }}>모두</button>
-                    <button className="px-3 h-8 rounded-md cursor-pointer hover-surface" style={{ color: 'var(--text-muted)' }}>대기 중</button>
-                    <button className="px-3 h-8 rounded-md cursor-pointer hover-surface" style={{ color: 'var(--text-muted)' }}>차단됨</button>
+                  <div className="flex items-center gap-4">
+                    <div className="text-lg font-semibold">{t.home.friends}</div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <button
+                        className="px-3 h-8 rounded-md cursor-pointer hover-surface"
+                        style={{ background: homeTab === 'online' ? 'var(--hover-bg)' : 'transparent', color: homeTab === 'online' ? 'var(--text-primary)' : 'var(--text-muted)' }}
+                        onClick={() => setHomeTab('online')}
+                      >
+                        {t.home.online}
+                      </button>
+                      <button
+                        className="px-3 h-8 rounded-md cursor-pointer hover-surface"
+                        style={{ background: homeTab === 'pending' ? 'var(--hover-bg)' : 'transparent', color: homeTab === 'pending' ? 'var(--text-primary)' : 'var(--text-muted)' }}
+                        onClick={() => setHomeTab('pending')}
+                      >
+                        {t.home.pending}
+                      </button>
+                      <button
+                        className="px-3 h-8 rounded-md cursor-pointer hover-surface"
+                        style={{
+                          backgroundColor: homeTab === 'add' ? 'color-mix(in oklch, var(--accent) 18%, transparent)' : 'var(--accent)',
+                          color: homeTab === 'add' ? 'var(--accent)' : '#111',
+                          transition: 'background-color 160ms ease, color 160ms ease',
+                        }}
+                        onClick={() => {
+                          setHomeTab('add')
+                          friendInputRef.current?.focus()
+                        }}
+                      >
+                        {t.home.addFriend}
+                      </button>
+                    </div>
                   </div>
                 </div>
-                <div className="px-6 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
-                  <div className="flex items-center gap-2 rounded-md px-3 h-10" style={{ background: 'var(--input-bg)', border: '1px solid var(--border)' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>🔍</span>
-                    <span className="text-sm" style={{ color: 'var(--text-muted)' }}>대화 찾기 또는 시작하기</span>
+                {homeTab === 'add' ? (
+                  <div className="px-6 py-5 border-b" style={{ borderColor: 'var(--border)' }}>
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <div className="text-lg font-semibold">{t.home.addFriend}</div>
+                        <div className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
+                          {t.home.addFriendDescription}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-4 flex items-center gap-2 rounded-md px-3 h-11" style={{ background: 'var(--input-bg)', border: '1px solid var(--border)' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>@</span>
+                      <input
+                        ref={friendInputRef}
+                        value={friendInput}
+                        onChange={(event) => setFriendInput(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') {
+                            event.preventDefault()
+                            submitFriendRequest()
+                          }
+                        }}
+                        className="flex-1 bg-transparent text-sm outline-none"
+                        placeholder={t.home.addFriendPlaceholder}
+                        style={{ color: 'var(--text-primary)' }}
+                        disabled={friendLoading}
+                      />
+                      <button
+                        type="button"
+                        className="px-3 h-8 rounded-md text-xs font-semibold cursor-pointer hover-surface"
+                        style={{ background: 'var(--accent)', color: '#111', opacity: friendLoading ? 0.7 : 1 }}
+                        onClick={submitFriendRequest}
+                        disabled={friendLoading}
+                      >
+                        {t.home.addFriendAction}
+                      </button>
+                    </div>
+                    {friendError ? (
+                      <div className="mt-2 text-xs" style={{ color: 'var(--danger)' }}>
+                        {friendError}
+                      </div>
+                    ) : null}
                   </div>
+                ) : null}
+                <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 space-y-3">
+                  {homeTab === 'pending' ? (
+                    <div className="space-y-4">
+                      <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
+                        {t.home.pendingIncoming}
+                      </div>
+                      <div className="space-y-2">
+                        {friendRequests.filter((req) => req.direction === 'incoming').length === 0 ? (
+                          <div className="text-sm" style={{ color: 'var(--text-muted)' }}>{t.home.pendingEmpty}</div>
+                        ) : (
+                          friendRequests
+                            .filter((req) => req.direction === 'incoming')
+                            .map((req) => (
+                              <div key={req.id} className="flex items-center justify-between gap-3 rounded-lg px-3 py-2 hover-surface" style={{ background: 'var(--panel)', border: '1px solid var(--border)' }}>
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center" style={{ background: 'var(--input-bg)' }}>
+                                    {req.user?.avatar ? (
+                                      <img src={req.user.avatar} alt={req.user.displayName || req.user.username} className="w-full h-full object-cover" />
+                                    ) : (
+                                      <span className="text-sm font-semibold">{(req.user?.displayName || req.user?.username || '?').slice(0, 1)}</span>
+                                    )}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <div className="text-sm font-semibold truncate">{req.user?.displayName || req.user?.username}</div>
+                                    <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{req.user?.username}</div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <button type="button" className="px-3 h-8 rounded-md text-xs font-semibold cursor-pointer hover-surface" style={{ background: 'var(--accent)', color: '#111' }} onClick={() => acceptFriendRequest(req.id)}>
+                                    {t.home.accept}
+                                  </button>
+                                  <button type="button" className="px-3 h-8 rounded-md text-xs font-semibold cursor-pointer hover-surface" style={{ background: 'var(--input-bg)', color: 'var(--text-muted)' }} onClick={() => rejectFriendRequest(req.id)}>
+                                    {t.home.reject}
+                                  </button>
+                                </div>
+                              </div>
+                            ))
+                        )}
+                      </div>
+                      <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
+                        {t.home.pendingOutgoing}
+                      </div>
+                      <div className="space-y-2">
+                        {friendRequests.filter((req) => req.direction === 'outgoing').length === 0 ? (
+                          <div className="text-sm" style={{ color: 'var(--text-muted)' }}>{t.home.pendingOutgoingEmpty}</div>
+                        ) : (
+                          friendRequests
+                            .filter((req) => req.direction === 'outgoing')
+                            .map((req) => (
+                              <div key={req.id} className="flex items-center justify-between gap-3 rounded-lg px-3 py-2 hover-surface" style={{ background: 'var(--panel)', border: '1px solid var(--border)' }}>
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center" style={{ background: 'var(--input-bg)' }}>
+                                    {req.user?.avatar ? (
+                                      <img src={req.user.avatar} alt={req.user.displayName || req.user.username} className="w-full h-full object-cover" />
+                                    ) : (
+                                      <span className="text-sm font-semibold">{(req.user?.displayName || req.user?.username || '?').slice(0, 1)}</span>
+                                    )}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <div className="text-sm font-semibold truncate">{req.user?.displayName || req.user?.username}</div>
+                                    <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{req.user?.username}</div>
+                                  </div>
+                                </div>
+                                <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{t.home.pendingStatus}</div>
+                              </div>
+                            ))
+                        )}
+                      </div>
+                    </div>
+                  ) : homeTab === 'online' ? (
+                    <div className="space-y-2">
+                      {friends.length === 0 ? (
+                        <div className="text-sm" style={{ color: 'var(--text-muted)' }}>{t.home.friendsEmpty}</div>
+                      ) : (
+                        friends.map((friend) => (
+                          <div key={friend.id} className="flex items-center justify-between gap-3 rounded-lg px-3 py-2 hover-surface" style={{ background: 'var(--panel)', border: '1px solid var(--border)' }}>
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center" style={{ background: 'var(--input-bg)' }}>
+                                {friend.avatar ? (
+                                  <img src={friend.avatar} alt={friend.displayName || friend.username} className="w-full h-full object-cover" />
+                                ) : (
+                                  <span className="text-sm font-semibold">{(friend.displayName || friend.username || '?').slice(0, 1)}</span>
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="text-sm font-semibold truncate">{friend.displayName || friend.username}</div>
+                                <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{friend.username}</div>
+                              </div>
+                            </div>
+                            <button type="button" className="px-3 h-8 rounded-md text-xs font-semibold cursor-pointer hover-surface" style={{ background: 'var(--input-bg)', color: 'var(--text-muted)' }} onClick={() => removeFriend(friend.id)}>
+                              {t.home.removeFriend}
+                            </button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                      {t.home.addFriendDescription}
+                    </div>
+                  )}
                 </div>
-                
               </div>
               <div className="w-[280px] shrink-0 p-4 space-y-3">
-                <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>현재 활동 중</div>
+                <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{t.home.activity}</div>
                 {[1, 2, 3].map((idx) => (
                   <div key={idx} className="rounded-xl p-3 hover-surface cursor-pointer" style={{ background: 'var(--panel)', border: '1px solid var(--border)' }}>
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-lg" style={{ background: 'var(--input-bg)' }} />
                       <div>
-                        <div className="text-sm font-semibold">활동 {idx}</div>
-                        <div className="text-xs" style={{ color: 'var(--text-muted)' }}>지금 참여 중</div>
+                        <div className="text-sm font-semibold">{t.home.activityItem.replace('{idx}', String(idx))}</div>
+                        <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{t.home.activityHint}</div>
                       </div>
                     </div>
                     <div className="mt-3 h-24 rounded-md" style={{ background: 'var(--input-bg)' }} />
@@ -2320,7 +2848,7 @@ function App() {
                   adminIds={adminIds}
                   loading={loadingMessages}
                   error={loadError}
-                  onRetry={() => fetchHistory(activeChannelId)}
+                  onRetry={() => fetchHistory(currentChannelId)}
                   t={t}
                 />
                 <Composer
@@ -2331,54 +2859,56 @@ function App() {
                   onRemoveAttachment={removeAttachment}
                   uploading={uploading}
                   attachments={attachments}
-                  channelName={activeChannel?.name || 'general'}
+                  channelName={currentChannelName}
                   t={t}
                 />
               </div>
-              <aside
-                className="hidden lg:flex flex-col w-64 shrink-0 border-l px-4 py-4"
-                style={{ borderColor: 'var(--border)', background: 'var(--bg-app)' }}
-              >
-                <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                  {t.header.members} - {serverMembers.length}
-                </div>
-                <div className="mt-3 space-y-0">
-                  {serverMembers.map((member) => (
-                    <div
-                      key={member.id}
-                      className="flex items-center gap-2 rounded-md px-2 py-1 hover-surface cursor-pointer"
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        const rect = (event.currentTarget as HTMLDivElement).getBoundingClientRect()
-                        const ev = new CustomEvent('open-user-profile', {
-                          detail: { user: member, x: rect.left - 8, y: rect.top },
-                        })
-                        window.dispatchEvent(ev)
-                      }}
-                      onContextMenu={(event) => {
-                        event.preventDefault()
-                        openMemberMenu(member, event.clientX, event.clientY)
-                      }}
-                    >
+              {!isMeView ? (
+                <aside
+                  className="hidden lg:flex flex-col w-64 shrink-0 border-l px-4 py-4"
+                  style={{ borderColor: 'var(--border)', background: 'var(--bg-app)' }}
+                >
+                  <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                    {t.header.members} - {serverMembers.length}
+                  </div>
+                  <div className="mt-3 space-y-0">
+                    {serverMembers.map((member) => (
                       <div
-                        className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center"
-                        style={{ background: 'var(--panel)' }}
+                        key={member.id}
+                        className="flex items-center gap-2 rounded-md px-2 py-1 hover-surface cursor-pointer"
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          const rect = (event.currentTarget as HTMLDivElement).getBoundingClientRect()
+                          const ev = new CustomEvent('open-user-profile', {
+                            detail: { user: member, x: rect.left - 8, y: rect.top },
+                          })
+                          window.dispatchEvent(ev)
+                        }}
+                        onContextMenu={(event) => {
+                          event.preventDefault()
+                          openMemberMenu(member, event.clientX, event.clientY)
+                        }}
                       >
-                        {member.avatar ? (
-                          <img src={member.avatar} alt={member.username} className="w-full h-full object-cover" />
-                        ) : (
-                          <span className="text-xs font-semibold">
-                            {(member.displayName || member.username || 'U').slice(0, 1)}
-                          </span>
-                        )}
+                        <div
+                          className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center"
+                          style={{ background: 'var(--panel)' }}
+                        >
+                          {member.avatar ? (
+                            <img src={member.avatar} alt={member.username} className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-xs font-semibold">
+                              {(member.displayName || member.username || 'U').slice(0, 1)}
+                            </span>
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-sm truncate">{member.displayName || member.username}</div>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <div className="text-sm truncate">{member.displayName || member.username}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </aside>
+                    ))}
+                  </div>
+                </aside>
+              ) : null}
             </div>
           )}
           {menu.visible && menu.message

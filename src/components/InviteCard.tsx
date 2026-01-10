@@ -15,6 +15,9 @@ type InviteCardProps = {
   url: string
 }
 
+const inviteCache = new Map<string, InviteInfo>()
+const inviteMemberCache = new Map<string, boolean>()
+
 export default function InviteCard({ code, url }: InviteCardProps) {
   const navigate = useNavigate()
   const [invite, setInvite] = useState<InviteInfo | null>(null)
@@ -29,6 +32,25 @@ export default function InviteCard({ code, url }: InviteCardProps) {
   }, [])
 
   useEffect(() => {
+    const cached = inviteCache.get(code)
+    if (cached) {
+      setInvite(cached)
+      setLoading(false)
+      setError('')
+    } else if (typeof window !== 'undefined') {
+      const raw = window.localStorage.getItem(`invite:${code}`)
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw) as InviteInfo
+          if (parsed?.code === code) {
+            setInvite(parsed)
+            setLoading(false)
+            setError('')
+            inviteCache.set(code, parsed)
+          }
+        } catch {}
+      }
+    }
     let cancelled = false
     setLoading(true)
     setError('')
@@ -36,11 +58,19 @@ export default function InviteCard({ code, url }: InviteCardProps) {
       .then(async (res) => {
         const data = await res.json().catch(() => null)
         if (!res.ok || !data) throw new Error(data?.error || 'invalid')
-        if (!cancelled) setInvite(data)
+        if (!cancelled) {
+          setInvite(data)
+          inviteCache.set(code, data)
+          if (typeof window !== 'undefined') {
+            window.localStorage.setItem(`invite:${code}`, JSON.stringify(data))
+          }
+        }
       })
       .catch((e) => {
         if (cancelled) return
-        setError(e?.message || 'invalid')
+        if (!inviteCache.has(code)) {
+          setError(e?.message || 'invalid')
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
@@ -52,13 +82,32 @@ export default function InviteCard({ code, url }: InviteCardProps) {
 
   useEffect(() => {
     if (!invite?.server?.id) return
+    const cachedMember = inviteMemberCache.get(invite.server.id)
+    if (cachedMember !== undefined) {
+      setIsMember(cachedMember)
+      return
+    }
+    if (typeof window !== 'undefined') {
+      const raw = window.localStorage.getItem(`invite-member:${invite.server.id}`)
+      if (raw === 'true' || raw === 'false') {
+        const value = raw === 'true'
+        setIsMember(value)
+        inviteMemberCache.set(invite.server.id, value)
+        return
+      }
+    }
     let cancelled = false
     fetch(`${baseUrl}/api/servers`, { credentials: 'include' })
       .then((res) => res.json())
       .then((data) => {
         if (cancelled) return
         if (Array.isArray(data)) {
-          setIsMember(data.some((server) => server?.id === invite.server.id))
+          const value = data.some((server) => server?.id === invite.server.id)
+          setIsMember(value)
+          inviteMemberCache.set(invite.server.id, value)
+          if (typeof window !== 'undefined') {
+            window.localStorage.setItem(`invite-member:${invite.server.id}`, String(value))
+          }
         }
       })
       .catch(() => {})

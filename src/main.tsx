@@ -9,6 +9,7 @@ import Invite from './routes/Invite.tsx'
 const routes = [
   { path: '/', element: <App /> },
   { path: '/channels/@me', element: <App /> },
+  { path: '/channels/@me/:channelId', element: <App /> },
   { path: '/channels/:serverId', element: <App /> },
   { path: '/channels/:serverId/:channelId', element: <App /> },
   { path: '/invite/:code', element: <Invite /> },

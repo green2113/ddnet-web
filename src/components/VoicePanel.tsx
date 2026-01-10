@@ -43,6 +43,7 @@ type VoicePanelProps = {
   forceHeadsetMuted?: boolean
   noiseSuppressionMode: 'webrtc' | 'off'
   t: UiText
+  onFocusedShareChange?: (focused: boolean) => void
   onRequireLogin?: () => void
   onJoinStateChange?: (channelId: string, joined: boolean) => void
   onSpeakingChange?: (channelId: string, speakingIds: string[]) => void
@@ -90,6 +91,7 @@ export default function VoicePanel({
   forceHeadsetMuted = false,
   noiseSuppressionMode,
   t,
+  onFocusedShareChange,
   onRequireLogin,
   onJoinStateChange,
   onSpeakingChange,
@@ -399,7 +401,7 @@ export default function VoicePanel({
   const connectSfu = async () => {
     if (!useSfuAudio) return
     if (!sfuBase) return
-    const peerId = user?.id || socket?.id
+    const peerId = socket?.id
     if (!peerId || !user) return
     if (sfuPeerRef.current) return
     if (sfuConnectingRef.current) return sfuConnectingRef.current
@@ -530,10 +532,17 @@ export default function VoicePanel({
   const startSpeakingMonitor = (peerId: string, stream: MediaStream, threshold?: number) => {
     if (analyserRef.current.has(peerId)) return
     const ctx = new AudioContext()
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {})
+    }
     const source = ctx.createMediaStreamSource(stream)
     const analyser = ctx.createAnalyser()
     analyser.fftSize = 1024
     source.connect(analyser)
+    const silentGain = ctx.createGain()
+    silentGain.gain.value = 0
+    analyser.connect(silentGain)
+    silentGain.connect(ctx.destination)
     const data = new Float32Array(analyser.fftSize)
     if (threshold !== undefined) {
       speakingThresholdRef.current.set(peerId, threshold)
@@ -542,6 +551,9 @@ export default function VoicePanel({
     }
 
     const tick = () => {
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => {})
+      }
       analyser.getFloatTimeDomainData(data)
       const normalized = normalizeLevel(data)
       const thresholdValue = speakingThresholdRef.current.get(peerId) ?? DEFAULT_SPEAKING_THRESHOLD
@@ -565,6 +577,9 @@ export default function VoicePanel({
   }
 
   const leaveVoice = () => {
+    if (joined) {
+      onJoinStateChange?.(channelId, false)
+    }
     if (socket && joined) {
       socket.emit('voice:leave', { channelId })
     }
@@ -1189,6 +1204,13 @@ export default function VoicePanel({
     setHideFocusedCursor(false)
   }, [focusedShareId])
 
+  useEffect(() => {
+    onFocusedShareChange?.(Boolean(focusedShareId))
+    return () => {
+      onFocusedShareChange?.(false)
+    }
+  }, [focusedShareId, onFocusedShareChange])
+
   const focusedShare = focusedShareId ? screenShares.find((share) => share.id === focusedShareId) : null
   const availableShareIds = screenShareAvailable.filter((id) => id && id !== socket?.id)
   const availableShareCards = availableShareIds.map((peerId) => {
@@ -1537,8 +1559,12 @@ export default function VoicePanel({
           }}
         >
           {focusedShare ? (
-            <div className="w-full h-full" onClick={() => setFocusedShareId(null)}>
-              <FocusedShareVideo stream={focusedShare.stream} muted={focusedShare.isLocal} />
+            <div className="w-full h-full flex items-center justify-center">
+              <FocusedShareVideo
+                stream={focusedShare.stream}
+                muted={focusedShare.isLocal}
+                onClose={() => setFocusedShareId(null)}
+              />
             </div>
           ) : (
             <div className="w-full h-full flex items-center justify-center text-sm" style={{ color: 'var(--text-muted)' }}>
@@ -1706,8 +1732,17 @@ function ScreenShareCard({
   )
 }
 
-function FocusedShareVideo({ stream, muted }: { stream: MediaStream; muted?: boolean }) {
+function FocusedShareVideo({
+  stream,
+  muted,
+  onClose,
+}: {
+  stream: MediaStream
+  muted?: boolean
+  onClose?: () => void
+}) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
+  const [aspectRatio, setAspectRatio] = useState(16 / 9)
 
   useEffect(() => {
     const video = videoRef.current
@@ -1715,7 +1750,35 @@ function FocusedShareVideo({ stream, muted }: { stream: MediaStream; muted?: boo
     if (video.srcObject !== stream) {
       video.srcObject = stream
     }
+    const updateAspect = () => {
+      if (!video.videoWidth || !video.videoHeight) return
+      setAspectRatio(video.videoWidth / video.videoHeight)
+    }
+    updateAspect()
+    video.addEventListener('loadedmetadata', updateAspect)
+    video.addEventListener('resize', updateAspect)
+    return () => {
+      video.removeEventListener('loadedmetadata', updateAspect)
+      video.removeEventListener('resize', updateAspect)
+    }
   }, [stream])
 
-  return <video ref={videoRef} autoPlay playsInline muted={muted} className="focused-share-video" />
+  return (
+    <div
+      className={`focused-share-target${onClose ? ' focused-share-clickable' : ''}`}
+      style={{ aspectRatio }}
+      onClick={onClose}
+      role={onClose ? 'button' : undefined}
+      tabIndex={onClose ? 0 : undefined}
+      onKeyDown={(event) => {
+        if (!onClose) return
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          onClose()
+        }
+      }}
+    >
+      <video ref={videoRef} autoPlay playsInline muted={muted} className="focused-share-video" />
+    </div>
+  )
 }

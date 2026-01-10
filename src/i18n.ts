@@ -77,6 +77,33 @@ export type UiText = {
     empty: string
     adminTag: string
   }
+  home: {
+    friends: string
+    online: string
+    addFriend: string
+    addFriendDescription: string
+    addFriendPlaceholder: string
+    addFriendAction: string
+    friendAddFailed: string
+    all: string
+    pending: string
+    pendingIncoming: string
+    pendingOutgoing: string
+    pendingEmpty: string
+    pendingOutgoingEmpty: string
+    pendingStatus: string
+    accept: string
+    reject: string
+    friendsEmpty: string
+    removeFriend: string
+    messageRequests: string
+    directMessages: string
+    directEmpty: string
+    directFallback: string
+    activity: string
+    activityItem: string
+    activityHint: string
+  }
   sidebarChannels: {
     serverName: string
     serverSettings: string
@@ -359,6 +386,33 @@ const translations: TranslationMap = {
       empty: 'No messages yet. Send the first one!',
       adminTag: '👑 Admin',
     },
+    home: {
+      friends: 'Friends',
+      online: 'Online',
+      addFriend: 'Add Friend',
+      addFriendDescription: 'Add friends with their username.',
+      addFriendPlaceholder: 'Enter a username (without @)',
+      addFriendAction: 'Send',
+      friendAddFailed: 'Unable to send request.',
+      all: 'All',
+      pending: 'Pending',
+      pendingIncoming: 'Incoming requests',
+      pendingOutgoing: 'Outgoing requests',
+      pendingEmpty: 'No incoming requests.',
+      pendingOutgoingEmpty: 'No outgoing requests.',
+      pendingStatus: 'Pending',
+      accept: 'Accept',
+      reject: 'Ignore',
+      friendsEmpty: 'No friends yet. Add someone to start chatting.',
+      removeFriend: 'Remove',
+      messageRequests: 'Message Requests',
+      directMessages: 'Direct Messages',
+      directEmpty: 'No direct messages yet.',
+      directFallback: 'Direct message',
+      activity: 'Active now',
+      activityItem: 'Activity {idx}',
+      activityHint: 'Jump in now',
+    },
     sidebarChannels: {
       serverName: 'Server',
       serverSettings: 'Server settings',
@@ -638,6 +692,33 @@ const translations: TranslationMap = {
       loading: '메시지를 불러오는 중…',
       empty: '아직 메시지가 없습니다. 첫 메시지를 보내보세요!',
       adminTag: '👑 관리자',
+    },
+    home: {
+      friends: '친구',
+      online: '온라인',
+      addFriend: '친구 추가하기',
+      addFriendDescription: '사용자 이름으로 친구를 추가할 수 있어요.',
+      addFriendPlaceholder: '사용자 이름 입력 (@ 없이)',
+      addFriendAction: '추가',
+      friendAddFailed: '친구 요청을 보내지 못했어요.',
+      all: '모두',
+      pending: '대기 중',
+      pendingIncoming: '받은 요청',
+      pendingOutgoing: '보낸 요청',
+      pendingEmpty: '받은 요청이 없습니다.',
+      pendingOutgoingEmpty: '보낸 요청이 없습니다.',
+      pendingStatus: '대기 중',
+      accept: '수락',
+      reject: '거절',
+      friendsEmpty: '아직 친구가 없습니다. 친구를 추가해 보세요.',
+      removeFriend: '삭제',
+      messageRequests: '메시지 요청',
+      directMessages: '다이렉트 만들기',
+      directEmpty: '아직 다이렉트가 없습니다.',
+      directFallback: '다이렉트 메시지',
+      activity: '현재 활동 중',
+      activityItem: '활동 {idx}',
+      activityHint: '지금 참여 중',
     },
     sidebarChannels: {
       serverName: '서버',
@@ -919,6 +1000,33 @@ const translations: TranslationMap = {
       empty: '还没有消息，发送第一条吧！',
       adminTag: '👑 管理员',
     },
+    home: {
+      friends: '好友',
+      online: '在线',
+      addFriend: '添加好友',
+      addFriendDescription: '使用用户名添加好友。',
+      addFriendPlaceholder: '输入用户名（不含 @）',
+      addFriendAction: '发送',
+      friendAddFailed: '无法发送好友请求。',
+      all: '全部',
+      pending: '待处理',
+      pendingIncoming: '收到的请求',
+      pendingOutgoing: '已发送的请求',
+      pendingEmpty: '暂无收到的请求。',
+      pendingOutgoingEmpty: '暂无发送的请求。',
+      pendingStatus: '待处理',
+      accept: '接受',
+      reject: '忽略',
+      friendsEmpty: '还没有好友，先添加一个吧。',
+      removeFriend: '删除',
+      messageRequests: '消息请求',
+      directMessages: '私信',
+      directEmpty: '暂无私信。',
+      directFallback: '私信',
+      activity: '正在活动',
+      activityItem: '活动 {idx}',
+      activityHint: '马上加入',
+    },
     sidebarChannels: {
       serverName: '服务器',
       serverSettings: '服务器设置',
@@ -1198,6 +1306,33 @@ const translations: TranslationMap = {
       loading: '正在載入訊息…',
       empty: '尚無訊息，先送出第一則吧！',
       adminTag: '👑 管理員',
+    },
+    home: {
+      friends: '好友',
+      online: '上線',
+      addFriend: '新增好友',
+      addFriendDescription: '使用使用者名稱新增好友。',
+      addFriendPlaceholder: '輸入使用者名稱（不含 @）',
+      addFriendAction: '送出',
+      friendAddFailed: '無法送出好友邀請。',
+      all: '全部',
+      pending: '待處理',
+      pendingIncoming: '收到的請求',
+      pendingOutgoing: '已送出的請求',
+      pendingEmpty: '目前沒有收到的請求。',
+      pendingOutgoingEmpty: '目前沒有送出的請求。',
+      pendingStatus: '待處理',
+      accept: '接受',
+      reject: '忽略',
+      friendsEmpty: '尚未加入好友，先新增一位吧。',
+      removeFriend: '刪除',
+      messageRequests: '訊息請求',
+      directMessages: '私訊',
+      directEmpty: '尚無私訊。',
+      directFallback: '私訊',
+      activity: '正在活動',
+      activityItem: '活動 {idx}',
+      activityHint: '現在加入',
     },
     sidebarChannels: {
       serverName: '伺服器',
