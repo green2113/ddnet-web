@@ -30,6 +30,9 @@ export type UiText = {
     banConfirm: string
     deleteMessage: string
     someone: string
+    friendAdd: string
+    friendCancel: string
+    friendRemove: string
     serverActionTitle: string
     serverActionTitleCreate: string
     serverActionTitleJoin: string
@@ -339,6 +342,9 @@ const translations: TranslationMap = {
       banConfirm: 'Ban',
       deleteMessage: 'Delete message',
       someone: 'Someone',
+      friendAdd: 'Add friend',
+      friendCancel: 'Cancel friend request',
+      friendRemove: 'Remove friend',
       serverActionTitle: 'Server',
       serverActionTitleCreate: 'Create server',
       serverActionTitleJoin: 'Join server',
@@ -646,6 +652,9 @@ const translations: TranslationMap = {
       banConfirm: '차단하기',
       deleteMessage: '메시지 삭제',
       someone: '누군가',
+      friendAdd: '친구 추가하기',
+      friendCancel: '친구 추가 취소',
+      friendRemove: '친구 삭제하기',
       serverActionTitle: '서버',
       serverActionTitleCreate: '서버 만들기',
       serverActionTitleJoin: '서버 들어가기',
@@ -953,6 +962,9 @@ const translations: TranslationMap = {
       banConfirm: '封禁',
       deleteMessage: '删除消息',
       someone: '某人',
+      friendAdd: '添加好友',
+      friendCancel: '取消好友请求',
+      friendRemove: '删除好友',
       serverActionTitle: '服务器',
       serverActionTitleCreate: '创建服务器',
       serverActionTitleJoin: '加入服务器',
@@ -1260,6 +1272,9 @@ const translations: TranslationMap = {
       banConfirm: '封鎖',
       deleteMessage: '刪除訊息',
       someone: '某人',
+      friendAdd: '新增好友',
+      friendCancel: '取消好友邀請',
+      friendRemove: '刪除好友',
       serverActionTitle: '伺服器',
       serverActionTitleCreate: '建立伺服器',
       serverActionTitleJoin: '加入伺服器',

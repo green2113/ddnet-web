@@ -1336,6 +1336,16 @@ function App() {
     }
   }
 
+  const cancelFriendRequest = async (requestId: string) => {
+    if (!requestId) return
+    try {
+      await axios.post(`${serverBase}/api/friends/requests/${requestId}/cancel`, {}, { withCredentials: true })
+      fetchFriendRequests()
+    } catch {
+      setFriendError(t.home.friendAddFailed)
+    }
+  }
+
   const removeFriend = async (friendId: string) => {
     if (!friendId) return
     try {
@@ -2989,9 +2999,46 @@ function App() {
                     }}
                     onClick={(e) => e.stopPropagation()}
                   >
-                    {canManageChannels && user && memberMenu.member.id !== user.id ? (
-                      <div className="member-menu-divider" />
-                    ) : null}
+                    {user && memberMenu.member.id !== user.id ? (() => {
+                      const isFriend = friends.some((friend) => friend.id === memberMenu.member!.id)
+                      const outgoing = friendRequests.find(
+                        (req) => req.direction === 'outgoing' && req.user?.id === memberMenu.member!.id
+                      )
+                      const incoming = friendRequests.find(
+                        (req) => req.direction === 'incoming' && req.user?.id === memberMenu.member!.id
+                      )
+                      const label = isFriend
+                        ? t.app.friendRemove
+                        : outgoing
+                          ? t.app.friendCancel
+                          : t.app.friendAdd
+                      const handleClick = () => {
+                        if (user.isGuest) return
+                        if (isFriend) {
+                          removeFriend(memberMenu.member!.id)
+                        } else if (outgoing) {
+                          cancelFriendRequest(outgoing.id)
+                        } else if (incoming) {
+                          acceptFriendRequest(incoming.id)
+                        } else {
+                          submitFriendRequest(memberMenu.member!.username)
+                        }
+                      }
+                      return (
+                        <button
+                          className="w-full text-left px-3 py-2 cursor-pointer hover-surface member-menu-item"
+                          style={{ opacity: user.isGuest ? 0.6 : 1, cursor: user.isGuest ? 'not-allowed' : 'pointer' }}
+                          onClick={() => {
+                            if (user.isGuest) return
+                            handleClick()
+                            setMemberMenu({ visible: false, x: 0, y: 0, anchorX: 0, anchorY: 0, member: null })
+                          }}
+                        >
+                          {label}
+                        </button>
+                      )
+                    })() : null}
+                    <div className="member-menu-divider" />
                     {canManageChannels && user && memberMenu.member.id !== user.id ? (
                       <>
                         <button
