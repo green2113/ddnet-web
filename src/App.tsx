@@ -1079,6 +1079,11 @@ function App() {
     socket.on('servers:update', () => {
       fetchServers()
     })
+    socket.on('friends:update', () => {
+      fetchFriends()
+      fetchFriendRequests()
+      fetchDmChannels()
+    })
     socket.on('chat:message', (msg: ChatMessage) => {
       const channelId = msg.channelId
       if (!channelId) return
@@ -1122,7 +1127,7 @@ function App() {
     return () => {
       socket.disconnect()
     }
-  }, [fetchServers, serverBase, user])
+  }, [fetchServers, fetchFriends, fetchFriendRequests, fetchDmChannels, serverBase, user])
 
   useEffect(() => {
     const socket = socketRef.current
