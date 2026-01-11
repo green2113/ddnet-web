@@ -1287,8 +1287,9 @@ function App() {
     requireLogin()
   }
 
-  const submitFriendRequest = async () => {
-    if (!friendInput.trim()) return
+  const submitFriendRequest = async (username?: string) => {
+    const target = (username ?? friendInput).trim()
+    if (!target) return
     if (!user) {
       requireLogin()
       return
@@ -1299,10 +1300,10 @@ function App() {
     try {
       await axios.post(
         `${serverBase}/api/friends/requests`,
-        { username: friendInput.trim() },
+        { username: target },
         { withCredentials: true },
       )
-      setFriendInput('')
+      if (!username) setFriendInput('')
       fetchFriendRequests()
       fetchFriends()
       fetchDmChannels()
