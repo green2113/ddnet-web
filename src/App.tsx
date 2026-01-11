@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { io, Socket } from 'socket.io-client'
 import axios from 'axios'
@@ -104,6 +104,15 @@ function App() {
   const [channels, setChannels] = useState<Channel[]>([])
   const [adminIds, setAdminIds] = useState<string[]>([])
   const canManageChannels = Boolean(user?.id && adminIds.includes(user.id))
+  const memberNameCollator = useMemo(
+    () => new Intl.Collator('ko', { numeric: true, sensitivity: 'base' }),
+    []
+  )
+  const sortedServerMembers = useMemo(() => {
+    return [...serverMembers].sort((a, b) =>
+      memberNameCollator.compare(a.displayName || a.username || '', b.displayName || b.username || '')
+    )
+  }, [serverMembers, memberNameCollator])
   const [servers, setServers] = useState<Server[]>([])
   const [serverOrder, setServerOrder] = useState<string[]>([])
   const [activeServerId, setActiveServerId] = useState('')
@@ -2865,7 +2874,7 @@ function App() {
                     {t.header.members} - {serverMembers.length}
                   </div>
                   <div className="mt-3 space-y-0">
-                    {serverMembers.map((member) => (
+                    {sortedServerMembers.map((member) => (
                       <div
                         key={member.id}
                         className="flex items-center gap-2 rounded-md px-2 py-1 hover-surface cursor-pointer"
@@ -3000,7 +3009,10 @@ function App() {
                     }}
                     onClick={(e) => e.stopPropagation()}
                   >
-                    {user && memberMenu.member.id !== user.id ? (() => {
+                    {(() => {
+                      const isSelf = user ? memberMenu.member!.id === user.id : false
+                      const canShowFriendAction = Boolean(user && !isSelf)
+                      const canShowModeration = Boolean(canManageChannels && user && !isSelf)
                       const isFriend = friends.some((friend) => friend.id === memberMenu.member!.id)
                       const outgoing = friendRequests.find(
                         (req) => req.direction === 'outgoing' && req.user?.id === memberMenu.member!.id
@@ -3008,13 +3020,13 @@ function App() {
                       const incoming = friendRequests.find(
                         (req) => req.direction === 'incoming' && req.user?.id === memberMenu.member!.id
                       )
-                      const label = isFriend
+                      const friendLabel = isFriend
                         ? t.app.friendRemove
                         : outgoing
                           ? t.app.friendCancel
                           : t.app.friendAdd
-                      const handleClick = () => {
-                        if (user.isGuest) return
+                      const handleFriendClick = () => {
+                        if (user?.isGuest) return
                         if (isFriend) {
                           removeFriend(memberMenu.member!.id)
                         } else if (outgoing) {
@@ -3025,55 +3037,80 @@ function App() {
                           submitFriendRequest(memberMenu.member!.username)
                         }
                       }
-                      return (
+                      const sections: ReactNode[][] = []
+
+                      if (canShowFriendAction) {
+                        sections.push([
+                          <button
+                            key="friend-action"
+                            className="w-full text-left px-3 py-2 cursor-pointer hover-surface member-menu-item"
+                            style={{
+                              opacity: user?.isGuest ? 0.6 : 1,
+                              cursor: user?.isGuest ? 'not-allowed' : 'pointer',
+                            }}
+                            onClick={() => {
+                              if (user?.isGuest) return
+                              handleFriendClick()
+                              setMemberMenu({ visible: false, x: 0, y: 0, anchorX: 0, anchorY: 0, member: null })
+                            }}
+                          >
+                            {friendLabel}
+                          </button>,
+                        ])
+                      }
+
+                      if (canShowModeration) {
+                        sections.push([
+                          <button
+                            key="kick"
+                            className="w-full text-left px-3 py-2 cursor-pointer member-menu-danger member-menu-item"
+                            onClick={() => {
+                              setModerationReason('')
+                              setModerationAction({ type: 'kick', member: memberMenu.member! })
+                              setMemberMenu({ visible: false, x: 0, y: 0, anchorX: 0, anchorY: 0, member: null })
+                            }}
+                          >
+                            {t.app.kickUser.replace(
+                              '{name}',
+                              memberMenu.member.displayName || memberMenu.member.username
+                            )}
+                          </button>,
+                          <button
+                            key="ban"
+                            className="w-full text-left px-3 py-2 cursor-pointer member-menu-danger member-menu-item"
+                            onClick={() => {
+                              setModerationReason('')
+                              setModerationAction({ type: 'ban', member: memberMenu.member! })
+                              setMemberMenu({ visible: false, x: 0, y: 0, anchorX: 0, anchorY: 0, member: null })
+                            }}
+                          >
+                            {t.app.banUser.replace(
+                              '{name}',
+                              memberMenu.member.displayName || memberMenu.member.username
+                            )}
+                          </button>,
+                        ])
+                      }
+
+                      sections.push([
                         <button
-                          className="w-full text-left px-3 py-2 cursor-pointer hover-surface member-menu-item"
-                          style={{ opacity: user.isGuest ? 0.6 : 1, cursor: user.isGuest ? 'not-allowed' : 'pointer' }}
+                          key="copy-id"
+                          className="w-full text-left px-3 py-2 hover-surface cursor-pointer member-menu-item"
                           onClick={() => {
-                            if (user.isGuest) return
-                            handleClick()
+                            navigator.clipboard.writeText(memberMenu.member!.id)
                             setMemberMenu({ visible: false, x: 0, y: 0, anchorX: 0, anchorY: 0, member: null })
                           }}
                         >
-                          {label}
-                        </button>
-                      )
-                    })() : null}
-                    {canManageChannels && user && memberMenu.member.id !== user.id ? (
-                      <>
-                        <div className="member-menu-divider" />
-                        <button
-                          className="w-full text-left px-3 py-2 cursor-pointer member-menu-danger member-menu-item"
-                          onClick={() => {
-                            setModerationReason('')
-                            setModerationAction({ type: 'kick', member: memberMenu.member! })
-                            setMemberMenu({ visible: false, x: 0, y: 0, anchorX: 0, anchorY: 0, member: null })
-                          }}
-                        >
-                          {t.app.kickUser.replace('{name}', memberMenu.member.displayName || memberMenu.member.username)}
-                        </button>
-                        <button
-                          className="w-full text-left px-3 py-2 cursor-pointer member-menu-danger member-menu-item"
-                          onClick={() => {
-                            setModerationReason('')
-                            setModerationAction({ type: 'ban', member: memberMenu.member! })
-                            setMemberMenu({ visible: false, x: 0, y: 0, anchorX: 0, anchorY: 0, member: null })
-                          }}
-                        >
-                          {t.app.banUser.replace('{name}', memberMenu.member.displayName || memberMenu.member.username)}
-                        </button>
-                      </>
-                    ) : null}
-                    <div className="member-menu-divider" />
-                    <button
-                      className="w-full text-left px-3 py-2 hover-surface cursor-pointer member-menu-item"
-                      onClick={() => {
-                        navigator.clipboard.writeText(memberMenu.member!.id)
-                        setMemberMenu({ visible: false, x: 0, y: 0, anchorX: 0, anchorY: 0, member: null })
-                      }}
-                    >
-                      {t.app.copyUserId}
-                    </button>
+                          {t.app.copyUserId}
+                        </button>,
+                      ])
+
+                      return sections.flatMap((section, index) => {
+                        const items = section.map((item) => item)
+                        if (index === 0) return items
+                        return [<div key={`divider-${index}`} className="member-menu-divider" />, ...items]
+                      })
+                    })()}
                   </div>
                 </>,
                 document.getElementById('overlay-root') || document.body
