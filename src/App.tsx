@@ -3039,9 +3039,9 @@ function App() {
                         </button>
                       )
                     })() : null}
-                    <div className="member-menu-divider" />
                     {canManageChannels && user && memberMenu.member.id !== user.id ? (
                       <>
+                        <div className="member-menu-divider" />
                         <button
                           className="w-full text-left px-3 py-2 cursor-pointer member-menu-danger member-menu-item"
                           onClick={() => {
