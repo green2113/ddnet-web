@@ -670,7 +670,7 @@ function App() {
   }, [homeTab])
 
   useEffect(() => {
-    if (!user) {
+    if (!user || user.isGuest) {
       setServerOrder([])
       return
     }
