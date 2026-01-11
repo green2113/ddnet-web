@@ -2697,13 +2697,13 @@ function App() {
                         style={{ color: 'var(--text-primary)' }}
                         disabled={friendLoading}
                       />
-                      <button
-                        type="button"
-                        className="px-3 h-8 rounded-md text-xs font-semibold cursor-pointer hover-surface"
-                        style={{ background: 'var(--accent)', color: '#111', opacity: friendLoading ? 0.7 : 1 }}
-                        onClick={submitFriendRequest}
-                        disabled={friendLoading}
-                      >
+                    <button
+                      type="button"
+                      className="px-3 h-8 rounded-md text-xs font-semibold cursor-pointer hover-surface"
+                      style={{ background: 'var(--accent)', color: '#111', opacity: friendLoading ? 0.7 : 1 }}
+                      onClick={() => submitFriendRequest()}
+                      disabled={friendLoading}
+                    >
                         {t.home.addFriendAction}
                       </button>
                     </div>
