@@ -137,6 +137,8 @@ function App() {
   const friendInputRef = useRef<HTMLInputElement | null>(null)
   const socketRef = useRef<Socket | null>(null)
   const [socketId, setSocketId] = useState<string | null>(null)
+  const wasMeRouteRef = useRef(false)
+  const lastViewKeyRef = useRef('')
   const activeServerRef = useRef('')
   const activeChannelRef = useRef('')
   const lastHistoryChannelIdRef = useRef('')
@@ -709,17 +711,22 @@ function App() {
 
   useEffect(() => {
     const isMeRoute = location.pathname === '/channels/@me' || location.pathname.startsWith('/channels/@me/')
+    const wasMeRoute = wasMeRouteRef.current
+    wasMeRouteRef.current = isMeRoute
+
     if (isMeRoute) {
-      setIsMeView(true)
-      setActiveServerId('')
-      setAdminIds([])
-      setChannels([])
-      setActiveChannelId('')
+      if (!wasMeRoute) {
+        setIsMeView(true)
+      }
       setActiveDmChannelId(routeChannelId || '')
       return
     }
-    setIsMeView(false)
-    setActiveDmChannelId('')
+
+    if (wasMeRoute) {
+      setIsMeView(false)
+      setActiveDmChannelId('')
+    }
+
     if (!servers.length) return
     const requested = routeServerId && servers.find((server) => server.id === routeServerId)
     if (requested) {
@@ -729,7 +736,7 @@ function App() {
     if (!activeServerId || !servers.find((server) => server.id === activeServerId)) {
       setActiveServerId(servers[0].id)
     }
-  }, [servers, routeServerId, activeServerId, location.pathname])
+  }, [servers, routeServerId, routeChannelId, activeServerId, location.pathname])
 
   useEffect(() => {
     if (!authReady || !user) return
@@ -740,7 +747,7 @@ function App() {
   }, [authReady, user, servers.length, navigate, location.pathname, routeServerId])
 
   useEffect(() => {
-    if (!activeServerId) return
+    if (!activeServerId || isMeView) return
     const cached = getCachedChannels(activeServerId)
     if (cached.length) {
       setChannels(cached)
@@ -754,7 +761,7 @@ function App() {
     lastHistoryChannelIdRef.current = ''
     fetchChannels(activeServerId)
     fetchAdmins(activeServerId)
-  }, [activeServerId, fetchChannels, fetchAdmins, getCachedChannels])
+  }, [activeServerId, fetchChannels, fetchAdmins, getCachedChannels, isMeView])
 
   useEffect(() => {
     if (!showSettings || !activeServerId || !canManageChannels) return
@@ -763,7 +770,7 @@ function App() {
   }, [showSettings, activeServerId, canManageChannels, fetchBans, fetchInvites])
 
   useEffect(() => {
-    if (!user || !activeServerId) {
+    if (!user || !activeServerId || isMeView) {
       setServerMembers([])
       return
     }
@@ -782,7 +789,7 @@ function App() {
     return () => {
       cancelled = true
     }
-  }, [activeServerId, serverBase, user])
+  }, [activeServerId, serverBase, user, isMeView])
 
   useEffect(() => {
     if (voiceSwitchTargetId) {
@@ -833,17 +840,27 @@ function App() {
     activeServerRef.current = activeServerId
   }, [activeServerId])
 
+  const activeChannelType = useMemo(() => {
+    return channels.find((channel) => channel.id === activeChannelId)?.type || null
+  }, [channels, activeChannelId])
+
   useLayoutEffect(() => {
+    const viewKey = `${isMeView ? 'me' : 'server'}:${activeServerId}:${currentChannelId}:${activeChannelId}:${activeChannelType || ''}`
+    if (lastViewKeyRef.current === viewKey) return
+    lastViewKeyRef.current = viewKey
+
     activeChannelRef.current = currentChannelId
     if (!isMeView && activeChannelId) {
-      setUnreadByChannel((prev) => ({ ...prev, [activeChannelId]: false }))
+      setUnreadByChannel((prev) => {
+        if (prev[activeChannelId] === false) return prev
+        return { ...prev, [activeChannelId]: false }
+      })
     }
     setMessages([])
     setLoadingMessages(Boolean(currentChannelId))
     setLoadError(false)
-    const active = channels.find((channel) => channel.id === activeChannelId)
-    const isVoice = !isMeView && active?.type === 'voice'
-    if (!isMeView && activeServerId && activeChannelId && active?.type !== 'category') {
+    const isVoice = !isMeView && activeChannelType === 'voice'
+    if (!isMeView && activeServerId && activeChannelId && activeChannelType !== 'category') {
       setLastChannelForServer(activeServerId, activeChannelId)
     }
     if (currentChannelId && !isVoice) {
@@ -857,7 +874,7 @@ function App() {
     if (!currentChannelId) {
       setLoadingMessages(false)
     }
-  }, [activeChannelId, channels, activeServerId, currentChannelId, isMeView, setLastChannelForServer])
+  }, [activeChannelId, activeChannelType, activeServerId, currentChannelId, isMeView, fetchHistory, setLastChannelForServer])
 
   useEffect(() => {
     const isMeRoute = location.pathname === '/channels/@me' || location.pathname.startsWith('/channels/@me/')
@@ -2045,7 +2062,7 @@ function App() {
                         <button
                           key={dm.id}
                           type="button"
-                          className="w-full text-left px-3 py-2 rounded-md flex items-center gap-2"
+                          className="w-full text-left px-3 py-2 rounded-xl flex items-center gap-2 hover-surface cursor-pointer"
                           style={{
                             background: activeDmChannelId === dm.id ? 'var(--hover-bg)' : 'transparent',
                             color: 'var(--text-primary)',
@@ -2366,7 +2383,7 @@ function App() {
                         <button
                           key={dm.id}
                           type="button"
-                          className="w-full text-left px-3 py-2 rounded-md flex items-center gap-2"
+                          className="w-full text-left px-3 py-2 rounded-xl flex items-center gap-2 hover-surface cursor-pointer"
                           style={{
                             background: activeDmChannelId === dm.id ? 'var(--hover-bg)' : 'transparent',
                             color: 'var(--text-primary)',
