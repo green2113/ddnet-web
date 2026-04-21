@@ -1,0 +1,45 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "ddnet-web",
+  "pages_build_output_dir": "./dist",
+  "compatibility_date": "2026-04-21",
+
+  "r2_buckets": [
+    {
+      "binding": "CHAT_MEDIA",
+      "bucket_name": "uclient-chat"
+    }
+  ],
+
+  "vars": {
+    "CHAT_MEDIA_PUBLIC_BASE": "https://media.under1111.com",
+    "CHAT_MEDIA_MAX_BYTES": "10485760"
+  },
+
+  "env": {
+    "preview": {
+      "r2_buckets": [
+        {
+          "binding": "CHAT_MEDIA",
+          "bucket_name": "uclient-chat"
+        }
+      ],
+      "vars": {
+        "CHAT_MEDIA_PUBLIC_BASE": "https://media.under1111.com",
+        "CHAT_MEDIA_MAX_BYTES": "10485760"
+      }
+    },
+    "production": {
+      "r2_buckets": [
+        {
+          "binding": "CHAT_MEDIA",
+          "bucket_name": "uclient-chat"
+        }
+      ],
+      "vars": {
+        "CHAT_MEDIA_PUBLIC_BASE": "https://media.under1111.com",
+        "CHAT_MEDIA_MAX_BYTES": "10485760"
+      }
+    }
+  }
+}
