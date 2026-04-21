@@ -24,6 +24,16 @@ function normalizeBaseUrl(value?: string) {
   return (value || '').replace(/\/$/, '')
 }
 
+function buildServeUrl(request: Request, key: string, publicBase?: string) {
+  const base = normalizeBaseUrl(publicBase)
+  if (base) {
+    return `${base}/${key}`
+  }
+
+  const origin = new URL(request.url).origin
+  return `${origin}/api/media/get?key=${encodeURIComponent(key)}`
+}
+
 function extensionFromType(contentType: string) {
   switch (contentType) {
     case 'image/png':
@@ -37,6 +47,35 @@ function extensionFromType(contentType: string) {
     default:
       return ''
   }
+}
+
+async function nextImageIndex(bucket: R2Bucket, dayPrefix: string): Promise<number> {
+  let maxIndex = 0
+  let cursor: string | undefined = undefined
+
+  do {
+    const listed = await bucket.list({
+      prefix: `${dayPrefix}image`,
+      cursor,
+      limit: 1000,
+    })
+
+    for (const obj of listed.objects) {
+      const fileName = obj.key.slice(dayPrefix.length)
+      const match = fileName.match(/^image(\d+)\.[^.]+$/i)
+      if (!match) {
+        continue
+      }
+      const parsed = Number(match[1])
+      if (Number.isFinite(parsed)) {
+        maxIndex = Math.max(maxIndex, parsed)
+      }
+    }
+
+    cursor = listed.truncated ? listed.cursor : undefined
+  } while (cursor)
+
+  return maxIndex + 1
 }
 
 export const onRequestOptions = async () => {
@@ -66,17 +105,20 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     return json({ error: 'payload_too_large' }, { status: 413, headers: { 'access-control-allow-origin': '*' } })
   }
 
-  const publicBase = normalizeBaseUrl(env.CHAT_MEDIA_PUBLIC_BASE)
-  if (!publicBase) {
-    return json({ error: 'CHAT_MEDIA_PUBLIC_BASE_missing' }, { status: 500, headers: { 'access-control-allow-origin': '*' } })
-  }
-
   const now = new Date()
   const yyyy = now.getUTCFullYear()
   const mm = String(now.getUTCMonth() + 1).padStart(2, '0')
   const dd = String(now.getUTCDate()).padStart(2, '0')
   const ext = extensionFromType(contentType)
-  const key = `chat/${yyyy}/${mm}/${dd}/${crypto.randomUUID()}.${ext}`
+  const dayPrefix = `chat/${yyyy}/${mm}/${dd}/`
+  let nextIndex = await nextImageIndex(env.CHAT_MEDIA, dayPrefix)
+  let key = `${dayPrefix}image${nextIndex}.${ext}`
+
+  // If a concurrent upload used the same index, move to the next free slot.
+  while (await env.CHAT_MEDIA.head(key)) {
+    nextIndex += 1
+    key = `${dayPrefix}image${nextIndex}.${ext}`
+  }
 
   await env.CHAT_MEDIA.put(key, body, {
     httpMetadata: {
@@ -90,7 +132,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
 
   return json(
     {
-      url: `${publicBase}/${key}`,
+      url: buildServeUrl(request, key, env.CHAT_MEDIA_PUBLIC_BASE),
       key,
     },
     {
