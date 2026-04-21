@@ -1,8 +1,20 @@
 {
   "danger": [
-    "discord.com"
+    
   ],
   "safe": [
-    "ddnet.org"
+    "ddnet.org",
+    "discord.com",
+    "playravion.com",
+    "steamcommunity.com",
+    "ddstats.tw",
+    "youtube.com",
+    "discord.gg",
+    "github.com",
+    "google.com",
+    "naver.com",
+    "x.com",
+    "tclient.app",
+    "bestclient.fun"
   ]
 }
