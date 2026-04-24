@@ -35,11 +35,12 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
 
   const cfg = settings(env)
   const eventTimeMs = Number.isFinite(payload.timestampMs) ? Math.floor(payload.timestampMs as number) : nowMs()
-  const existing = await readRecord(env.PRESENCE_KV, playerId)
+  const sessionId = normalizeSessionId(payload.sessionId, 'default')
+  const existing = await readRecord(env.PRESENCE_KV, playerId, sessionId)
 
   const next = {
     playerId,
-    sessionId: normalizeSessionId(payload.sessionId, existing?.sessionId || `${playerId}:${eventTimeMs}`),
+    sessionId,
     server,
     displayName: normalizeDisplayName(payload.name),
     serverClientId: normalizeServerClientId(payload.clientId),

@@ -83,8 +83,8 @@ export function nowMs() {
   return Date.now()
 }
 
-function keyForPlayer(playerId: string) {
-  return `${KEY_PREFIX}${playerId}`
+function keyForSession(playerId: string, sessionId: string) {
+  return `${KEY_PREFIX}${playerId}:${sessionId}`
 }
 
 export function normalizePlayerId(value: string | undefined) {
@@ -111,12 +111,12 @@ export function normalizeSessionId(value: string | undefined, fallback: string) 
   return normalized.slice(0, 128)
 }
 
-export async function readRecord(kv: KVNamespace, playerId: string): Promise<PresenceRecord | null> {
-  return kv.get<PresenceRecord>(keyForPlayer(playerId), 'json')
+export async function readRecord(kv: KVNamespace, playerId: string, sessionId: string): Promise<PresenceRecord | null> {
+  return kv.get<PresenceRecord>(keyForSession(playerId, sessionId), 'json')
 }
 
 export async function writeRecord(kv: KVNamespace, record: PresenceRecord, ttlSec: number) {
-  await kv.put(keyForPlayer(record.playerId), JSON.stringify(record), {
+  await kv.put(keyForSession(record.playerId, record.sessionId), JSON.stringify(record), {
     expirationTtl: ttlSec,
   })
 }

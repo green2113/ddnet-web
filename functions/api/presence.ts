@@ -11,7 +11,12 @@ export const onRequestGet = async ({ env }: { env: Env }) => {
 
   const cfg = settings(env)
   const online = await listOnline(env.PRESENCE_KV, cfg.staleAfterSec, cfg.maxList)
-  return json(online.servers)
+  const serverKeyed = online.servers.map((entry) => ({
+    [entry.server_address]: {
+      players: entry.players,
+    },
+  }))
+  return json(serverKeyed)
 }
 
 export const onRequestPost = async () => {
