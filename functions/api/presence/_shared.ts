@@ -133,28 +133,18 @@ export async function listOnline(kv: KVNamespace, staleAfterSec: number, maxList
 
   const online: PresenceRecord[] = []
   const byServer: Record<string, number> = {}
-  const byServerMembers: Record<string, Array<{ name: string; client_id: number; instance_id: string; last_seen: number }>> = {}
-
-  const obfuscateInstanceId = (playerId: string) => {
-    let hash = 2166136261
-    for(let i = 0; i < playerId.length; i++) {
-      hash ^= playerId.charCodeAt(i)
-      hash = Math.imul(hash, 16777619)
-    }
-    const hex = (hash >>> 0).toString(16).padStart(8, '0')
-    return `u-${hex}`
-  }
+  const byServerMembers: Record<string, Array<{ name: string; client_id: number; last_seen: number }>> = {}
 
   let cursor: string | undefined = undefined
   const targetCount = Math.max(1, maxList)
   do {
-    const listed = await kv.list({
+    const listResult: KVNamespaceListResult<unknown> = await kv.list({
       prefix: KEY_PREFIX,
       limit: Math.min(1000, targetCount),
       cursor,
     })
 
-    for(const item of listed.keys) {
+    for(const item of listResult.keys) {
       const value = await kv.get<PresenceRecord>(item.name, 'json')
       if (!value) {
         continue
@@ -173,7 +163,6 @@ export async function listOnline(kv: KVNamespace, staleAfterSec: number, maxList
       byServerMembers[server].push({
         name: value.displayName || 'unknown',
         client_id: Number.isFinite(parsedClientId) ? parsedClientId : -1,
-        instance_id: obfuscateInstanceId(value.playerId),
         last_seen: Math.floor(value.lastSeenMs / 1000),
       })
 
@@ -186,7 +175,7 @@ export async function listOnline(kv: KVNamespace, staleAfterSec: number, maxList
       break
     }
 
-    cursor = listed.list_complete ? undefined : listed.cursor
+    cursor = listResult.list_complete ? undefined : listResult.cursor
   } while(cursor)
 
   const servers = Object.keys(byServer)
