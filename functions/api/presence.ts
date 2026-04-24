@@ -11,14 +11,7 @@ export const onRequestGet = async ({ env }: { env: Env }) => {
 
   const cfg = settings(env)
   const online = await listOnline(env.PRESENCE_KV, cfg.staleAfterSec, cfg.maxList)
-  return json({
-    ok: true,
-    mode: 'snapshot_by_server',
-    note: 'UUIDs are used internally and never returned in this response.',
-    heartbeatIntervalSec: cfg.heartbeatIntervalSec,
-    staleAfterSec: cfg.staleAfterSec,
-    ...online,
-  })
+  return json(online.servers)
 }
 
 export const onRequestPost = async () => {

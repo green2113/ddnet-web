@@ -134,7 +134,17 @@ export async function listOnline(kv: KVNamespace, staleAfterSec: number, maxList
 
   const online: PresenceRecord[] = []
   const byServer: Record<string, number> = {}
-  const byServerMembers: Record<string, Array<{ name: string; clientId: string }>> = {}
+  const byServerMembers: Record<string, Array<{ name: string; client_id: number; instance_id: string; last_seen: number }>> = {}
+
+  const obfuscateInstanceId = (playerId: string) => {
+    let hash = 2166136261
+    for(let i = 0; i < playerId.length; i++) {
+      hash ^= playerId.charCodeAt(i)
+      hash = Math.imul(hash, 16777619)
+    }
+    const hex = (hash >>> 0).toString(16).padStart(8, '0')
+    return `u-${hex}`
+  }
 
   for (const item of listed.keys) {
     const value = await kv.get<PresenceRecord>(item.name, 'json')
@@ -151,23 +161,25 @@ export async function listOnline(kv: KVNamespace, staleAfterSec: number, maxList
     if(!byServerMembers[server]) {
       byServerMembers[server] = []
     }
+    const parsedClientId = Number.parseInt(value.serverClientId || '-1', 10)
     byServerMembers[server].push({
       name: value.displayName || 'unknown',
-      clientId: value.serverClientId || '',
+      client_id: Number.isFinite(parsedClientId) ? parsedClientId : -1,
+      instance_id: obfuscateInstanceId(value.playerId),
+      last_seen: Math.floor(value.lastSeenMs / 1000),
     })
   }
 
   const servers = Object.keys(byServer)
     .sort((a, b) => a.localeCompare(b))
     .map((server) => ({
-      server,
-      count: byServer[server],
-      members: (byServerMembers[server] || []).sort((a, b) => {
+      server_address: server,
+      players: (byServerMembers[server] || []).sort((a, b) => {
         const byName = a.name.localeCompare(b.name)
         if(byName !== 0) {
           return byName
         }
-        return a.clientId.localeCompare(b.clientId)
+        return a.client_id - b.client_id
       }),
     }))
 
