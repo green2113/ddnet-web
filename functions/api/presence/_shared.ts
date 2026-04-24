@@ -130,7 +130,6 @@ function isOnline(record: PresenceRecord, now: number, staleAfterSec: number) {
 
 export async function listOnline(kv: KVNamespace, staleAfterSec: number, maxList: number) {
   const now = nowMs()
-  const listed = await kv.list({ prefix: KEY_PREFIX, limit: maxList })
 
   const online: PresenceRecord[] = []
   const byServer: Record<string, number> = {}
@@ -146,29 +145,49 @@ export async function listOnline(kv: KVNamespace, staleAfterSec: number, maxList
     return `u-${hex}`
   }
 
-  for (const item of listed.keys) {
-    const value = await kv.get<PresenceRecord>(item.name, 'json')
-    if (!value) {
-      continue
-    }
-    if (!isOnline(value, now, staleAfterSec)) {
-      continue
+  let cursor: string | undefined = undefined
+  const targetCount = Math.max(1, maxList)
+  do {
+    const listed = await kv.list({
+      prefix: KEY_PREFIX,
+      limit: Math.min(1000, targetCount),
+      cursor,
+    })
+
+    for(const item of listed.keys) {
+      const value = await kv.get<PresenceRecord>(item.name, 'json')
+      if (!value) {
+        continue
+      }
+      if (!isOnline(value, now, staleAfterSec)) {
+        continue
+      }
+
+      online.push(value)
+      const server = value.server || 'unknown'
+      byServer[server] = (byServer[server] || 0) + 1
+      if(!byServerMembers[server]) {
+        byServerMembers[server] = []
+      }
+      const parsedClientId = Number.parseInt(value.serverClientId || '-1', 10)
+      byServerMembers[server].push({
+        name: value.displayName || 'unknown',
+        client_id: Number.isFinite(parsedClientId) ? parsedClientId : -1,
+        instance_id: obfuscateInstanceId(value.playerId),
+        last_seen: Math.floor(value.lastSeenMs / 1000),
+      })
+
+      if(online.length >= targetCount) {
+        break
+      }
     }
 
-    online.push(value)
-    const server = value.server || 'unknown'
-    byServer[server] = (byServer[server] || 0) + 1
-    if(!byServerMembers[server]) {
-      byServerMembers[server] = []
+    if(online.length >= targetCount) {
+      break
     }
-    const parsedClientId = Number.parseInt(value.serverClientId || '-1', 10)
-    byServerMembers[server].push({
-      name: value.displayName || 'unknown',
-      client_id: Number.isFinite(parsedClientId) ? parsedClientId : -1,
-      instance_id: obfuscateInstanceId(value.playerId),
-      last_seen: Math.floor(value.lastSeenMs / 1000),
-    })
-  }
+
+    cursor = listed.list_complete ? undefined : listed.cursor
+  } while(cursor)
 
   const servers = Object.keys(byServer)
     .sort((a, b) => a.localeCompare(b))
@@ -244,6 +263,6 @@ export function settings(env: Env) {
   const staleAfterSec = clampInt(env.PRESENCE_STALE_AFTER_SEC, DEFAULT_STALE_AFTER_SEC, 10, 600)
   const heartbeatIntervalSec = clampInt(env.PRESENCE_HEARTBEAT_INTERVAL_SEC, DEFAULT_HEARTBEAT_INTERVAL_SEC, 5, 300)
   const recordTtlSec = clampInt(env.PRESENCE_RECORD_TTL_SEC, DEFAULT_RECORD_TTL_SEC, staleAfterSec + 10, 7 * 24 * 60 * 60)
-  const maxList = clampInt(env.PRESENCE_MAX_LIST, DEFAULT_MAX_LIST, 1, 10000)
+  const maxList = clampInt(env.PRESENCE_MAX_LIST, DEFAULT_MAX_LIST, 1, 1000)
   return { staleAfterSec, heartbeatIntervalSec, recordTtlSec, maxList }
 }
