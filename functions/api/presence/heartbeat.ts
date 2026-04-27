@@ -48,7 +48,20 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     previousServer: existing?.previousServer,
   }
 
-  await writeRecord(env.PRESENCE_KV, next, cfg.recordTtlSec)
+  const heartbeatWindowMs = cfg.heartbeatIntervalSec * 1000
+  const previous = existing || null
+  const shouldPersist =
+    !previous ||
+    previous.status !== next.status ||
+    previous.server !== next.server ||
+    previous.displayName !== next.displayName ||
+    previous.serverClientId !== next.serverClientId ||
+    previous.lastEvent !== next.lastEvent ||
+    Math.max(0, next.lastSeenMs - previous.lastSeenMs) >= heartbeatWindowMs
+
+  if (shouldPersist) {
+    await writeRecord(env.PRESENCE_KV, next, cfg.recordTtlSec)
+  }
 
   return json({
     ok: true,
@@ -58,6 +71,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
       clientId: next.serverClientId,
       status: next.status,
       lastSeenMs: next.lastSeenMs,
+      persisted: shouldPersist,
     },
   })
 }
