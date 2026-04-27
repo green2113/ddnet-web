@@ -24,8 +24,8 @@ export interface Env {
   PRESENCE_MAX_LIST?: string
 }
 
-export const DEFAULT_HEARTBEAT_INTERVAL_SEC = 30
-export const DEFAULT_STALE_AFTER_SEC = 45
+export const DEFAULT_HEARTBEAT_INTERVAL_SEC = 60
+export const DEFAULT_STALE_AFTER_SEC = 180
 export const DEFAULT_RECORD_TTL_SEC = 24 * 60 * 60
 export const DEFAULT_MAX_LIST = 2000
 
