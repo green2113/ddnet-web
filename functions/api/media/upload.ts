@@ -49,33 +49,15 @@ function extensionFromType(contentType: string) {
   }
 }
 
-async function nextImageIndex(bucket: R2Bucket, dayPrefix: string): Promise<number> {
-  let maxIndex = 0
-  let cursor: string | undefined = undefined
-
-  do {
-    const listed = await bucket.list({
-      prefix: `${dayPrefix}image`,
-      cursor,
-      limit: 1000,
-    })
-
-    for (const obj of listed.objects) {
-      const fileName = obj.key.slice(dayPrefix.length)
-      const match = fileName.match(/^image(\d+)\.[^.]+$/i)
-      if (!match) {
-        continue
-      }
-      const parsed = Number(match[1])
-      if (Number.isFinite(parsed)) {
-        maxIndex = Math.max(maxIndex, parsed)
-      }
-    }
-
-    cursor = listed.truncated ? listed.cursor : undefined
-  } while (cursor)
-
-  return maxIndex + 1
+function generateUuid(): string {
+  const bytes = new Uint8Array(16)
+  crypto.getRandomValues(bytes)
+  // Set version 4 bits
+  bytes[6] = (bytes[6] & 0x0f) | 0x40
+  // Set variant bits
+  bytes[8] = (bytes[8] & 0x3f) | 0x80
+  const hex = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('')
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
 }
 
 export const onRequestOptions = async () => {
@@ -111,13 +93,12 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   const dd = String(now.getUTCDate()).padStart(2, '0')
   const ext = extensionFromType(contentType)
   const dayPrefix = `chat/${yyyy}/${mm}/${dd}/`
-  let nextIndex = await nextImageIndex(env.CHAT_MEDIA, dayPrefix)
-  let key = `${dayPrefix}image${nextIndex}.${ext}`
+  const uuid = generateUuid()
+  let key = `${dayPrefix}${uuid}.${ext}`
 
-  // If a concurrent upload used the same index, move to the next free slot.
+  // Extremely unlikely, but ensure no collision exists.
   while (await env.CHAT_MEDIA.head(key)) {
-    nextIndex += 1
-    key = `${dayPrefix}image${nextIndex}.${ext}`
+    key = `${dayPrefix}${generateUuid()}.${ext}`
   }
 
   await env.CHAT_MEDIA.put(key, body, {
