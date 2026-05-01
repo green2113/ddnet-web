@@ -8,6 +8,10 @@
     {
       "binding": "CHAT_MEDIA",
       "bucket_name": "uclient-chat"
+    },
+    {
+      "binding": "DOWNLOAD",
+      "bucket_name": "download"
     }
   ],
 
@@ -32,6 +36,10 @@
         {
           "binding": "CHAT_MEDIA",
           "bucket_name": "uclient-chat"
+        },
+        {
+          "binding": "DOWNLOAD",
+          "bucket_name": "download"
         }
       ],
       "kv_namespaces": [
@@ -53,6 +61,10 @@
         {
           "binding": "CHAT_MEDIA",
           "bucket_name": "uclient-chat"
+        },
+        {
+          "binding": "DOWNLOAD",
+          "bucket_name": "download"
         }
       ],
       "kv_namespaces": [
