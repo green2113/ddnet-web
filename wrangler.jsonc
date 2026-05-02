@@ -1,4 +1,4 @@
-{
+﻿{
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "ddnet-web",
   "pages_build_output_dir": "./dist",
@@ -12,6 +12,10 @@
     {
       "binding": "DOWNLOAD",
       "bucket_name": "download"
+    },
+    {
+      "binding": "SOUNDBOARD_MEDIA",
+      "bucket_name": "uclient-soundboard"
     }
   ],
 
@@ -20,6 +24,11 @@
       "binding": "PRESENCE_KV",
       "id": "b2cb620193ba423eb017deb38fda6325",
       "preview_id": "b2cb620193ba423eb017deb38fda6325"
+    },
+    {
+      "binding": "SOUNDBOARD_KV",
+      "id": "8977adf906ea4ab98a1767805f16b878",
+      "preview_id": "8977adf906ea4ab98a1767805f16b878"
     }
   ],
 
@@ -27,7 +36,10 @@
     "CHAT_MEDIA_PUBLIC_BASE": "https://media.under1111.com",
     "CHAT_MEDIA_MAX_BYTES": "10485760",
     "PRESENCE_HEARTBEAT_INTERVAL_SEC": "60",
-    "PRESENCE_STALE_AFTER_SEC": "180"
+    "PRESENCE_STALE_AFTER_SEC": "180",
+    "SOUNDBOARD_PUBLIC_BASE": "https://media.under1111.com/soundboard",
+    "SOUNDBOARD_MAX_BYTES": "5242880",
+    "SOUNDBOARD_MAX_SECONDS": "10"
   },
 
   "env": {
@@ -40,6 +52,10 @@
         {
           "binding": "DOWNLOAD",
           "bucket_name": "download"
+        },
+        {
+          "binding": "SOUNDBOARD_MEDIA",
+          "bucket_name": "uclient-soundboard-preview"
         }
       ],
       "kv_namespaces": [
@@ -47,13 +63,21 @@
           "binding": "PRESENCE_KV",
           "id": "b2cb620193ba423eb017deb38fda6325",
           "preview_id": "b2cb620193ba423eb017deb38fda6325"
+        },
+        {
+          "binding": "SOUNDBOARD_KV",
+          "id": "8977adf906ea4ab98a1767805f16b878",
+          "preview_id": "8977adf906ea4ab98a1767805f16b878"
         }
       ],
       "vars": {
         "CHAT_MEDIA_PUBLIC_BASE": "https://media.under1111.com",
         "CHAT_MEDIA_MAX_BYTES": "10485760",
         "PRESENCE_HEARTBEAT_INTERVAL_SEC": "60",
-        "PRESENCE_STALE_AFTER_SEC": "180"
+        "PRESENCE_STALE_AFTER_SEC": "180",
+        "SOUNDBOARD_PUBLIC_BASE": "https://media.under1111.com/soundboard",
+        "SOUNDBOARD_MAX_BYTES": "5242880",
+        "SOUNDBOARD_MAX_SECONDS": "10"
       }
     },
     "production": {
@@ -65,6 +89,10 @@
         {
           "binding": "DOWNLOAD",
           "bucket_name": "download"
+        },
+        {
+          "binding": "SOUNDBOARD_MEDIA",
+          "bucket_name": "uclient-soundboard"
         }
       ],
       "kv_namespaces": [
@@ -72,14 +100,23 @@
           "binding": "PRESENCE_KV",
           "id": "b2cb620193ba423eb017deb38fda6325",
           "preview_id": "b2cb620193ba423eb017deb38fda6325"
+        },
+        {
+          "binding": "SOUNDBOARD_KV",
+          "id": "8977adf906ea4ab98a1767805f16b878",
+          "preview_id": "8977adf906ea4ab98a1767805f16b878"
         }
       ],
       "vars": {
         "CHAT_MEDIA_PUBLIC_BASE": "https://media.under1111.com",
         "CHAT_MEDIA_MAX_BYTES": "10485760",
         "PRESENCE_HEARTBEAT_INTERVAL_SEC": "60",
-        "PRESENCE_STALE_AFTER_SEC": "180"
+        "PRESENCE_STALE_AFTER_SEC": "180",
+        "SOUNDBOARD_PUBLIC_BASE": "https://media.under1111.com/soundboard",
+        "SOUNDBOARD_MAX_BYTES": "5242880",
+        "SOUNDBOARD_MAX_SECONDS": "10"
       }
     }
   }
 }
+
