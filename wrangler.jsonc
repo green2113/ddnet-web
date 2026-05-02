@@ -37,7 +37,7 @@
     "CHAT_MEDIA_MAX_BYTES": "10485760",
     "PRESENCE_HEARTBEAT_INTERVAL_SEC": "60",
     "PRESENCE_STALE_AFTER_SEC": "180",
-    "SOUNDBOARD_PUBLIC_BASE": "https://media.under1111.com/soundboard",
+    "SOUNDBOARD_PUBLIC_BASE": "https://media.under1111.com",
     "SOUNDBOARD_MAX_BYTES": "5242880",
     "SOUNDBOARD_MAX_SECONDS": "10"
   },
@@ -75,7 +75,7 @@
         "CHAT_MEDIA_MAX_BYTES": "10485760",
         "PRESENCE_HEARTBEAT_INTERVAL_SEC": "60",
         "PRESENCE_STALE_AFTER_SEC": "180",
-        "SOUNDBOARD_PUBLIC_BASE": "https://media.under1111.com/soundboard",
+        "SOUNDBOARD_PUBLIC_BASE": "https://media.under1111.com",
         "SOUNDBOARD_MAX_BYTES": "5242880",
         "SOUNDBOARD_MAX_SECONDS": "10"
       }
@@ -112,11 +112,12 @@
         "CHAT_MEDIA_MAX_BYTES": "10485760",
         "PRESENCE_HEARTBEAT_INTERVAL_SEC": "60",
         "PRESENCE_STALE_AFTER_SEC": "180",
-        "SOUNDBOARD_PUBLIC_BASE": "https://media.under1111.com/soundboard",
+        "SOUNDBOARD_PUBLIC_BASE": "https://media.under1111.com",
         "SOUNDBOARD_MAX_BYTES": "5242880",
         "SOUNDBOARD_MAX_SECONDS": "10"
       }
     }
   }
 }
+
 
