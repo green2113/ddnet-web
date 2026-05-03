@@ -111,7 +111,12 @@ export async function readPersonal(kv: KVNamespace, installId: string): Promise<
   if(!Array.isArray(v)) {
     return []
   }
-  return v
+  // Heal legacy URLs that were stored with a duplicate path segment
+  // e.g. https://media.under1111.com/soundboard/soundboard/personal/... → .../soundboard/personal/...
+  return v.map(item => ({
+    ...item,
+    url: item.url.replace(/\/(soundboard)\/\1\//, '/$1/'),
+  }))
 }
 
 export async function writePersonal(kv: KVNamespace, installId: string, items: SoundboardItem[]) {
