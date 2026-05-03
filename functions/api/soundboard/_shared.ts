@@ -78,6 +78,38 @@ export function buildServeUrl(request: Request, key: string, publicBase?: string
   return `${origin}/api/media/get?key=${encodeURIComponent(key)}`
 }
 
+export function buildSoundboardProxyUrl(request: Request, key: string) {
+  const origin = new URL(request.url).origin
+  return `${origin}/api/soundboard/media?key=${encodeURIComponent(key)}`
+}
+
+export function buildSoundboardServeUrl(request: Request, key: string, publicBase?: string) {
+  const base = normalizePublicBase(publicBase)
+  if(base) {
+    return `${base}/${key}`
+  }
+  return buildSoundboardProxyUrl(request, key)
+}
+
+export function normalizeLegacySoundboardKeyFromUrl(urlText: string) {
+  try {
+    const url = new URL(urlText)
+    if(url.hostname !== 'media.under1111.com' && url.hostname !== 'soundboard.under1111.com') {
+      return ''
+    }
+    let path = url.pathname
+    if(path.startsWith('/soundboard/soundboard/')) {
+      path = path.replace('/soundboard/soundboard/', '/soundboard/')
+    }
+    if(!path.startsWith('/soundboard/')) {
+      return ''
+    }
+    return path.slice(1)
+  } catch {
+    return ''
+  }
+}
+
 export function extensionFromType(contentType: string) {
   switch(contentType) {
     case 'audio/wav':
@@ -106,17 +138,31 @@ export function personalKey(installId: string) {
   return `soundboard:user:${installId}`
 }
 
-export async function readPersonal(kv: KVNamespace, installId: string): Promise<SoundboardItem[]> {
+export async function readPersonal(kv: KVNamespace, installId: string, request?: Request, publicBase?: string): Promise<SoundboardItem[]> {
   const v = await kv.get<SoundboardItem[]>(personalKey(installId), 'json')
   if(!Array.isArray(v)) {
     return []
   }
-  // Heal legacy URLs that were stored with a duplicate path segment
-  // e.g. https://media.under1111.com/soundboard/soundboard/personal/... → .../soundboard/personal/...
-  return v.map(item => ({
-    ...item,
-    url: item.url.replace(/\/(soundboard)\/\1\//, '/$1/'),
-  }))
+  return v.map(item => {
+    const HealedLegacyUrl = item.url.replace(/\/(soundboard)\/\1\//, '/$1/')
+    if(!request) {
+      return {
+        ...item,
+        url: HealedLegacyUrl,
+      }
+    }
+    const Key = normalizeLegacySoundboardKeyFromUrl(HealedLegacyUrl)
+    if(!Key) {
+      return {
+        ...item,
+        url: HealedLegacyUrl,
+      }
+    }
+    return {
+      ...item,
+      url: buildSoundboardServeUrl(request, Key, publicBase),
+    }
+  })
 }
 
 export async function writePersonal(kv: KVNamespace, installId: string, items: SoundboardItem[]) {

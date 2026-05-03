@@ -10,7 +10,7 @@ export const onRequestGet = async ({ request, env }: { request: Request; env: En
 
   let personal: SoundboardItem[] = []
   if(env.SOUNDBOARD_KV && installId !== DEFAULT_INSTALL_ID) {
-    personal = await readPersonal(env.SOUNDBOARD_KV, installId)
+    personal = await readPersonal(env.SOUNDBOARD_KV, installId, request, env.SOUNDBOARD_PUBLIC_BASE)
   }
 
   return json({

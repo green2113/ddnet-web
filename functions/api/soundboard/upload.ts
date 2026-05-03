@@ -4,9 +4,9 @@ import {
   DEFAULT_INSTALL_ID,
   DEFAULT_MAX_BYTES,
   DEFAULT_MAX_SECONDS,
+  buildSoundboardServeUrl,
   Env,
   SoundboardItem,
-  buildServeUrl,
   extensionFromType,
   generateUuid,
   json,
@@ -86,7 +86,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   const item: SoundboardItem = {
     id,
     title,
-    url: buildServeUrl(request, key, env.SOUNDBOARD_PUBLIC_BASE),
+    url: buildSoundboardServeUrl(request, key, env.SOUNDBOARD_PUBLIC_BASE),
     ownerId: installId,
     scope: 'personal',
     durationMs: Number.isFinite(durationMsHeader) && durationMsHeader > 0 ? Math.floor(durationMsHeader) : 0,
@@ -95,7 +95,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     createdAt: now.toISOString(),
   }
 
-  const current = await readPersonal(env.SOUNDBOARD_KV, installId)
+  const current = await readPersonal(env.SOUNDBOARD_KV, installId, request, env.SOUNDBOARD_PUBLIC_BASE)
   current.unshift(item)
   await writePersonal(env.SOUNDBOARD_KV, installId, current)
 
