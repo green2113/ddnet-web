@@ -27,3 +27,4 @@ dist-ssr
 *.sw?
 
 .env
+functions/api/soundboard/SOUNDBOARD_DEFAULTS_JSON.json
