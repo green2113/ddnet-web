@@ -168,7 +168,11 @@ export function normalizeVersionsPayload(value: unknown): UClientVersionEntry[] 
 }
 
 async function readJsonFromKv(kv: KVNamespace, key: string): Promise<unknown | null> {
-  return kv.get(key, 'json')
+  const text = await kv.get(key, 'text')
+  if(text === null) return null
+  // Strip BOM (\uFEFF) if present before parsing
+  const cleaned = text.charCodeAt(0) === 0xFEFF ? text.slice(1) : text
+  return JSON.parse(cleaned)
 }
 
 async function readJsonFromR2(r2: R2Bucket, key: string): Promise<unknown | null> {
