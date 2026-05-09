@@ -11,7 +11,7 @@ export const onRequestGet = async ({ env }: { env: Env }) => {
       return errorJson('uclient_update_latest_not_found', 404)
     }
     return json(latest)
-  } catch {
-    return errorJson('uclient_update_latest_load_failed', 500)
+  } catch(e) {
+    return errorJson('uclient_update_latest_load_failed: ' + String(e), 500)
   }
 }
