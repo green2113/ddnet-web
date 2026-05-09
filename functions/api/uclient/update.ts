@@ -1,6 +1,6 @@
 /// <reference types="@cloudflare/workers-types" />
 
-import { Env, json, optionsResponse } from './uclient/update/_shared'
+import { Env, json, optionsResponse } from './update/_shared'
 
 export const onRequestOptions = async () => optionsResponse('GET, OPTIONS')
 
