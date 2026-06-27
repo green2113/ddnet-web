@@ -3,6 +3,7 @@
 import {
   badRequest,
   Env,
+  invalidatePresenceListSnapshot,
   json,
   kvUnavailable,
   normalizeDisplayName,
@@ -53,6 +54,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   }
 
   await writeRecord(env.PRESENCE_KV, next, cfg.recordTtlSec)
+  await invalidatePresenceListSnapshot(env.PRESENCE_KV)
 
   return json({
     ok: true,

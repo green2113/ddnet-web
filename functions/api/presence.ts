@@ -1,6 +1,6 @@
 /// <reference types="@cloudflare/workers-types" />
 
-import { Env, json, kvUnavailable, listOnline, optionsResponse, settings } from './presence/_shared'
+import { Env, getCachedPresenceList, json, jsonPresenceList, kvUnavailable, optionsResponse, settings } from './presence/_shared'
 
 export const onRequestOptions = async () => optionsResponse('GET, OPTIONS')
 
@@ -10,13 +10,13 @@ export const onRequestGet = async ({ env }: { env: Env }) => {
   }
 
   const cfg = settings(env)
-  const online = await listOnline(env.PRESENCE_KV, cfg.staleAfterSec, cfg.maxList)
-  const serverKeyed = online.servers.map((entry) => ({
-    [entry.server_address]: {
-      players: entry.players,
-    },
-  }))
-  return json(serverKeyed)
+  const serverKeyed = await getCachedPresenceList(
+    env.PRESENCE_KV,
+    cfg.staleAfterSec,
+    cfg.maxList,
+    cfg.listCacheSec,
+  )
+  return jsonPresenceList(serverKeyed, cfg.listCacheSec)
 }
 
 export const onRequestPost = async () => {

@@ -22,14 +22,26 @@ export interface Env {
   PRESENCE_STALE_AFTER_SEC?: string
   PRESENCE_RECORD_TTL_SEC?: string
   PRESENCE_MAX_LIST?: string
+  PRESENCE_LIST_CACHE_SEC?: string
 }
 
 export const DEFAULT_HEARTBEAT_INTERVAL_SEC = 60
 export const DEFAULT_STALE_AFTER_SEC = 180
 export const DEFAULT_RECORD_TTL_SEC = 24 * 60 * 60
 export const DEFAULT_MAX_LIST = 2000
+export const DEFAULT_LIST_CACHE_SEC = 30
 
 const KEY_PREFIX = 'presence:player:'
+const SNAPSHOT_KEY = 'presence:list:snapshot'
+const KV_GET_BATCH_SIZE = 32
+
+export type PresenceListPlayer = { name: string; client_id: number; last_seen: number }
+export type PresenceListServerKeyed = Array<Record<string, { players: PresenceListPlayer[] }>>
+
+interface PresenceListSnapshot {
+  builtAtMs: number
+  serverKeyed: PresenceListServerKeyed
+}
 
 export function json(data: unknown, init?: ResponseInit) {
   return new Response(JSON.stringify(data), {
@@ -39,6 +51,17 @@ export function json(data: unknown, init?: ResponseInit) {
       'cache-control': 'no-store',
       'access-control-allow-origin': '*',
       ...(init?.headers || {}),
+    },
+  })
+}
+
+export function jsonPresenceList(data: PresenceListServerKeyed, listCacheSec: number) {
+  const maxAge = Math.max(10, listCacheSec)
+  return new Response(JSON.stringify(data), {
+    headers: {
+      'content-type': 'application/json; charset=utf-8',
+      'cache-control': `public, max-age=${maxAge}, s-maxage=${maxAge}, stale-while-revalidate=120`,
+      'access-control-allow-origin': '*',
     },
   })
 }
@@ -128,15 +151,24 @@ function isOnline(record: PresenceRecord, now: number, staleAfterSec: number) {
   return now - record.lastSeenMs <= staleAfterSec * 1000
 }
 
+async function readRecordsBatch(kv: KVNamespace, keyNames: string[]) {
+  const records: Array<PresenceRecord | null> = []
+  for(let i = 0; i < keyNames.length; i += KV_GET_BATCH_SIZE) {
+    const chunk = keyNames.slice(i, i + KV_GET_BATCH_SIZE)
+    const chunkRecords = await Promise.all(chunk.map((name) => kv.get<PresenceRecord>(name, 'json')))
+    records.push(...chunkRecords)
+  }
+  return records
+}
+
 export async function listOnline(kv: KVNamespace, staleAfterSec: number, maxList: number) {
   const now = nowMs()
-
+  const targetCount = Math.max(1, maxList)
   const online: PresenceRecord[] = []
   const byServer: Record<string, number> = {}
-  const byServerMembers: Record<string, Array<{ name: string; client_id: number; last_seen: number }>> = {}
+  const byServerMembers: Record<string, PresenceListPlayer[]> = {}
 
   let cursor: string | undefined = undefined
-  const targetCount = Math.max(1, maxList)
   do {
     const listResult: KVNamespaceListResult<unknown> = await kv.list({
       prefix: KEY_PREFIX,
@@ -144,12 +176,13 @@ export async function listOnline(kv: KVNamespace, staleAfterSec: number, maxList
       cursor,
     })
 
-    for(const item of listResult.keys) {
-      const value = await kv.get<PresenceRecord>(item.name, 'json')
-      if (!value) {
+    const keyNames = listResult.keys.map((item) => item.name)
+    const values = await readRecordsBatch(kv, keyNames)
+    for(const value of values) {
+      if(!value) {
         continue
       }
-      if (!isOnline(value, now, staleAfterSec)) {
+      if(!isOnline(value, now, staleAfterSec)) {
         continue
       }
 
@@ -178,25 +211,70 @@ export async function listOnline(kv: KVNamespace, staleAfterSec: number, maxList
     cursor = listResult.list_complete ? undefined : listResult.cursor
   } while(cursor)
 
-  const servers = Object.keys(byServer)
-    .sort((a, b) => a.localeCompare(b))
-    .map((server) => ({
-      server_address: server,
-      players: (byServerMembers[server] || []).sort((a, b) => {
-        const byName = a.name.localeCompare(b.name)
-        if(byName !== 0) {
-          return byName
-        }
-        return a.client_id - b.client_id
-      }),
-    }))
-
   return {
     nowMs: now,
     onlineCount: online.length,
     byServer,
-    servers,
+    servers: Object.keys(byServerMembers)
+      .sort((a, b) => a.localeCompare(b))
+      .map((server) => ({
+        server_address: server,
+        players: (byServerMembers[server] || []).sort((a, b) => {
+          const byName = a.name.localeCompare(b.name)
+          if(byName !== 0) {
+            return byName
+          }
+          return a.client_id - b.client_id
+        }),
+      })),
   }
+}
+
+async function readPresenceListSnapshot(kv: KVNamespace, listCacheSec: number): Promise<PresenceListSnapshot | null> {
+  const snapshot = await kv.get<PresenceListSnapshot>(SNAPSHOT_KEY, 'json')
+  if(!snapshot || !Number.isFinite(snapshot.builtAtMs) || !Array.isArray(snapshot.serverKeyed)) {
+    return null
+  }
+  if(nowMs() - snapshot.builtAtMs > listCacheSec * 1000) {
+    return null
+  }
+  return snapshot
+}
+
+async function writePresenceListSnapshot(kv: KVNamespace, serverKeyed: PresenceListServerKeyed, listCacheSec: number) {
+  const snapshot: PresenceListSnapshot = {
+    builtAtMs: nowMs(),
+    serverKeyed,
+  }
+  await kv.put(SNAPSHOT_KEY, JSON.stringify(snapshot), {
+    expirationTtl: listCacheSec + 60,
+  })
+}
+
+export async function invalidatePresenceListSnapshot(kv: KVNamespace) {
+  await kv.delete(SNAPSHOT_KEY)
+}
+
+export async function getCachedPresenceList(
+  kv: KVNamespace,
+  staleAfterSec: number,
+  maxList: number,
+  listCacheSec: number,
+): Promise<PresenceListServerKeyed> {
+  const cached = await readPresenceListSnapshot(kv, listCacheSec)
+  if(cached) {
+    return cached.serverKeyed
+  }
+
+  const online = await listOnline(kv, staleAfterSec, maxList)
+  const serverKeyed = online.servers.map((entry) => ({
+    [entry.server_address]: {
+      players: entry.players,
+    },
+  }))
+
+  await writePresenceListSnapshot(kv, serverKeyed, listCacheSec)
+  return serverKeyed
 }
 
 export async function parseJson<T>(request: Request): Promise<T | null> {
@@ -253,5 +331,6 @@ export function settings(env: Env) {
   const heartbeatIntervalSec = clampInt(env.PRESENCE_HEARTBEAT_INTERVAL_SEC, DEFAULT_HEARTBEAT_INTERVAL_SEC, 5, 300)
   const recordTtlSec = clampInt(env.PRESENCE_RECORD_TTL_SEC, DEFAULT_RECORD_TTL_SEC, staleAfterSec + 10, 7 * 24 * 60 * 60)
   const maxList = clampInt(env.PRESENCE_MAX_LIST, DEFAULT_MAX_LIST, 1, 1000)
-  return { staleAfterSec, heartbeatIntervalSec, recordTtlSec, maxList }
+  const listCacheSec = clampInt(env.PRESENCE_LIST_CACHE_SEC, DEFAULT_LIST_CACHE_SEC, 10, 120)
+  return { staleAfterSec, heartbeatIntervalSec, recordTtlSec, maxList, listCacheSec }
 }
