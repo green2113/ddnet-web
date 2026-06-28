@@ -11,6 +11,7 @@ import {
   normalizeServer,
   normalizeServerClientId,
   normalizeSessionId,
+  normalizeVersion,
   nowMs,
   PresenceEventType,
   readRecord,
@@ -27,6 +28,7 @@ interface SyncInput {
   clientId?: string
   fromServer?: string
   toServer?: string
+  version?: string
   timestampMs?: number
 }
 
@@ -107,6 +109,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
       return badRequest('server_required')
     }
 
+    const version = normalizeVersion(payload.version)
     const next = {
       playerId,
       sessionId,
@@ -118,6 +121,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
       updatedAtMs: eventTimeMs,
       lastEvent: 'join' as const,
       previousServer: existing?.server,
+      ...(version ? { version } : {}),
     }
 
     await writeRecord(env.PRESENCE_KV, next, cfg.recordTtlSec)
@@ -130,6 +134,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
         server: next.server,
         name: next.displayName,
         clientId: next.serverClientId,
+        version: next.version || null,
         previousServer: next.previousServer || null,
         status: next.status,
         lastSeenMs: next.lastSeenMs,
@@ -138,6 +143,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   }
 
   if(event === 'heartbeat') {
+    const version = normalizeVersion(payload.version || existing?.version)
     const next = {
       playerId,
       sessionId,
@@ -149,6 +155,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
       updatedAtMs: eventTimeMs,
       lastEvent: 'heartbeat' as const,
       previousServer: existing?.previousServer,
+      ...(version ? { version } : {}),
     }
 
     const heartbeatWindowMs = cfg.heartbeatIntervalSec * 1000
@@ -159,6 +166,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
       previous.server !== next.server ||
       previous.displayName !== next.displayName ||
       previous.serverClientId !== next.serverClientId ||
+      previous.version !== next.version ||
       previous.lastEvent !== next.lastEvent ||
       Math.max(0, next.lastSeenMs - previous.lastSeenMs) >= heartbeatWindowMs
 
@@ -174,6 +182,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
         server: next.server,
         name: next.displayName,
         clientId: next.serverClientId,
+        version: next.version || null,
         status: next.status,
         lastSeenMs: next.lastSeenMs,
         persisted: shouldPersist,
@@ -182,6 +191,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   }
 
   if(event === 'leave') {
+    const version = normalizeVersion(payload.version || existing?.version)
     const next = {
       playerId,
       sessionId,
@@ -193,6 +203,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
       updatedAtMs: eventTimeMs,
       lastEvent: 'leave' as const,
       previousServer: existing?.previousServer,
+      ...(version ? { version } : {}),
     }
 
     await writeRecord(env.PRESENCE_KV, next, cfg.recordTtlSec)
@@ -217,6 +228,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   }
   const previousServer = normalizeServer(payload.fromServer || payload.server || existing?.server)
 
+  const version = normalizeVersion(payload.version || existing?.version)
   const next = {
     playerId,
     sessionId,
@@ -228,6 +240,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     updatedAtMs: eventTimeMs,
     lastEvent: 'switch' as const,
     previousServer,
+    ...(version ? { version } : {}),
   }
 
   await writeRecord(env.PRESENCE_KV, next, cfg.recordTtlSec)
@@ -240,6 +253,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
       server: next.server,
       name: next.displayName,
       clientId: next.serverClientId,
+      version: next.version || null,
       previousServer: next.previousServer || null,
       status: next.status,
       lastSeenMs: next.lastSeenMs,

@@ -11,6 +11,7 @@ import {
   normalizeServer,
   normalizeServerClientId,
   normalizeSessionId,
+  normalizeVersion,
   nowMs,
   optionsResponse,
   parseJson,
@@ -34,6 +35,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   const eventTimeMs = Number.isFinite(payload.timestampMs) ? Math.floor(payload.timestampMs as number) : nowMs()
   const sessionId = normalizeSessionId(payload.sessionId, 'default')
   const existing = await readRecord(env.PRESENCE_KV, playerId, sessionId)
+  const version = normalizeVersion(payload.version || existing?.version)
 
   const next = {
     playerId,
@@ -46,6 +48,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     updatedAtMs: eventTimeMs,
     lastEvent: 'heartbeat' as const,
     previousServer: existing?.previousServer,
+    ...(version ? { version } : {}),
   }
 
   const heartbeatWindowMs = cfg.heartbeatIntervalSec * 1000
@@ -56,6 +59,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     previous.server !== next.server ||
     previous.displayName !== next.displayName ||
     previous.serverClientId !== next.serverClientId ||
+    previous.version !== next.version ||
     previous.lastEvent !== next.lastEvent ||
     Math.max(0, next.lastSeenMs - previous.lastSeenMs) >= heartbeatWindowMs
 
@@ -69,6 +73,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
       server: next.server,
       name: next.displayName,
       clientId: next.serverClientId,
+      version: next.version || null,
       status: next.status,
       lastSeenMs: next.lastSeenMs,
       persisted: shouldPersist,

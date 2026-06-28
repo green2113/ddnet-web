@@ -9,6 +9,7 @@ export interface PresenceRecord {
   server: string
   displayName: string
   serverClientId: string
+  version?: string
   status: PresenceStatus
   lastSeenMs: number
   updatedAtMs: number
@@ -36,7 +37,7 @@ const KEY_PREFIX = 'presence:player:'
 const SNAPSHOT_KEY = 'presence:list:snapshot'
 const KV_GET_BATCH_SIZE = 32
 
-export type PresenceListPlayer = { name: string; client_id: number; last_seen: number }
+export type PresenceListPlayer = { name: string; client_id: number; last_seen: number; version?: string }
 export type PresenceListServerKeyed = Array<Record<string, { players: PresenceListPlayer[] }>>
 
 interface PresenceListSnapshot {
@@ -194,11 +195,15 @@ export async function listOnline(kv: KVNamespace, staleAfterSec: number, maxList
         byServerMembers[server] = []
       }
       const parsedClientId = Number.parseInt(value.serverClientId || '-1', 10)
-      byServerMembers[server].push({
+      const player: PresenceListPlayer = {
         name: value.displayName || 'unknown',
         client_id: Number.isFinite(parsedClientId) ? parsedClientId : -1,
         last_seen: Math.floor(value.lastSeenMs / 1000),
-      })
+      }
+      if(value.version) {
+        player.version = value.version
+      }
+      byServerMembers[server].push(player)
 
       if(online.length >= targetCount) {
         break
@@ -291,6 +296,7 @@ export interface PresenceInputBase {
   sessionId?: string
   name?: string
   clientId?: string
+  version?: string
   timestampMs?: number
 }
 
@@ -325,6 +331,14 @@ export function normalizeServerClientId(value: string | undefined) {
     return ''
   }
   return normalized.slice(0, 16)
+}
+
+export function normalizeVersion(value: string | undefined) {
+  const normalized = (value || '').trim()
+  if(!normalized) {
+    return ''
+  }
+  return normalized.slice(0, 64)
 }
 
 export function settings(env: Env) {

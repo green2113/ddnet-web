@@ -12,6 +12,7 @@ import {
   normalizeServer,
   normalizeServerClientId,
   normalizeSessionId,
+  normalizeVersion,
   nowMs,
   optionsResponse,
   parseJson,
@@ -38,6 +39,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   const eventTimeMs = Number.isFinite(payload.timestampMs) ? Math.floor(payload.timestampMs as number) : nowMs()
   const sessionId = normalizeSessionId(payload.sessionId, 'default')
   const existing = await readRecord(env.PRESENCE_KV, playerId, sessionId)
+  const version = normalizeVersion(payload.version)
 
   const next = {
     playerId,
@@ -50,6 +52,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     updatedAtMs: eventTimeMs,
     lastEvent: 'join' as const,
     previousServer: existing?.server,
+    ...(version ? { version } : {}),
   }
 
   await writeRecord(env.PRESENCE_KV, next, cfg.recordTtlSec)
@@ -61,6 +64,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
       server: next.server,
       name: next.displayName,
       clientId: next.serverClientId,
+      version: next.version || null,
       previousServer: next.previousServer || null,
       status: next.status,
       lastSeenMs: next.lastSeenMs,

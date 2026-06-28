@@ -12,6 +12,7 @@ import {
   normalizeServer,
   normalizeServerClientId,
   normalizeSessionId,
+  normalizeVersion,
   nowMs,
   optionsResponse,
   parseJson,
@@ -35,6 +36,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   const eventTimeMs = Number.isFinite(payload.timestampMs) ? Math.floor(payload.timestampMs as number) : nowMs()
   const sessionId = normalizeSessionId(payload.sessionId, 'default')
   const existing = await readRecord(env.PRESENCE_KV, playerId, sessionId)
+  const version = normalizeVersion(payload.version || existing?.version)
 
   const next = {
     playerId,
@@ -47,6 +49,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     updatedAtMs: eventTimeMs,
     lastEvent: 'leave' as const,
     previousServer: existing?.previousServer,
+    ...(version ? { version } : {}),
   }
 
   await writeRecord(env.PRESENCE_KV, next, cfg.recordTtlSec)
