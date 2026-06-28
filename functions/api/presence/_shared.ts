@@ -23,6 +23,7 @@ export interface Env {
   PRESENCE_RECORD_TTL_SEC?: string
   PRESENCE_MAX_LIST?: string
   PRESENCE_LIST_CACHE_SEC?: string
+  PRESENCE_UDP_SYNC_SECRET?: string
 }
 
 export const DEFAULT_HEARTBEAT_INTERVAL_SEC = 60
