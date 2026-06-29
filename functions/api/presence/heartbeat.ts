@@ -51,7 +51,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     ...(version ? { version } : {}),
   }
 
-  const heartbeatWindowMs = cfg.heartbeatIntervalSec * 1000
+  const heartbeatWindowMs = Math.min(cfg.heartbeatIntervalSec * 1000, 15000)
   const previous = existing || null
   const shouldPersist =
     !previous ||
