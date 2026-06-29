@@ -158,7 +158,6 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
       ...(version ? { version } : {}),
     }
 
-    const heartbeatWindowMs = Math.min(cfg.heartbeatIntervalSec * 1000, 15000)
     const previous = existing || null
     const shouldPersist =
       !previous ||
@@ -168,7 +167,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
       previous.serverClientId !== next.serverClientId ||
       previous.version !== next.version ||
       previous.lastEvent !== next.lastEvent ||
-      Math.max(0, next.lastSeenMs - previous.lastSeenMs) >= heartbeatWindowMs
+      next.lastSeenMs > previous.lastSeenMs
 
     if(shouldPersist) {
       await writeRecord(env.PRESENCE_KV, next, cfg.recordTtlSec)
