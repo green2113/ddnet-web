@@ -18,33 +18,36 @@ function contentTypeForFilename(filename: string) {
   return 'application/octet-stream'
 }
 
-function isSafeAssetPath(path: string) {
+function isVersionedReleasePath(path: string) {
   if(!path || path.includes('..') || path.includes('\\')) {
     return false
   }
+
   const segments = path.split('/').filter(Boolean)
   if(segments.length < 3) {
     return false
   }
+
+  // Only handle release assets like 2.4.1/windows/UClient-windows.zip
+  if(!/^\d+\.\d+(?:\.\d+)?(?:[-+][0-9A-Za-z.-]+)?$/.test(segments[0])) {
+    return false
+  }
+
   return segments.every((segment) => /^[A-Za-z0-9._+-]+$/.test(segment))
 }
 
-export const onRequestGet = async ({
-  params,
-  env,
-}: {
-  params: { catchall?: string | string[] }
-  env: Env
-}) => {
-  if(!env.DOWNLOAD) {
-    return new Response('Storage not configured', { status: 503 })
-  }
+export const onRequestGet: PagesFunction<Env> = async (context) => {
+  const { env, params, next } = context
 
   const raw = params.catchall
   const segments = Array.isArray(raw) ? raw : raw ? [raw] : []
   const assetPath = segments.join('/')
-  if(!isSafeAssetPath(assetPath)) {
-    return new Response('Not Found', { status: 404 })
+  if(!isVersionedReleasePath(assetPath)) {
+    return next()
+  }
+
+  if(!env.DOWNLOAD) {
+    return new Response('Storage not configured', { status: 503 })
   }
 
   const r2Key = `uclient/${assetPath}`
