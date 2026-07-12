@@ -43,6 +43,8 @@
     "PRESENCE_HEARTBEAT_INTERVAL_SEC": "60",
     "PRESENCE_STALE_AFTER_SEC": "180",
     "PRESENCE_LIST_CACHE_SEC": "30",
+    // When set, /api/presence GET proxies this Rust JSON snapshot server instead of KV.
+    "PRESENCE_ORIGIN_URL": "https://presence-origin.under1111.com/api/presence",
     // Set via `wrangler secret put PRESENCE_UDP_SYNC_SECRET` in production; empty placeholder only.
     "PRESENCE_UDP_SYNC_SECRET": "",
     "SOUNDBOARD_PUBLIC_BASE": "https://soundboard.under1111.com",
@@ -89,6 +91,7 @@
         "PRESENCE_HEARTBEAT_INTERVAL_SEC": "60",
         "PRESENCE_STALE_AFTER_SEC": "180",
         "PRESENCE_LIST_CACHE_SEC": "30",
+        "PRESENCE_ORIGIN_URL": "https://presence-origin.under1111.com/api/presence",
         "SOUNDBOARD_PUBLIC_BASE": "https://soundboard.under1111.com",
         "SOUNDBOARD_MAX_BYTES": "5242880",
         "SOUNDBOARD_MAX_SECONDS": "10"
@@ -132,6 +135,7 @@
         "PRESENCE_HEARTBEAT_INTERVAL_SEC": "60",
         "PRESENCE_STALE_AFTER_SEC": "180",
         "PRESENCE_LIST_CACHE_SEC": "30",
+        "PRESENCE_ORIGIN_URL": "https://presence-origin.under1111.com/api/presence",
         "SOUNDBOARD_PUBLIC_BASE": "https://soundboard.under1111.com",
         "SOUNDBOARD_MAX_BYTES": "5242880",
         "SOUNDBOARD_MAX_SECONDS": "10"

@@ -25,6 +25,9 @@ export interface Env {
   PRESENCE_MAX_LIST?: string
   PRESENCE_LIST_CACHE_SEC?: string
   PRESENCE_UDP_SYNC_SECRET?: string
+  // When set, /api/presence GET proxies this upstream (Rust JSON snapshot server)
+  // instead of reading KV. Example: https://presence-origin.under1111.com/api/presence
+  PRESENCE_ORIGIN_URL?: string
 }
 
 export const DEFAULT_HEARTBEAT_INTERVAL_SEC = 60

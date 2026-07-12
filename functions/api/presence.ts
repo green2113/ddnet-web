@@ -4,12 +4,52 @@ import { Env, getCachedPresenceList, json, jsonPresenceList, kvUnavailable, opti
 
 export const onRequestOptions = async () => optionsResponse('GET, OPTIONS')
 
+async function fetchFromOrigin(originUrl: string, listCacheSec: number): Promise<Response | null> {
+  try {
+    const upstream = await fetch(originUrl, {
+      method: 'GET',
+      headers: { accept: 'application/json' },
+      // Edge-cache the upstream JSON so we don't hammer the origin per request.
+      cf: { cacheTtl: Math.max(10, listCacheSec), cacheEverything: true },
+    } as RequestInit)
+
+    if (!upstream.ok) {
+      return null
+    }
+
+    const body = await upstream.text()
+    const maxAge = Math.max(10, listCacheSec)
+    return new Response(body, {
+      headers: {
+        'content-type': 'application/json; charset=utf-8',
+        'cache-control': `public, max-age=${maxAge}, s-maxage=${maxAge}, stale-while-revalidate=120`,
+        'access-control-allow-origin': '*',
+      },
+    })
+  } catch {
+    return null
+  }
+}
+
 export const onRequestGet = async ({ env }: { env: Env }) => {
+  const cfg = settings(env)
+  const originUrl = (env.PRESENCE_ORIGIN_URL || '').trim()
+
+  if (originUrl) {
+    const proxied = await fetchFromOrigin(originUrl, cfg.listCacheSec)
+    if (proxied) {
+      return proxied
+    }
+    // Origin unreachable: fall back to KV if bound, otherwise report empty list.
+    if (!env.PRESENCE_KV) {
+      return jsonPresenceList([], cfg.listCacheSec)
+    }
+  }
+
   if (!env.PRESENCE_KV) {
     return kvUnavailable()
   }
 
-  const cfg = settings(env)
   const serverKeyed = await getCachedPresenceList(
     env.PRESENCE_KV,
     cfg.staleAfterSec,
