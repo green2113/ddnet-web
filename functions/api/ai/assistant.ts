@@ -72,13 +72,49 @@ export const onRequestOptions = async () =>
     headers: { ...CORS_HEADERS, 'access-control-max-age': '86400' },
   })
 
-/** Health check — does not call OpenAI. */
-export const onRequestGet = async ({ env }: { env: Env }) =>
-  json({
+/** Health check. Use `?diag=openai` to probe outbound OpenAI connectivity. */
+export const onRequestGet = async ({ request, env }: { request: Request; env: Env }) => {
+  const base = {
     ok: true,
     configured: hasApiKey(env),
     model: (env.AI_ASSISTANT_MODEL || DEFAULT_MODEL).trim(),
-  })
+  }
+
+  const url = new URL(request.url)
+  if (url.searchParams.get('diag') !== 'openai') {
+    return json(base)
+  }
+
+  if (!hasApiKey(env)) {
+    return json({ ...base, openai: { ok: false, error: 'OPENAI_API_KEY missing' } }, 503)
+  }
+
+  const apiKey = (env.OPENAI_API_KEY as string).trim()
+  try {
+    const upstream = await fetch('https://api.openai.com/v1/models', {
+      method: 'GET',
+      headers: { authorization: `Bearer ${apiKey}` },
+      signal: AbortSignal.timeout(10000),
+    })
+    const text = await upstream.text()
+    return json({
+      ...base,
+      openai: {
+        ok: upstream.ok,
+        status: upstream.status,
+        body: text.replace(/\s+/g, ' ').slice(0, 240),
+      },
+    })
+  } catch (err) {
+    return json({
+      ...base,
+      openai: {
+        ok: false,
+        error: err instanceof Error ? err.message : String(err),
+      },
+    })
+  }
+}
 
 const SYSTEM_PROMPT = `You are the in-game assistant for a DDNet game client (UClient/BestClient).
 Your only job is to translate the user's natural-language request into safe client commands, chosen strictly from the provided CATALOG.
@@ -201,7 +237,15 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
       return json({ reply: 'message_required', commands: [] }, 400)
     }
 
-    const apiKey = (env.OPENAI_API_KEY as string).trim()
+    // Local ping — verifies POST routing without calling OpenAI.
+    if (message === '__ping__') {
+      return json({ reply: 'pong', commands: [] })
+    }
+
+    const apiKey = (env.OPENAI_API_KEY as string)
+      .trim()
+      .replace(/^Bearer\s+/i, '')
+      .replace(/^["']|["']$/g, '')
     const model = (env.AI_ASSISTANT_MODEL || DEFAULT_MODEL).trim()
     const endpoint = (env.AI_ASSISTANT_ENDPOINT || DEFAULT_OPENAI_ENDPOINT).trim()
 
@@ -220,6 +264,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
           temperature: 0.2,
           max_tokens: 600,
         }),
+        signal: AbortSignal.timeout(20000),
       })
     } catch (err) {
       const detail = err instanceof Error ? err.message : String(err)
