@@ -72,7 +72,7 @@ export const onRequestOptions = async () =>
     headers: { ...CORS_HEADERS, 'access-control-max-age': '86400' },
   })
 
-/** Health check. Use `?diag=openai` to probe outbound OpenAI connectivity. */
+/** Health check. Use `?diag=openai` or `?diag=chat` to probe OpenAI. */
 export const onRequestGet = async ({ request, env }: { request: Request; env: Env }) => {
   const base = {
     ok: true,
@@ -81,7 +81,8 @@ export const onRequestGet = async ({ request, env }: { request: Request; env: En
   }
 
   const url = new URL(request.url)
-  if (url.searchParams.get('diag') !== 'openai') {
+  const diag = url.searchParams.get('diag')
+  if (diag !== 'openai' && diag !== 'chat') {
     return json(base)
   }
 
@@ -89,20 +90,52 @@ export const onRequestGet = async ({ request, env }: { request: Request; env: En
     return json({ ...base, openai: { ok: false, error: 'OPENAI_API_KEY missing' } }, 503)
   }
 
-  const apiKey = (env.OPENAI_API_KEY as string).trim()
+  const apiKey = (env.OPENAI_API_KEY as string)
+    .trim()
+    .replace(/^Bearer\s+/i, '')
+    .replace(/^["']|["']$/g, '')
+  const model = (env.AI_ASSISTANT_MODEL || DEFAULT_MODEL).trim()
+
   try {
-    const upstream = await fetch('https://api.openai.com/v1/models', {
-      method: 'GET',
-      headers: { authorization: `Bearer ${apiKey}` },
-      signal: AbortSignal.timeout(10000),
+    if (diag === 'openai') {
+      const upstream = await fetch('https://api.openai.com/v1/models', {
+        method: 'GET',
+        headers: { authorization: `Bearer ${apiKey}` },
+        signal: AbortSignal.timeout(10000),
+      })
+      const text = await upstream.text()
+      return json({
+        ...base,
+        openai: {
+          ok: upstream.ok,
+          status: upstream.status,
+          body: text.replace(/\s+/g, ' ').slice(0, 240),
+        },
+      })
+    }
+
+    // Minimal chat/completions probe — same path the real assistant uses.
+    const upstream = await fetch(DEFAULT_OPENAI_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: 'user', content: 'Reply with exactly: ok' }],
+        max_tokens: 16,
+        temperature: 0,
+      }),
+      signal: AbortSignal.timeout(20000),
     })
     const text = await upstream.text()
     return json({
       ...base,
-      openai: {
+      chat: {
         ok: upstream.ok,
         status: upstream.status,
-        body: text.replace(/\s+/g, ' ').slice(0, 240),
+        body: text.replace(/\s+/g, ' ').slice(0, 320),
       },
     })
   } catch (err) {
@@ -260,7 +293,6 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
         body: JSON.stringify({
           model,
           messages: buildMessages(body),
-          response_format: { type: 'json_object' },
           temperature: 0.2,
           max_tokens: 600,
         }),
