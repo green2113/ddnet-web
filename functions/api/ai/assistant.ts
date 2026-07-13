@@ -43,7 +43,7 @@ const MAX_COMMANDS = 8
 
 const CORS_HEADERS: Record<string, string> = {
   'access-control-allow-origin': '*',
-  'access-control-allow-methods': 'POST, OPTIONS',
+  'access-control-allow-methods': 'GET, POST, OPTIONS',
   'access-control-allow-headers': 'content-type',
 }
 
@@ -58,10 +58,26 @@ function json(data: unknown, status = 200) {
   })
 }
 
+function hasApiKey(env: Env): boolean {
+  try {
+    return typeof env.OPENAI_API_KEY === 'string' && env.OPENAI_API_KEY.trim().length > 0
+  } catch {
+    return false
+  }
+}
+
 export const onRequestOptions = async () =>
   new Response(null, {
     status: 204,
     headers: { ...CORS_HEADERS, 'access-control-max-age': '86400' },
+  })
+
+/** Health check — does not call OpenAI. */
+export const onRequestGet = async ({ env }: { env: Env }) =>
+  json({
+    ok: true,
+    configured: hasApiKey(env),
+    model: (env.AI_ASSISTANT_MODEL || DEFAULT_MODEL).trim(),
   })
 
 const SYSTEM_PROMPT = `You are the in-game assistant for a DDNet game client (UClient/BestClient).
@@ -114,7 +130,16 @@ function sanitizeCommands(raw: unknown): ProposedCommand[] {
 function buildMessages(body: AssistantRequest) {
   const locale = (body.locale || 'en').slice(0, 16)
   const message = String(body.message || '').slice(0, MAX_MESSAGE_LEN)
-  const catalogJson = JSON.stringify(body.catalog ?? {})
+  // Cap catalog size so a huge client payload cannot blow the Worker.
+  let catalogJson = '{}'
+  try {
+    catalogJson = JSON.stringify(body.catalog ?? {})
+    if (catalogJson.length > 24000) {
+      catalogJson = catalogJson.slice(0, 24000)
+    }
+  } catch {
+    catalogJson = '{}'
+  }
 
   const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
     { role: 'system', content: SYSTEM_PROMPT },
@@ -134,86 +159,113 @@ function buildMessages(body: AssistantRequest) {
   return messages
 }
 
-export const onRequestPost = async ({ request, env }: { request: Request; env: Env }) => {
-  const apiKey = (env.OPENAI_API_KEY || '').trim()
-  if (!apiKey) {
-    // Non-200 so the client falls back to its local rule-based handler.
-    return json({ reply: 'AI 서버가 아직 설정되지 않았습니다.', commands: [] }, 500)
-  }
-
-  let body: AssistantRequest
+function parseModelJson(content: string): { reply?: unknown; commands?: unknown } | null {
   try {
-    body = (await request.json()) as AssistantRequest
+    return JSON.parse(content) as { reply?: unknown; commands?: unknown }
   } catch {
-    return json({ reply: 'invalid_json', commands: [] }, 400)
-  }
-
-  const message = String(body?.message || '').trim()
-  if (!message) {
-    return json({ reply: 'message_required', commands: [] }, 400)
-  }
-
-  const model = (env.AI_ASSISTANT_MODEL || DEFAULT_MODEL).trim()
-  const endpoint = (env.AI_ASSISTANT_ENDPOINT || DEFAULT_OPENAI_ENDPOINT).trim()
-
-  let upstream: Response
-  try {
-    upstream = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages: buildMessages(body),
-        response_format: { type: 'json_object' },
-        temperature: 0.2,
-        max_tokens: 600,
-      }),
-    })
-  } catch {
-    return json({ reply: 'AI 서버에 연결하지 못했습니다.', commands: [] }, 502)
-  }
-
-  if (!upstream.ok) {
-    return json({ reply: `AI 서버 오류 (HTTP ${upstream.status})`, commands: [] }, 502)
-  }
-
-  let completion: {
-    choices?: Array<{ message?: { content?: string } }>
-  }
-  try {
-    completion = await upstream.json()
-  } catch {
-    return json({ reply: 'AI 응답을 해석하지 못했습니다.', commands: [] }, 502)
-  }
-
-  const content = completion?.choices?.[0]?.message?.content
-  if (!content) {
-    return json({ reply: 'AI 응답이 비어 있습니다.', commands: [] }, 502)
-  }
-
-  let parsed: { reply?: unknown; commands?: unknown }
-  try {
-    parsed = JSON.parse(content)
-  } catch {
-    // The model occasionally wraps JSON in prose; try to salvage the object.
     const start = content.indexOf('{')
     const end = content.lastIndexOf('}')
-    if (start >= 0 && end > start) {
-      try {
-        parsed = JSON.parse(content.slice(start, end + 1))
-      } catch {
-        return json({ reply: 'AI 응답 형식이 올바르지 않습니다.', commands: [] }, 502)
-      }
-    } else {
-      return json({ reply: 'AI 응답 형식이 올바르지 않습니다.', commands: [] }, 502)
+    if (start < 0 || end <= start) {
+      return null
+    }
+    try {
+      return JSON.parse(content.slice(start, end + 1)) as { reply?: unknown; commands?: unknown }
+    } catch {
+      return null
     }
   }
+}
 
-  const reply = typeof parsed.reply === 'string' && parsed.reply.trim() ? parsed.reply.trim().slice(0, 480) : '요청을 처리했습니다.'
-  const commands = sanitizeCommands(parsed.commands)
+export const onRequestPost = async ({ request, env }: { request: Request; env: Env }) => {
+  try {
+    if (!hasApiKey(env)) {
+      // Non-200 so the client falls back to its local rule-based handler.
+      return json(
+        {
+          reply: 'AI 서버에 OPENAI_API_KEY가 없습니다. Cloudflare Pages 환경변수에 키를 넣으세요.',
+          commands: [],
+        },
+        503,
+      )
+    }
 
-  return json({ reply, commands })
+    let body: AssistantRequest
+    try {
+      body = (await request.json()) as AssistantRequest
+    } catch {
+      return json({ reply: 'invalid_json', commands: [] }, 400)
+    }
+
+    const message = String(body?.message || '').trim()
+    if (!message) {
+      return json({ reply: 'message_required', commands: [] }, 400)
+    }
+
+    const apiKey = (env.OPENAI_API_KEY as string).trim()
+    const model = (env.AI_ASSISTANT_MODEL || DEFAULT_MODEL).trim()
+    const endpoint = (env.AI_ASSISTANT_ENDPOINT || DEFAULT_OPENAI_ENDPOINT).trim()
+
+    let upstream: Response
+    try {
+      upstream = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          messages: buildMessages(body),
+          response_format: { type: 'json_object' },
+          temperature: 0.2,
+          max_tokens: 600,
+        }),
+      })
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err)
+      return json({ reply: `AI 서버에 연결하지 못했습니다: ${detail.slice(0, 120)}`, commands: [] }, 502)
+    }
+
+    const upstreamText = await upstream.text()
+    if (!upstream.ok) {
+      const detail = upstreamText.replace(/\s+/g, ' ').slice(0, 160)
+      return json(
+        {
+          reply: `OpenAI 오류 (HTTP ${upstream.status})${detail ? `: ${detail}` : ''}`,
+          commands: [],
+        },
+        502,
+      )
+    }
+
+    let completion: {
+      choices?: Array<{ message?: { content?: string } }>
+    }
+    try {
+      completion = JSON.parse(upstreamText) as typeof completion
+    } catch {
+      return json({ reply: 'AI 응답을 해석하지 못했습니다.', commands: [] }, 502)
+    }
+
+    const content = completion?.choices?.[0]?.message?.content
+    if (!content || typeof content !== 'string') {
+      return json({ reply: 'AI 응답이 비어 있습니다.', commands: [] }, 502)
+    }
+
+    const parsed = parseModelJson(content)
+    if (!parsed) {
+      return json({ reply: 'AI 응답 형식이 올바르지 않습니다.', commands: [] }, 502)
+    }
+
+    const reply =
+      typeof parsed.reply === 'string' && parsed.reply.trim()
+        ? parsed.reply.trim().slice(0, 480)
+        : '요청을 처리했습니다.'
+    const commands = sanitizeCommands(parsed.commands)
+
+    return json({ reply, commands })
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err)
+    return json({ reply: `AI 프록시 오류: ${detail.slice(0, 160)}`, commands: [] }, 500)
+  }
 }
