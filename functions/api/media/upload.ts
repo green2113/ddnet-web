@@ -49,15 +49,11 @@ function extensionFromType(contentType: string) {
   }
 }
 
-function generateUuid(): string {
-  const bytes = new Uint8Array(16)
-  crypto.getRandomValues(bytes)
-  // Set version 4 bits
-  bytes[6] = (bytes[6] & 0x0f) | 0x40
-  // Set variant bits
-  bytes[8] = (bytes[8] & 0x3f) | 0x80
-  const hex = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('')
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
+async function sha256Hex(body: ArrayBuffer): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', body)
+  return Array.from(new Uint8Array(digest))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('')
 }
 
 export const onRequestOptions = async () => {
@@ -87,34 +83,31 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
     return json({ error: 'payload_too_large' }, { status: 413, headers: { 'access-control-allow-origin': '*' } })
   }
 
-  const now = new Date()
-  const yyyy = now.getUTCFullYear()
-  const mm = String(now.getUTCMonth() + 1).padStart(2, '0')
-  const dd = String(now.getUTCDate()).padStart(2, '0')
   const ext = extensionFromType(contentType)
-  const dayPrefix = `chat/${yyyy}/${mm}/${dd}/`
-  const uuid = generateUuid()
-  let key = `${dayPrefix}${uuid}.${ext}`
+  // Content-addressed key: identical image bytes always map to the same object,
+  // so re-uploading the same image reuses the existing URL instead of duplicating it.
+  const hash = await sha256Hex(body)
+  const key = `chat/sha256/${hash}.${ext}`
 
-  // Extremely unlikely, but ensure no collision exists.
-  while (await env.CHAT_MEDIA.head(key)) {
-    key = `${dayPrefix}${generateUuid()}.${ext}`
+  // Only store when this content has not been uploaded before.
+  const existing = await env.CHAT_MEDIA.head(key)
+  if (!existing) {
+    await env.CHAT_MEDIA.put(key, body, {
+      httpMetadata: {
+        contentType,
+        cacheControl: 'public, max-age=31536000, immutable',
+      },
+      customMetadata: {
+        source: 'uclient-chat-upload',
+      },
+    })
   }
-
-  await env.CHAT_MEDIA.put(key, body, {
-    httpMetadata: {
-      contentType,
-      cacheControl: 'public, max-age=31536000, immutable',
-    },
-    customMetadata: {
-      source: 'uclient-chat-upload',
-    },
-  })
 
   return json(
     {
       url: buildServeUrl(request, key, env.CHAT_MEDIA_PUBLIC_BASE),
       key,
+      deduplicated: !!existing,
     },
     {
       status: 200,
