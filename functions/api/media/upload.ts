@@ -56,6 +56,14 @@ async function sha256Hex(body: ArrayBuffer): Promise<string> {
     .join('')
 }
 
+// Sanitize an optional file name so it is safe to embed in an object key / URL.
+// Used for skin sharing, where the file must keep the sharer's skin name so the
+// receiver can save it under the same name (skins are matched by name).
+function sanitizeFileName(value: string): string {
+  const base = value.replace(/\.[^.]*$/, '')
+  return base.replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 48)
+}
+
 export const onRequestOptions = async () => {
   return new Response(null, {
     status: 204,
@@ -87,7 +95,14 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   // Content-addressed key: identical image bytes always map to the same object,
   // so re-uploading the same image reuses the existing URL instead of duplicating it.
   const hash = await sha256Hex(body)
-  const key = `chat/sha256/${hash}.${ext}`
+
+  // Optional file name (e.g. shared skin name). When provided, the object is stored
+  // so the served URL ends with "<name>.<ext>", allowing the receiver to derive the
+  // skin name from the URL. Still deduplicated per (content, name) via the hash path.
+  const nameParam = sanitizeFileName(new URL(request.url).searchParams.get('name') || '')
+  const key = nameParam
+    ? `chat/named/${hash}/${nameParam}.${ext}`
+    : `chat/sha256/${hash}.${ext}`
 
   // Only store when this content has not been uploaded before.
   const existing = await env.CHAT_MEDIA.head(key)
