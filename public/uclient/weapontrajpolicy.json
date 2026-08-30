@@ -2,5 +2,5 @@
     "allow_ips": [],
     "deny_ips": [],
     "allow_modes": [],
-    "deny_modes": ["ctf", "InfClass", "fng", "AxFNG", "CTF", "InfClassR", "InfClassR ctf", "TeeWare", "FNG", "fng2+", "fng2", "fng2++", "gCTF", "iCTF", "iCTF)", "iCTF+", "openfng", "solofng", "solofng|catchfn", "trainfng", "zCatch"]
+    "deny_modes": ["ctf", "InfClass", "fng", "AxFNG", "CTF", "InfClassR", "InfClassR ctf", "TeeWare", "FNG", "fng2+", "fng2", "fng2++", "gCTF", "iCTF", "iCTF)", "iCTF+", "openfng", "solofng", "solofng|catchfn", "trainfng", "zCatch", "InfClassR  ctf"]
 }
