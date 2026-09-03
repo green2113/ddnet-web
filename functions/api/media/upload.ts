@@ -4,10 +4,12 @@ export interface Env {
   CHAT_MEDIA: R2Bucket
   CHAT_MEDIA_PUBLIC_BASE?: string
   CHAT_MEDIA_MAX_BYTES?: string
+  CHAT_MEDIA_GIF_MAX_BYTES?: string
   CHAT_MEDIA_MAP_MAX_BYTES?: string
 }
 
 const DEFAULT_MAX_BYTES = 10 * 1024 * 1024
+const DEFAULT_GIF_MAX_BYTES = 64 * 1024 * 1024
 const DEFAULT_MAP_MAX_BYTES = 32 * 1024 * 1024
 const ALLOWED_IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif'])
 const MAP_CONTENT_TYPE = 'application/octet-stream'
@@ -96,7 +98,9 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
 
   const maxBytes = isMapUpload
     ? Number(env.CHAT_MEDIA_MAP_MAX_BYTES || DEFAULT_MAP_MAX_BYTES)
-    : Number(env.CHAT_MEDIA_MAX_BYTES || DEFAULT_MAX_BYTES)
+    : contentType === 'image/gif'
+      ? Number(env.CHAT_MEDIA_GIF_MAX_BYTES || DEFAULT_GIF_MAX_BYTES)
+      : Number(env.CHAT_MEDIA_MAX_BYTES || DEFAULT_MAX_BYTES)
   const body = await request.arrayBuffer()
   if (!body || body.byteLength === 0) {
     return json({ error: 'empty_body' }, { status: 400, headers: { 'access-control-allow-origin': '*' } })
