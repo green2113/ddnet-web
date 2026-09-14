@@ -10,12 +10,14 @@ export interface UClientUpdatePlatform {
 
 export interface UClientLatestUpdate {
   version: string
+  launcherVersion?: string
   releasedAt?: string
   platforms?: Record<string, UClientUpdatePlatform>
 }
 
 export interface UClientVersionEntry {
   version: string
+  launcherVersion?: string
   releasedAt?: string
 }
 
@@ -123,18 +125,24 @@ export function normalizeLatestPayload(value: unknown): UClientLatestUpdate | nu
     return null
   }
   const releasedAt = normalizeReleasedAt(source.releasedAt ?? source.released_at ?? source.publishedAt ?? source.published_at)
+  const launcherVersion = normalizeVersion(
+    source.launcherVersion ?? source.launcher_version ?? source.launcherVersionString,
+  )
 
   const platforms: Record<string, UClientUpdatePlatform> = {}
   if(looksLikePlatformMap(source.platforms)) {
     for(const [platformKey, platformValue] of Object.entries(source.platforms)) {
       const normalized = normalizePlatform(platformValue)
-      if(normalized.url) {
+      if(normalized.url || normalized.path) {
         platforms[platformKey] = normalized
       }
     }
   }
 
   const latest: UClientLatestUpdate = { version }
+  if(launcherVersion) {
+    latest.launcherVersion = launcherVersion
+  }
   if(releasedAt) {
     latest.releasedAt = releasedAt
   }
@@ -161,8 +169,13 @@ export function normalizeVersionsPayload(value: unknown): UClientVersionEntry[] 
       continue
     }
     const releasedAt = normalizeReleasedAt(source.releasedAt ?? source.released_at ?? source.publishedAt ?? source.published_at)
+    const launcherVersion = normalizeVersion(source.launcherVersion ?? source.launcher_version)
     seen.add(version)
-    versions.push({ version, releasedAt })
+    const entry: UClientVersionEntry = { version, releasedAt }
+    if(launcherVersion) {
+      entry.launcherVersion = launcherVersion
+    }
+    versions.push(entry)
   }
   return versions
 }
