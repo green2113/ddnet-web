@@ -15,25 +15,68 @@ function contentTypeForFilename(filename: string) {
   if(lower.endsWith('.tar.xz')) {
     return 'application/x-xz'
   }
+  if(lower.endsWith('.json')) {
+    return 'application/json; charset=utf-8'
+  }
   return 'application/octet-stream'
 }
 
-function isVersionedReleasePath(path: string) {
-  if(!path || path.includes('..') || path.includes('\\')) {
-    return false
+const VERSION_SEGMENT = /^\d+\.\d+(?:\.\d+)?(?:[-+][0-9A-Za-z.-]+)?$/
+const SAFE_SEGMENT = /^[A-Za-z0-9._+-]+$/
+
+function isVersionSegment(segment: string) {
+  return VERSION_SEGMENT.test(segment)
+}
+
+function isSafePathSegment(segment: string) {
+  return SAFE_SEGMENT.test(segment)
+}
+
+/** Maps /uclient/<path> to an R2 object key under uclient/, or null if not a release asset. */
+function r2KeyForUclientAsset(assetPath: string): string | null {
+  if(!assetPath || assetPath.includes('..') || assetPath.includes('\\')) {
+    return null
   }
 
-  const segments = path.split('/').filter(Boolean)
-  if(segments.length < 3) {
-    return false
+  const segments = assetPath.split('/').filter(Boolean)
+  if(segments.length === 0 || !segments.every(isSafePathSegment)) {
+    return null
   }
 
-  // Only handle release assets like 2.4.1/windows/UClient-windows.zip
-  if(!/^\d+\.\d+(?:\.\d+)?(?:[-+][0-9A-Za-z.-]+)?$/.test(segments[0])) {
-    return false
+  // Legacy full distribution: 2.4.1/windows/UClient-windows.zip
+  if(segments.length >= 3 && isVersionSegment(segments[0])) {
+    return `uclient/${assetPath}`
   }
 
-  return segments.every((segment) => /^[A-Za-z0-9._+-]+$/.test(segment))
+  // Channel pointers: client/latest.json, launcher/latest.json
+  if(
+    segments.length === 2 &&
+    (segments[0] === 'client' || segments[0] === 'launcher') &&
+    segments[1] === 'latest.json'
+  ) {
+    return `uclient/${assetPath}`
+  }
+
+  // Channel packages: client/2.10.1/windows/..., launcher/1.1.2/windows/...
+  if(
+    (segments[0] === 'client' || segments[0] === 'launcher') &&
+    segments.length >= 4 &&
+    isVersionSegment(segments[1])
+  ) {
+    return `uclient/${assetPath}`
+  }
+
+  // Per-version launcher metadata: launcher/1.1.2/latest.json
+  if(
+    segments[0] === 'launcher' &&
+    segments.length === 3 &&
+    segments[2] === 'latest.json' &&
+    isVersionSegment(segments[1])
+  ) {
+    return `uclient/${assetPath}`
+  }
+
+  return null
 }
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
@@ -42,7 +85,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const raw = params.catchall
   const segments = Array.isArray(raw) ? raw : raw ? [raw] : []
   const assetPath = segments.join('/')
-  if(!isVersionedReleasePath(assetPath)) {
+  const r2Key = r2KeyForUclientAsset(assetPath)
+  if(!r2Key) {
     return next()
   }
 
@@ -50,7 +94,6 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     return new Response('Storage not configured', { status: 503 })
   }
 
-  const r2Key = `uclient/${assetPath}`
   const object = await env.DOWNLOAD.get(r2Key)
   if(!object) {
     return new Response('Not Found', { status: 404 })
